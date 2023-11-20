@@ -336,8 +336,8 @@ def Rubin.SmulSupport.Support (α : Type _) [MulAction G α] (g : G) :=
   {x : α | g • x ≠ x}
 #align support Rubin.SmulSupport.Support
 
-theorem Rubin.SmulSupport.support_eq_not_fixed_by {g : G} :
-    Rubin.SmulSupport.Support α g = MulAction.fixedBy G α gᶜ := by tauto
+theorem Rubin.SmulSupport.support_eq_not_fixed_by {g : G}:
+    Rubin.SmulSupport.Support α g = (MulAction.fixedBy α g)ᶜ := by tauto
 #align support_eq_not_fixed_by Rubin.SmulSupport.support_eq_not_fixed_by
 
 theorem Rubin.SmulSupport.mem_support {x : α} {g : G} :
@@ -480,8 +480,8 @@ def rigidStabilizer' (G : Type _) [Group G] [MulAction G α] (U : Set α) : Set 
 def rigidStabilizer (G : Type _) [Group G] [MulAction G α] (U : Set α) : Subgroup G
     where
   carrier := {g : G | ∀ (x) (_ : x ∉ U), g • x = x}
-  hMul_mem' a b ha hb x x_notin_U := by rw [mul_smul a b x, hb x x_notin_U, ha x x_notin_U]
-  inv_mem' _ hg x x_notin_U := Rubin.GroupActionExt.smul_eq_iff_inv_smul_eq.mp (hg x x_notin_U)
+  mul_mem' ha hb x x_notin_U := by rw [mul_smul, hb x x_notin_U, ha x x_notin_U]
+  inv_mem' hg x x_notin_U := Rubin.GroupActionExt.smul_eq_iff_inv_smul_eq.mp (hg x x_notin_U)
   one_mem' x _ := one_smul G x
 #align rigid_stabilizer rigidStabilizer
 
@@ -695,7 +695,7 @@ theorem Rubin.Period.period_neutral_eq_one (p : α) : Rubin.Period.period p (1 :
 #align period_neutral_eq_one Rubin.Period.period_neutral_eq_one
 
 def Rubin.Period.periods (U : Set α) (H : Subgroup G) : Set ℕ :=
-  {n : ℕ | ∃ (p : U) (g : H), Rubin.Period.period (p : α) (g : G) = n}
+  {n : ℕ | ∃ (p : α) (g : H), p ∈ U ∧ Rubin.Period.period (p : α) (g : G) = n}
 #align periods Rubin.Period.periods
 
 /- ./././Mathport/Syntax/Translate/Tactic/Builtin.lean:73:14: unsupported tactic `group_action #[[]] -/
@@ -713,23 +713,25 @@ theorem Rubin.Period.periods_lemmas {U : Set α} (U_nonempty : Set.Nonempty U) {
     trace
       "./././Mathport/Syntax/Translate/Tactic/Builtin.lean:73:14: unsupported tactic `group_action #[[]]"
   have periods_nonempty : (Rubin.Period.periods U H).Nonempty := by
-    use 1;
-    let p := Set.Nonempty.some U_nonempty;
-    use p;
-    exact Set.Nonempty.some_mem U_nonempty;
-    use 1;
-    exact Rubin.Period.period_neutral_eq_one p
+    use 1
+    let p := Set.Nonempty.some U_nonempty; use p
+    use 1
+    constructor
+    · exact Set.Nonempty.some_mem U_nonempty
+    · exact Rubin.Period.period_neutral_eq_one p
+
   have periods_bounded : BddAbove (Rubin.Period.periods U H) := by
     use m; intro some_period hperiod;
-    rcases hperiod with ⟨p, g, hperiod⟩; rw [← hperiod];
+    rcases hperiod with ⟨p, g, hperiod⟩
+    rw [← hperiod.2]
     exact (Rubin.Period.period_le_fix m_pos (gmp_eq_p p g)).2
   exact ⟨periods_nonempty, periods_bounded, m, m_pos, gmp_eq_p⟩
 #align period_lemma Rubin.Period.periods_lemmas
 
 theorem Rubin.Period.period_from_exponent (U : Set α) (U_nonempty : U.Nonempty) {H : Subgroup G}
     (exp_ne_zero : Monoid.exponent H ≠ 0) :
-    ∃ (p : U) (g : H) (n : ℕ),
-      n > 0 ∧ Rubin.Period.period (p : α) (g : G) = n ∧ n = sSup (Rubin.Period.periods U H) :=
+    ∃ (p : α) (g : H) (n : ℕ),
+      p ∈ U ∧ n > 0 ∧ Rubin.Period.period (p : α) (g : G) = n ∧ n = sSup (Rubin.Period.periods U H) :=
   by
   rcases Rubin.Period.periods_lemmas U_nonempty exp_ne_zero with
     ⟨periods_nonempty, periods_bounded, m, m_pos, gmp_eq_p⟩
@@ -737,8 +739,13 @@ theorem Rubin.Period.period_from_exponent (U : Set α) (U_nonempty : U.Nonempty)
   use p
   use g
   use sSup (Rubin.Period.periods U H)
-  exact
-    ⟨hperiod ▸ (Rubin.Period.period_le_fix m_pos (gmp_eq_p p g)).1, hperiod, rfl⟩
+  -- TODO: cleanup?
+  exact ⟨
+    hperiod.1,
+    hperiod.2 ▸ (Rubin.Period.period_le_fix m_pos (gmp_eq_p p g)).1,
+    hperiod.2,
+    rfl
+  ⟩
 #align period_from_exponent Rubin.Period.period_from_exponent
 
 theorem Rubin.Period.zero_lt_period_le_Sup_periods {U : Set α} (U_nonempty : U.Nonempty)
@@ -752,6 +759,7 @@ theorem Rubin.Period.zero_lt_period_le_Sup_periods {U : Set α} (U_nonempty : U.
   intro p g
   have period_in_periods : Rubin.Period.period (p : α) (g : G) ∈ Rubin.Period.periods U H := by
     use p; use g
+    simp
   exact
     ⟨(Rubin.Period.period_le_fix m_pos (gmp_eq_p p g)).1,
       le_csSup periods_bounded period_in_periods⟩
