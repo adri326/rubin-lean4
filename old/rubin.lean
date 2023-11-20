@@ -156,7 +156,6 @@ add_tactic_doc
 
 end group_action_tactic
 
-namespace Rubin
 example (G α : Type*) [group G] (a b c : G) [mul_action G α] (x : α) : ⁅a*b,c⁆ • x = (a*⁅b,c⁆*a⁻¹*⁅a,c⁆) • x := begin
   group_action,
 end
@@ -1053,5 +1052,3 @@ end regular_support
 -- noncomputable theorem rubin (hα : rubin_action G α) (hβ : rubin_action G β) : equivariant_homeomorph G α β := sorry
 
 end rubin
-
-end Rubin
