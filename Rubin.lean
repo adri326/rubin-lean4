@@ -16,6 +16,11 @@ import Mathlib.Topology.Compactness.Compact
 import Mathlib.Topology.Separation
 import Mathlib.Topology.Homeomorph
 
+import Lean.Meta.Tactic.Util
+import Lean.Elab.Tactic.Basic
+import Lean.Meta.Tactic.Simp.Main
+import Mathlib.Tactic.Ring.Basic
+
 #align_import rubin
 
 -- TODO: remove
@@ -47,79 +52,84 @@ theorem Rubin.GroupActionExt.smul_succ {G α : Type _} (n : ℕ) [Group G] [MulA
 #align smul_succ Rubin.GroupActionExt.smul_succ
 
 section GroupActionTactic
+-- open Lean.Elab.Tactic
+-- open Lean.Meta.Simp
+open Lean.Parser.Tactic
 
--- namespace Tactic.Interactive
 
--- /- ./././Mathport/Syntax/Translate/Tactic/Mathlib/Core.lean:38:34: unsupported: setup_tactic_parser -/
--- open Tactic
+syntax (name := group_action₁) "group_action₁" (location)?: tactic
+macro_rules
+  | `(tactic| group_action₁ $[at $location]?) => `(tactic| simp only [
+    smul_smul,
+    Rubin.GroupActionExt.smul_eq_smul_inv,
+    Rubin.GroupActionExt.smul_succ,
 
--- /- ./././Mathport/Syntax/Translate/Tactic/Mathlib/Core.lean:38:34: unsupported: setup_tactic_parser -/
--- open Tactic.SimpArgType Interactive Tactic.Group
+    one_smul,
+    mul_one,
+    one_mul,
+    sub_self,
+    add_neg_self,
+    neg_add_self,
+    neg_neg,
+    tsub_self,
+    <-mul_assoc,
 
--- /-- Auxiliary tactic for the `group_action` tactic. Calls the simplifier only. -/
--- unsafe def aux_group_action (locat : Loc) : tactic Unit :=
---   tactic.interactive.simp_core { failIfUnchanged := false } skip true
---       [expr ``(Rubin.GroupActionExt.smul_smul'), expr ``(Rubin.GroupActionExt.smul_eq_smul_inv),
---         expr ``(Rubin.GroupActionExt.smul_succ), expr ``(one_smul), expr ``(commutatorElement_def),
---         expr ``(mul_one), expr ``(one_mul), expr ``(one_pow), expr ``(one_zpow), expr ``(sub_self),
---         expr ``(add_neg_self), expr ``(neg_add_self), expr ``(neg_neg), expr ``(tsub_self),
---         expr ``(Int.ofNat_add), expr ``(Int.ofNat_mul), expr ``(Int.ofNat_zero),
---         expr ``(Int.ofNat_one), expr ``(Int.ofNat_bit0), expr ``(Int.ofNat_bit1),
---         expr ``(Int.mul_neg_eq_neg_mul_symm), expr ``(Int.neg_mul_eq_neg_mul_symm),
---         symm_expr ``(zpow_ofNat), symm_expr ``(zpow_neg_one), symm_expr ``(zpow_mul),
---         symm_expr ``(zpow_add_one), symm_expr ``(zpow_one_add), symm_expr ``(zpow_add),
---         expr ``(mul_zpow_neg_one), expr ``(zpow_zero), expr ``(mul_zpow), symm_expr ``(mul_assoc),
---         expr ``(Mathlib.Tactic.Group.zpow_trick), expr ``(Mathlib.Tactic.Group.zpow_trick_one),
---         expr ``(Mathlib.Tactic.Group.zpow_trick_one'), expr ``(zpow_trick_sub), expr ``(mul_one),
---         expr ``(one_mul), expr ``(one_pow), expr ``(one_zpow), expr ``(sub_self),
---         expr ``(add_neg_self), expr ``(neg_add_self), expr ``(neg_neg), expr ``(tsub_self),
---         expr ``(Int.ofNat_add), expr ``(Int.ofNat_mul), expr ``(Int.ofNat_zero),
---         expr ``(Int.ofNat_one), expr ``(Int.ofNat_bit0), expr ``(Int.ofNat_bit1),
---         expr ``(Int.mul_neg_eq_neg_mul_symm), expr ``(Int.neg_mul_eq_neg_mul_symm),
---         symm_expr ``(zpow_ofNat), symm_expr ``(zpow_neg_one), symm_expr ``(zpow_mul),
---         symm_expr ``(zpow_add_one), symm_expr ``(zpow_one_add), symm_expr ``(zpow_add),
---         expr ``(mul_zpow_neg_one), expr ``(zpow_zero), expr ``(mul_zpow), symm_expr ``(mul_assoc),
---         expr ``(Mathlib.Tactic.Group.zpow_trick), expr ``(Mathlib.Tactic.Group.zpow_trick_one),
---         expr ``(Mathlib.Tactic.Group.zpow_trick_one'), expr ``(zpow_trick_sub),
---         expr ``(Tactic.Ring.horner)]
---       [] locat >>
---     skip
--- #align tactic.interactive.aux_group_action tactic.interactive.aux_group_action
+    one_pow,
+    one_zpow,
+    mul_zpow_neg_one,
+    zpow_zero,
+    mul_zpow,
+    zpow_sub,
+    zpow_ofNat,
+    zpow_neg_one,
+    <-zpow_mul,
+    zpow_add_one,
+    zpow_one_add,
+    zpow_add,
 
--- /-- Tactic for normalizing expressions in group actions, without assuming
--- commutativity, using only the group axioms without any information about
--- which group is manipulated.
--- Example:
--- ```lean
--- example {G α : Type} [group G] [mul_action G α] (a b : G) (x y : α) (h : a • b • x = a • y) : b⁻¹ • y = x :=
--- begin
---   group_action at h, -- normalizes `h` which becomes `h : c = d`
---   rw ← h,            -- the goal is now `a*d*d⁻¹ = a`
---   group_action       -- which then normalized and closed
--- end
--- ```
--- -/
--- unsafe def group_action (locat : parse location) : tactic Unit := do
---   aux_group_action locat
---   repeat (andthen (aux_group₂ locat) (aux_group_action locat))
--- #align tactic.interactive.group_action tactic.interactive.group_action
+    Int.ofNat_add,
+    Int.ofNat_mul,
+    Int.ofNat_zero,
+    Int.ofNat_one,
+    Int.mul_neg_eq_neg_mul_symm,
+    Int.neg_mul_eq_neg_mul_symm,
 
--- end Tactic.Interactive
+    Mathlib.Tactic.Group.zpow_trick,
+    Mathlib.Tactic.Group.zpow_trick_one,
+    Mathlib.Tactic.Group.zpow_trick_one',
 
--- add_tactic_doc
---   { Name := "group_action"
---     category := DocCategory.tactic
---     declNames := [`tactic.interactive.group_action]
---     tags := ["decision procedure", "simplification"] }
+    commutatorElement_def
+  ] $[at $location]?
+)
 
--- end GroupActionTactic
+/-- Tactic for normalizing expressions in group actions, without assuming
+commutativity, using only the group axioms without any information about
+which group is manipulated.
+Example:
+```lean
+example {G α : Type} [Group G] [MulAction G α] (a b : G) (x y : α) (h : a • b • x = a • y) : b⁻¹ • y = x := by
+  group_action at h -- normalizes `h` which becomes `h : c = d`
+  rw [←h]           -- the goal is now `a*d*d⁻¹ = a`
+  group_action      -- which then normalized and closed
+```
+-/
+syntax (name := group_action) "group_action" (location)?: tactic
+macro_rules
+  | `(tactic| group_action $[at $location]?) => `(tactic|
+    repeat (fail_if_no_progress (group_action₁ $[at $location]? <;> group $[at $location]?))
+  )
 
-/- ./././Mathport/Syntax/Translate/Tactic/Builtin.lean:73:14: unsupported tactic `group_action #[[]] -/
+example {G α: Type _} [Group G] [MulAction G α] (g h: G) (x: α): g • h • x = (g * h) • x := by
+  group_action
+
+example {G α : Type} [Group G] [MulAction G α] (a b : G) (x y : α) (h : a • b • x = a • y) : b⁻¹ • y = x := by
+  group_action at h  -- normalizes `h` which becomes `h : c = d`
+  rw [←h]            -- the goal is now `a*d*d⁻¹ = a`
+  group_action       -- which then normalized and closed
+
 example (G α : Type _) [Group G] (a b c : G) [MulAction G α] (x : α) :
     ⁅a * b, c⁆ • x = (a * ⁅b, c⁆ * a⁻¹ * ⁅a, c⁆) • x := by
-  sorry
-  trace
-    "./././Mathport/Syntax/Translate/Tactic/Builtin.lean:73:14: unsupported tactic `group_action #[[]]"
+  group_action
 
 theorem Rubin.equiv_congr_ne {ι ι' : Type _} (e : ι ≃ ι') {x y : ι} : x ≠ y → e x ≠ e y :=
   by
@@ -681,15 +691,11 @@ theorem Rubin.Period.notfix_le_period' {p : α} {g : G} {n : ℕ} (n_pos : n > 0
     pmoves (⟨i, i_lt_n⟩ : Fin n) i_pos
 #align notfix_le_period' Rubin.Period.notfix_le_period'
 
-/- ./././Mathport/Syntax/Translate/Tactic/Builtin.lean:73:14: unsupported tactic `group_action #[[]] -/
 theorem Rubin.Period.period_neutral_eq_one (p : α) : Rubin.Period.period p (1 : G) = 1 :=
   by
   have : 0 < Rubin.Period.period p (1 : G) ∧ Rubin.Period.period p (1 : G) ≤ 1 :=
     Rubin.Period.period_le_fix (by norm_num : 1 > 0)
-      (by
-        sorry
-        trace
-          "./././Mathport/Syntax/Translate/Tactic/Builtin.lean:73:14: unsupported tactic `group_action #[[]]" :
+      (by group_action :
         (1 : G) ^ 1 • p = p)
   linarith
 #align period_neutral_eq_one Rubin.Period.period_neutral_eq_one
@@ -698,7 +704,6 @@ def Rubin.Period.periods (U : Set α) (H : Subgroup G) : Set ℕ :=
   {n : ℕ | ∃ (p : α) (g : H), p ∈ U ∧ Rubin.Period.period (p : α) (g : G) = n}
 #align periods Rubin.Period.periods
 
-/- ./././Mathport/Syntax/Translate/Tactic/Builtin.lean:73:14: unsupported tactic `group_action #[[]] -/
 -- TODO: split into multiple lemmas
 theorem Rubin.Period.periods_lemmas {U : Set α} (U_nonempty : Set.Nonempty U) {H : Subgroup G}
     (exp_ne_zero : Monoid.exponent H ≠ 0) :
@@ -709,9 +714,7 @@ theorem Rubin.Period.periods_lemmas {U : Set α} (U_nonempty : Set.Nonempty U) {
   rcases Monoid.exponentExists_iff_ne_zero.2 exp_ne_zero with ⟨m, m_pos, gm_eq_one⟩
   have gmp_eq_p : ∀ (p : α) (g : H), g ^ m • p = p := by
     intro p g; rw [gm_eq_one g];
-    sorry
-    trace
-      "./././Mathport/Syntax/Translate/Tactic/Builtin.lean:73:14: unsupported tactic `group_action #[[]]"
+    group_action
   have periods_nonempty : (Rubin.Period.periods U H).Nonempty := by
     use 1
     let p := Set.Nonempty.some U_nonempty; use p
@@ -1072,11 +1075,11 @@ theorem Rubin.RegularSupport.interiorClosure_mono {U V : Set α} :
 
 def Set.is_regular_open (U : Set α) :=
   Rubin.RegularSupport.InteriorClosure U = U
-#align Set.is_regular_open Set.is_regular_open
+#align set.is_regular_open Set.is_regular_open
 
 theorem Set.is_regular_def (U : Set α) :
     U.is_regular_open ↔ Rubin.RegularSupport.InteriorClosure U = U := by rfl
-#align Set.is_regular_def Set.is_regular_def
+#align set.is_regular_def Set.is_regular_def
 
 theorem Rubin.RegularSupport.IsOpen.in_closure {U : Set α} : IsOpen U → U ⊆ interior (closure U) :=
   by
