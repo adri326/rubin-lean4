@@ -17,19 +17,16 @@ import Mathlib.Topology.Separation
 import Mathlib.Topology.Homeomorph
 
 import Rubin.Tactic
+import Rubin.MulActionExt
+import Rubin.SmulImage
+import Rubin.Support
 
 #align_import rubin
 
 namespace Rubin
 open Rubin.Tactic
 
--- TODO: remove
---@[simp]
-theorem GroupActionExt.smul_smul' {G α : Type _} [Group G] [MulAction G α] {g h : G} {x : α} :
-    g • h • x = (g * h) • x :=
-  smul_smul g h x
-#align smul_smul' Rubin.GroupActionExt.smul_smul'
-
+-- TODO: find a home
 theorem equiv_congr_ne {ι ι' : Type _} (e : ι ≃ ι') {x y : ι} : x ≠ y → e x ≠ e y :=
   by
   intro x_ne_y
@@ -38,14 +35,6 @@ theorem equiv_congr_ne {ι ι' : Type _} (e : ι ≃ ι') {x y : ι} : x ≠ y �
   convert congr_arg e.symm h <;> simp only [Equiv.symm_apply_apply]
 #align equiv.congr_ne Rubin.equiv_congr_ne
 
--- this definitely should be added to mathlib!
-@[simp, to_additive]
-theorem GroupActionExt.subgroup_mk_smul {G α : Type _} [Group G] [MulAction G α]
-    {S : Subgroup G} {g : G} (hg : g ∈ S) (a : α) : (⟨g, hg⟩ : S) • a = g • a :=
-  rfl
-#align Subgroup.mk_smul Rubin.GroupActionExt.subgroup_mk_smul
-#align add_subgroup.mk_vadd AddSubgroup.mk_vadd
-
 ----------------------------------------------------------------
 section Rubin
 
@@ -53,9 +42,6 @@ variable {G α β : Type _} [Group G]
 
 ----------------------------------------------------------------
 section Groups
-
-theorem bracket_mul {f g : G} : ⁅f, g⁆ = f * g * f⁻¹ * g⁻¹ := by tauto
-#align bracket_mul Rubin.bracket_mul
 
 def is_algebraically_disjoint (f g : G) :=
   ∀ h : G,
@@ -78,307 +64,10 @@ theorem orbit_bot (G : Type _) [Group G] [MulAction G α] (p : α) :
   rw [MulAction.mem_orbit_iff]
   constructor
   · rintro ⟨⟨_, g_bot⟩, g_to_x⟩
-    rw [← g_to_x, Set.mem_singleton_iff, Rubin.GroupActionExt.subgroup_mk_smul]
+    rw [← g_to_x, Set.mem_singleton_iff, Subgroup.mk_smul]
     exact (Subgroup.mem_bot.mp g_bot).symm ▸ one_smul _ _
   exact fun h => ⟨1, Eq.trans (one_smul _ p) (Set.mem_singleton_iff.mp h).symm⟩
 #align orbit_bot Rubin.orbit_bot
-
---------------------------------
-section SmulImage
-
-theorem GroupActionExt.smul_congr (g : G) {x y : α} (h : x = y) : g • x = g • y :=
-  congr_arg ((· • ·) g) h
-#align smul_congr Rubin.GroupActionExt.smul_congr
-
-theorem GroupActionExt.smul_eq_iff_inv_smul_eq {x : α} {g : G} : g • x = x ↔ g⁻¹ • x = x :=
-  ⟨fun h => (Rubin.GroupActionExt.smul_congr g⁻¹ h).symm.trans (inv_smul_smul g x), fun h =>
-    (Rubin.GroupActionExt.smul_congr g h).symm.trans (smul_inv_smul g x)⟩
-#align smul_eq_iff_inv_smul_eq Rubin.GroupActionExt.smul_eq_iff_inv_smul_eq
-
-theorem GroupActionExt.smul_pow_eq_of_smul_eq {x : α} {g : G} (n : ℕ) :
-    g • x = x → g ^ n • x = x := by
-  induction n with
-  | zero => simp only [pow_zero, one_smul, eq_self_iff_true, imp_true_iff]
-  | succ n n_ih =>
-    intro h
-    nth_rw 2 [← (Rubin.GroupActionExt.smul_congr g (n_ih h)).trans h]
-    rw [← mul_smul, ← pow_succ]
-#align smul_pow_eq_of_smul_eq Rubin.GroupActionExt.smul_pow_eq_of_smul_eq
-
-theorem GroupActionExt.smul_zpow_eq_of_smul_eq {x : α} {g : G} (n : ℤ) :
-    g • x = x → g ^ n • x = x := by
-  intro h
-  cases n with
-  | ofNat n => let res := Rubin.GroupActionExt.smul_pow_eq_of_smul_eq n h; simp; exact res
-  | negSucc n =>
-    let res :=
-      smul_eq_iff_inv_smul_eq.mp (Rubin.GroupActionExt.smul_pow_eq_of_smul_eq (1 + n) h);
-    simp
-    rw [add_comm]
-    exact res
-#align smul_zpow_eq_of_smul_eq Rubin.GroupActionExt.smul_zpow_eq_of_smul_eq
-
-def GroupActionExt.is_equivariant (G : Type _) {β : Type _} [Group G] [MulAction G α]
-    [MulAction G β] (f : α → β) :=
-  ∀ g : G, ∀ x : α, f (g • x) = g • f x
-#align is_equivariant Rubin.GroupActionExt.is_equivariant
-
-def SmulImage.smulImage' (g : G) (U : Set α) :=
-  {x | g⁻¹ • x ∈ U}
-#align subset_img' Rubin.SmulImage.smulImage'
-
-def SmulImage.smul_preimage' (g : G) (U : Set α) :=
-  {x | g • x ∈ U}
-#align subset_preimg' Rubin.SmulImage.smul_preimage'
-
-def SmulImage.SmulImage (g : G) (U : Set α) :=
-  (· • ·) g '' U
-#align subset_img Rubin.SmulImage.SmulImage
-
-infixl:60 "•''" => Rubin.SmulImage.SmulImage
-
-theorem SmulImage.smulImage_def {g : G} {U : Set α} : g•''U = (· • ·) g '' U :=
-  rfl
-#align subset_img_def Rubin.SmulImage.smulImage_def
-
-theorem SmulImage.mem_smulImage {x : α} {g : G} {U : Set α} : x ∈ g•''U ↔ g⁻¹ • x ∈ U :=
-  by
-  rw [Rubin.SmulImage.smulImage_def, Set.mem_image ((· • ·) g) U x]
-  constructor
-  · rintro ⟨y, yU, gyx⟩
-    let ygx : y = g⁻¹ • x := inv_smul_smul g y ▸ Rubin.GroupActionExt.smul_congr g⁻¹ gyx
-    exact ygx ▸ yU
-  · intro h
-    exact ⟨g⁻¹ • x, ⟨Set.mem_preimage.mp h, smul_inv_smul g x⟩⟩
-#align mem_smul'' Rubin.SmulImage.mem_smulImage
-
-theorem SmulImage.mem_inv_smulImage {x : α} {g : G} {U : Set α} : x ∈ g⁻¹•''U ↔ g • x ∈ U :=
-  by
-  let msi := @Rubin.SmulImage.mem_smulImage _ _ _ _ x g⁻¹ U
-  rw [inv_inv] at msi
-  exact msi
-#align mem_inv_smul'' Rubin.SmulImage.mem_inv_smulImage
-
-theorem SmulImage.mul_smulImage (g h : G) (U : Set α) : g * h•''U = g•''(h•''U) :=
-  by
-  ext
-  rw [Rubin.SmulImage.mem_smulImage, Rubin.SmulImage.mem_smulImage, Rubin.SmulImage.mem_smulImage, ←
-    mul_smul, mul_inv_rev]
-#align mul_smul'' Rubin.SmulImage.mul_smulImage
-
-@[simp]
-theorem SmulImage.smulImage_smulImage {g h : G} {U : Set α} : g•''(h•''U) = g * h•''U :=
-  (Rubin.SmulImage.mul_smulImage g h U).symm
-#align smul''_smul'' Rubin.SmulImage.smulImage_smulImage
-
-@[simp]
-theorem SmulImage.one_smulImage (U : Set α) : (1 : G)•''U = U :=
-  by
-  ext
-  rw [Rubin.SmulImage.mem_smulImage, inv_one, one_smul]
-#align one_smul'' Rubin.SmulImage.one_smulImage
-
-theorem SmulImage.disjoint_smulImage (g : G) {U V : Set α} :
-    Disjoint U V → Disjoint (g•''U) (g•''V) :=
-  by
-  intro disjoint_U_V
-  rw [Set.disjoint_left]
-  rw [Set.disjoint_left] at disjoint_U_V
-  intro x x_in_gU
-  by_contra h
-  exact (disjoint_U_V (mem_smulImage.mp x_in_gU)) (mem_smulImage.mp h)
-#align disjoint_smul'' Rubin.SmulImage.disjoint_smulImage
-
--- TODO: check if this is actually needed
-theorem SmulImage.smulImage_congr (g : G) {U V : Set α} : U = V → g•''U = g•''V :=
-  congr_arg fun W : Set α => g•''W
-#align smul''_congr Rubin.SmulImage.smulImage_congr
-
-theorem SmulImage.smulImage_subset (g : G) {U V : Set α} : U ⊆ V → g•''U ⊆ g•''V :=
-  by
-  intro h1 x
-  rw [Rubin.SmulImage.mem_smulImage, Rubin.SmulImage.mem_smulImage]
-  exact fun h2 => h1 h2
-#align smul''_subset Rubin.SmulImage.smulImage_subset
-
-theorem SmulImage.smulImage_union (g : G) {U V : Set α} : g•''U ∪ V = (g•''U) ∪ (g•''V) :=
-  by
-  ext
-  rw [Rubin.SmulImage.mem_smulImage, Set.mem_union, Set.mem_union, Rubin.SmulImage.mem_smulImage,
-    Rubin.SmulImage.mem_smulImage]
-#align smul''_union Rubin.SmulImage.smulImage_union
-
-theorem SmulImage.smulImage_inter (g : G) {U V : Set α} : g•''U ∩ V = (g•''U) ∩ (g•''V) :=
-  by
-  ext
-  rw [Set.mem_inter_iff, Rubin.SmulImage.mem_smulImage, Rubin.SmulImage.mem_smulImage,
-    Rubin.SmulImage.mem_smulImage, Set.mem_inter_iff]
-#align smul''_inter Rubin.SmulImage.smulImage_inter
-
-theorem SmulImage.smulImage_eq_inv_preimage {g : G} {U : Set α} : g•''U = (· • ·) g⁻¹ ⁻¹' U :=
-  by
-  ext
-  constructor
-  · intro h; rw [Set.mem_preimage]; exact mem_smulImage.mp h
-  · intro h; rw [Rubin.SmulImage.mem_smulImage]; exact Set.mem_preimage.mp h
-#align smul''_eq_inv_preimage Rubin.SmulImage.smulImage_eq_inv_preimage
-
-theorem SmulImage.smulImage_eq_of_smul_eq {g h : G} {U : Set α} :
-    (∀ x ∈ U, g • x = h • x) → g•''U = h•''U :=
-  by
-  intro hU
-  ext x
-  rw [Rubin.SmulImage.mem_smulImage, Rubin.SmulImage.mem_smulImage]
-  constructor
-  · intro k; let a := congr_arg ((· • ·) h⁻¹) (hU (g⁻¹ • x) k);
-    simp only [smul_inv_smul, inv_smul_smul] at a ; exact Set.mem_of_eq_of_mem a k
-  · intro k; let a := congr_arg ((· • ·) g⁻¹) (hU (h⁻¹ • x) k);
-    simp only [smul_inv_smul, inv_smul_smul] at a ; exact Set.mem_of_eq_of_mem a.symm k
-#align smul''_eq_of_smul_eq Rubin.SmulImage.smulImage_eq_of_smul_eq
-
-end SmulImage
-
---------------------------------
-section Support
-
-def SmulSupport.Support (α : Type _) [MulAction G α] (g : G) :=
-  {x : α | g • x ≠ x}
-#align support Rubin.SmulSupport.Support
-
-theorem SmulSupport.support_eq_not_fixed_by {g : G}:
-    Rubin.SmulSupport.Support α g = (MulAction.fixedBy α g)ᶜ := by tauto
-#align support_eq_not_fixed_by Rubin.SmulSupport.support_eq_not_fixed_by
-
-theorem SmulSupport.mem_support {x : α} {g : G} :
-    x ∈ Rubin.SmulSupport.Support α g ↔ g • x ≠ x := by tauto
-#align mem_support Rubin.SmulSupport.mem_support
-
-theorem SmulSupport.not_mem_support {x : α} {g : G} :
-    x ∉ Rubin.SmulSupport.Support α g ↔ g • x = x := by
-  rw [Rubin.SmulSupport.mem_support, Classical.not_not]
-#align mem_not_support Rubin.SmulSupport.not_mem_support
-
-theorem SmulSupport.smul_mem_support {g : G} {x : α} :
-    x ∈ Rubin.SmulSupport.Support α g → g • x ∈ Rubin.SmulSupport.Support α g := fun h =>
-  h ∘ smul_left_cancel g
-#align smul_in_support Rubin.SmulSupport.smul_mem_support
-
-theorem SmulSupport.inv_smul_mem_support {g : G} {x : α} :
-    x ∈ Rubin.SmulSupport.Support α g → g⁻¹ • x ∈ Rubin.SmulSupport.Support α g := fun h k =>
-  h (smul_inv_smul g x ▸ Rubin.GroupActionExt.smul_congr g k)
-#align inv_smul_in_support Rubin.SmulSupport.inv_smul_mem_support
-
-theorem SmulSupport.fixed_of_disjoint {g : G} {x : α} {U : Set α} :
-    x ∈ U → Disjoint U (Rubin.SmulSupport.Support α g) → g • x = x :=
-  fun x_in_U disjoint_U_support =>
-  Rubin.SmulSupport.not_mem_support.mp (Set.disjoint_left.mp disjoint_U_support x_in_U)
-#align fixed_of_disjoint Rubin.SmulSupport.fixed_of_disjoint
-
-theorem SmulSupport.fixed_smulImage_in_support (g : G) {U : Set α} :
-    Rubin.SmulSupport.Support α g ⊆ U → g•''U = U :=
-  by
-  intro support_in_U
-  ext x
-  cases' @or_not (x ∈ Rubin.SmulSupport.Support α g) with xmoved xfixed
-  exact
-    ⟨fun _ => support_in_U xmoved, fun _ =>
-      SmulImage.mem_smulImage.mpr (support_in_U (Rubin.SmulSupport.inv_smul_mem_support xmoved))⟩
-  rw [Rubin.SmulImage.mem_smulImage, GroupActionExt.smul_eq_iff_inv_smul_eq.mp (not_mem_support.mp xfixed)]
-#align fixes_subset_within_support Rubin.SmulSupport.fixed_smulImage_in_support
-
-theorem SmulSupport.smulImage_subset_in_support (g : G) (U V : Set α) :
-    U ⊆ V → Rubin.SmulSupport.Support α g ⊆ V → g•''U ⊆ V := fun U_in_V support_in_V =>
-  Rubin.SmulSupport.fixed_smulImage_in_support g support_in_V ▸
-    Rubin.SmulImage.smulImage_subset g U_in_V
-#align moves_subset_within_support Rubin.SmulSupport.smulImage_subset_in_support
-
-theorem SmulSupport.support_mul (g h : G) (α : Type _) [MulAction G α] :
-    Rubin.SmulSupport.Support α (g * h) ⊆
-      Rubin.SmulSupport.Support α g ∪ Rubin.SmulSupport.Support α h :=
-  by
-  intro x x_in_support
-  by_contra h_support
-
-  let res := not_or.mp h_support
-  exact
-    x_in_support
-      ((mul_smul g h x).trans
-        ((congr_arg ((· • ·) g) (not_mem_support.mp res.2)).trans <| not_mem_support.mp res.1))
-#align support_mul Rubin.SmulSupport.support_mul
-
-theorem SmulSupport.support_conjugate (α : Type _) [MulAction G α] (g h : G) :
-    Rubin.SmulSupport.Support α (h * g * h⁻¹) = h•''Rubin.SmulSupport.Support α g :=
-  by
-  ext x
-  rw [Rubin.SmulSupport.mem_support, Rubin.SmulImage.mem_smulImage, Rubin.SmulSupport.mem_support,
-    mul_smul, mul_smul]
-  constructor
-  · intro h1; by_contra h2; exact h1 ((congr_arg ((· • ·) h) h2).trans (smul_inv_smul _ _))
-  · intro h1; by_contra h2; exact h1 (inv_smul_smul h (g • h⁻¹ • x) ▸ congr_arg ((· • ·) h⁻¹) h2)
-#align support_conjugate Rubin.SmulSupport.support_conjugate
-
-theorem SmulSupport.support_inv (α : Type _) [MulAction G α] (g : G) :
-    Rubin.SmulSupport.Support α g⁻¹ = Rubin.SmulSupport.Support α g :=
-  by
-  ext x
-  rw [Rubin.SmulSupport.mem_support, Rubin.SmulSupport.mem_support]
-  constructor
-  · intro h1; by_contra h2; exact h1 (GroupActionExt.smul_eq_iff_inv_smul_eq.mp h2)
-  · intro h1; by_contra h2; exact h1 (GroupActionExt.smul_eq_iff_inv_smul_eq.mpr h2)
-#align support_inv Rubin.SmulSupport.support_inv
-
-theorem SmulSupport.support_pow (α : Type _) [MulAction G α] (g : G) (j : ℕ) :
-    Rubin.SmulSupport.Support α (g ^ j) ⊆ Rubin.SmulSupport.Support α g :=
-  by
-  intro x xmoved
-  by_contra xfixed
-  rw [Rubin.SmulSupport.mem_support] at xmoved
-  induction j with
-  | zero => apply xmoved; rw [pow_zero g, one_smul]
-  | succ j j_ih =>
-    apply xmoved
-    let j_ih := (congr_arg ((· • ·) g) (not_not.mp j_ih)).trans (not_mem_support.mp xfixed)
-    simp at j_ih
-    rw [← mul_smul, ← pow_succ] at j_ih
-    exact j_ih
-#align support_pow Rubin.SmulSupport.support_pow
-
-theorem SmulSupport.support_comm (α : Type _) [MulAction G α] (g h : G) :
-    Rubin.SmulSupport.Support α ⁅g, h⁆ ⊆
-      Rubin.SmulSupport.Support α h ∪ (g•''Rubin.SmulSupport.Support α h) :=
-  by
-  intro x x_in_support
-  by_contra all_fixed
-  rw [Set.mem_union] at all_fixed
-  cases' @or_not (h • x = x) with xfixed xmoved
-  · rw [Rubin.SmulSupport.mem_support, Rubin.bracket_mul, mul_smul,
-      GroupActionExt.smul_eq_iff_inv_smul_eq.mp xfixed, ← Rubin.SmulSupport.mem_support] at x_in_support
-    exact
-      ((Rubin.SmulSupport.support_conjugate α h g).symm ▸ (not_or.mp all_fixed).2)
-        x_in_support
-  · exact all_fixed (Or.inl xmoved)
-#align support_comm Rubin.SmulSupport.support_comm
-
-theorem SmulSupport.disjoint_support_comm (f g : G) {U : Set α} :
-    Rubin.SmulSupport.Support α f ⊆ U → Disjoint U (g•''U) → ∀ x ∈ U, ⁅f, g⁆ • x = f • x :=
-  by
-  intro support_in_U disjoint_U x x_in_U
-  have support_conj : Rubin.SmulSupport.Support α (g * f⁻¹ * g⁻¹) ⊆ g•''U :=
-    ((Rubin.SmulSupport.support_conjugate α f⁻¹ g).trans
-          (Rubin.SmulImage.smulImage_congr g (Rubin.SmulSupport.support_inv α f))).symm ▸
-      Rubin.SmulImage.smulImage_subset g support_in_U
-  have goal :=
-    (congr_arg ((· • ·) f)
-        (Rubin.SmulSupport.fixed_of_disjoint x_in_U
-          (Set.disjoint_of_subset_right support_conj disjoint_U))).symm
-  simp at goal
-  sorry
-  -- rw [mul_smul, mul_smul] at goal
-
-  -- exact goal.symm
-#align disjoint_support_comm Rubin.SmulSupport.disjoint_support_comm
-
-end Support
 
 -- comment by Cedric: would be nicer to define just a subset, and then show it is a subgroup
 def rigidStabilizer' (G : Type _) [Group G] [MulAction G α] (U : Set α) : Set G :=
@@ -390,12 +79,12 @@ def rigidStabilizer (G : Type _) [Group G] [MulAction G α] (U : Set α) : Subgr
     where
   carrier := {g : G | ∀ (x) (_ : x ∉ U), g • x = x}
   mul_mem' ha hb x x_notin_U := by rw [mul_smul, hb x x_notin_U, ha x x_notin_U]
-  inv_mem' hg x x_notin_U := Rubin.GroupActionExt.smul_eq_iff_inv_smul_eq.mp (hg x x_notin_U)
+  inv_mem' hg x x_notin_U := smul_eq_iff_inv_smul_eq.mp (hg x x_notin_U)
   one_mem' x _ := one_smul G x
 #align rigid_stabilizer Rubin.rigidStabilizer
 
 theorem rist_supported_in_set {g : G} {U : Set α} :
-    g ∈ rigidStabilizer G U → Rubin.SmulSupport.Support α g ⊆ U := fun h x x_in_support =>
+    g ∈ rigidStabilizer G U → Support α g ⊆ U := fun h x x_in_support =>
   by_contradiction (x_in_support ∘ h x)
 #align rist_supported_in_set Rubin.rist_supported_in_set
 
@@ -421,18 +110,18 @@ class Topological.ContinuousMulAction (G α : Type _) [Group G] [TopologicalSpac
 
 structure Topological.equivariant_homeomorph (G α β : Type _) [Group G] [TopologicalSpace α]
     [TopologicalSpace β] [MulAction G α] [MulAction G β] extends Homeomorph α β where
-  equivariant : GroupActionExt.is_equivariant G toFun
+  equivariant : is_equivariant G toFun
 #align equivariant_homeomorph Rubin.Topological.equivariant_homeomorph
 
 theorem Topological.equivariant_fun [MulAction G α] [MulAction G β]
     (h : Rubin.Topological.equivariant_homeomorph G α β) :
-    Rubin.GroupActionExt.is_equivariant G h.toFun :=
+    is_equivariant G h.toFun :=
   h.equivariant
 #align equivariant_fun Rubin.Topological.equivariant_fun
 
 theorem Topological.equivariant_inv [MulAction G α] [MulAction G β]
     (h : Rubin.Topological.equivariant_homeomorph G α β) :
-    Rubin.GroupActionExt.is_equivariant G h.invFun :=
+    is_equivariant G h.invFun :=
   by
   intro g x
   symm
@@ -444,27 +133,27 @@ theorem Topological.equivariant_inv [MulAction G α] [MulAction G β]
 variable [Rubin.Topological.ContinuousMulAction G α]
 
 theorem Topological.img_open_open (g : G) (U : Set α) (h : IsOpen U)
-    [Rubin.Topological.ContinuousMulAction G α] : IsOpen (g•''U) :=
+    [Rubin.Topological.ContinuousMulAction G α] : IsOpen (g •'' U) :=
   by
-  rw [Rubin.SmulImage.smulImage_eq_inv_preimage]
+  rw [Rubin.smulImage_eq_inv_preimage]
   exact Continuous.isOpen_preimage (Rubin.Topological.ContinuousMulAction.continuous g⁻¹) U h
 #align img_open_open Rubin.Topological.img_open_open
 
 theorem Topological.support_open (g : G) [TopologicalSpace α] [T2Space α]
-    [Rubin.Topological.ContinuousMulAction G α] : IsOpen (Rubin.SmulSupport.Support α g) :=
+    [Rubin.Topological.ContinuousMulAction G α] : IsOpen (Support α g) :=
   by
   apply isOpen_iff_forall_mem_open.mpr
   intro x xmoved
   rcases T2Space.t2 (g • x) x xmoved with ⟨U, V, open_U, open_V, gx_in_U, x_in_V, disjoint_U_V⟩
   exact
-    ⟨V ∩ (g⁻¹•''U), fun y yW =>
+    ⟨V ∩ (g⁻¹ •'' U), fun y yW =>
       -- TODO: don't use @-notation here
       @Disjoint.ne_of_mem α U V disjoint_U_V (g • y)
-      (SmulImage.mem_inv_smulImage.mp (Set.mem_of_mem_inter_right yW))
+      (mem_inv_smulImage.mp (Set.mem_of_mem_inter_right yW))
       y
       (Set.mem_of_mem_inter_left yW),
       IsOpen.inter open_V (Rubin.Topological.img_open_open g⁻¹ U open_U),
-      ⟨x_in_V, SmulImage.mem_inv_smulImage.mpr gx_in_U⟩⟩
+      ⟨x_in_V, mem_inv_smulImage.mpr gx_in_U⟩⟩
 #align support_open Rubin.Topological.support_open
 
 end TopologicalActions
@@ -492,7 +181,7 @@ theorem faithful_rigid_stabilizer_moves_point {g : G} {U : Set α} :
   exact ⟨x, rist_supported_in_set g_rigid xmoved, xmoved⟩
 #align faithful_rist_moves_point Rubin.faithful_rigid_stabilizer_moves_point
 
-theorem ne_one_support_nonempty {g : G} : g ≠ 1 → (Rubin.SmulSupport.Support α g).Nonempty :=
+theorem ne_one_support_nonempty {g : G} : g ≠ 1 → (Support α g).Nonempty :=
   by
   intro h1
   cases' Rubin.faithful_moves_point'₁ α h1 with x h
@@ -500,35 +189,31 @@ theorem ne_one_support_nonempty {g : G} : g ≠ 1 → (Rubin.SmulSupport.Support
   exact h
 #align ne_one_support_nempty Rubin.ne_one_support_nonempty
 
--- FIXME: somehow clashes with another definition
-theorem disjoint_commute₁ {f g : G} :
-    Disjoint (Rubin.SmulSupport.Support α f) (Rubin.SmulSupport.Support α g) → Commute f g :=
+theorem disjoint_commute {f g : G} :
+    Disjoint (Support α f) (Support α g) → Commute f g :=
   by
   intro hdisjoint
   rw [← commutatorElement_eq_one_iff_commute]
   apply @Rubin.faithful_moves_point₁ _ α
   intro x
-  rw [Rubin.bracket_mul, mul_smul, mul_smul, mul_smul]
-  cases' @or_not (x ∈ Rubin.SmulSupport.Support α f) with hfmoved hffixed
-  ·
-    rw [GroupActionExt.smul_eq_iff_inv_smul_eq.mp (SmulSupport.not_mem_support.mp (Set.disjoint_left.mp hdisjoint hfmoved)),
-      SmulSupport.not_mem_support.mp
-        (Set.disjoint_left.mp hdisjoint (Rubin.SmulSupport.inv_smul_mem_support hfmoved)),
+  rw [commutatorElement_def, mul_smul, mul_smul, mul_smul]
+  cases' @or_not (x ∈ Support α f) with hfmoved hffixed
+  · rw [smul_eq_iff_inv_smul_eq.mp (not_mem_support.mp (Set.disjoint_left.mp hdisjoint hfmoved)),
+      not_mem_support.mp
+        (Set.disjoint_left.mp hdisjoint (inv_smul_mem_support hfmoved)),
       smul_inv_smul]
-  cases' @or_not (x ∈ Rubin.SmulSupport.Support α g) with hgmoved hgfixed
-  ·
-    rw [GroupActionExt.smul_eq_iff_inv_smul_eq.mp
-        (SmulSupport.not_mem_support.mp <|
-          Set.disjoint_right.mp hdisjoint (Rubin.SmulSupport.inv_smul_mem_support hgmoved)),
-      smul_inv_smul, SmulSupport.not_mem_support.mp hffixed]
-  ·
-    rw [
-      GroupActionExt.smul_eq_iff_inv_smul_eq.mp (SmulSupport.not_mem_support.mp hgfixed),
-      GroupActionExt.smul_eq_iff_inv_smul_eq.mp (SmulSupport.not_mem_support.mp hffixed),
-      SmulSupport.not_mem_support.mp hgfixed,
-      SmulSupport.not_mem_support.mp hffixed
+  cases' @or_not (x ∈ Support α g) with hgmoved hgfixed
+  · rw [smul_eq_iff_inv_smul_eq.mp
+        (not_mem_support.mp <|
+          Set.disjoint_right.mp hdisjoint (inv_smul_mem_support hgmoved)),
+      smul_inv_smul, not_mem_support.mp hffixed]
+  · rw [
+      smul_eq_iff_inv_smul_eq.mp (not_mem_support.mp hgfixed),
+      smul_eq_iff_inv_smul_eq.mp (not_mem_support.mp hffixed),
+      not_mem_support.mp hgfixed,
+      not_mem_support.mp hffixed
     ]
-#align disjoint_commute Rubin.disjoint_commute₁
+#align disjoint_commute Rubin.disjoint_commute
 
 end FaithfulActions
 
@@ -707,8 +392,8 @@ def Disjointness.IsLocallyMoving (G α : Type _) [Group G] [TopologicalSpace α]
 --   split,
 --   exact ⟨mem_inv_smul''.mpr gx_in_V,x_in_W⟩,
 --   exact Set.disjoint_of_subset
---     (Set.inter_subset_right (g⁻¹•''V) W)
---     (λ y hy, smul_inv_smul g y ▸ mem_inv_smul''.mp (Set.mem_of_mem_inter_left (mem_smulImage.mp hy)) : g•''U ⊆ V)
+--     (Set.inter_subset_right (g⁻¹ •'' V) W)
+--     (λ y hy, smul_inv_smul g y ▸ mem_inv_smul''.mp (Set.mem_of_mem_inter_left (mem_smulImage.mp hy)) : g •'' U ⊆ V)
 --     disjoint_V_W.symm
 -- end
 -- lemma disjoint_nbhd_in {g : G} {x : α} [t2_space α] {V : set α} : is_open V → x ∈ V → g • x ≠ x → ∃U : set α, is_open U ∧ x ∈ U ∧ U ⊆ V ∧ disjoint U (g •'' U) := begin
@@ -724,7 +409,7 @@ def Disjointness.IsLocallyMoving (G α : Type _) [Group G] [TopologicalSpace α]
 --   exact Set.inter_subset_right W V,
 --   exact Set.disjoint_of_subset
 --     (Set.inter_subset_left W V)
---     ((@smul''_inter _ _ _ _ g W V).symm ▸ Set.inter_subset_left (g•''W) (g•''V) : g•''U ⊆ g•''W)
+--     ((@smul''_inter _ _ _ _ g W V).symm ▸ Set.inter_subset_left (g •'' W) (g •'' V) : g •'' U ⊆ g •'' W)
 --     disjoint_W
 -- end
 -- lemma rewrite_Union (f : fin 2 × fin 2 → set α) : (⋃(i : fin 2 × fin 2), f i) = (f (0,0) ∪ f (0,1)) ∪ (f (1,0) ∪ f (1,1)) := begin
@@ -743,12 +428,12 @@ def Disjointness.IsLocallyMoving (G α : Type _) [Group G] [TopologicalSpace α]
 --   cases Set.not_disjoint_iff.mp (mt (@disjoint_commute G α _ _ _ _ _) hfh) with x hx,
 --   let x_in_support_f := hx.1,
 --   let hx_ne_x := mem_support.mp hx.2,
--- -- so since α is Hausdoff there is V nonempty ⊆ support α f with h•''V disjoint from V
+-- -- so since α is Hausdoff there is V nonempty ⊆ support α f with h •'' V disjoint from V
 --   rcases disjoint_nbhd_in (support_open f) x_in_support_f hx_ne_x with ⟨V,open_V,x_in_V,V_in_support,disjoint_img_V⟩,
 --   let ristV_ne_bot := locally_moving V open_V (Set.nonempty_of_mem x_in_V),
 -- -- let f₂ be a nontrivial element of rigid_stabilizer G V
 --   rcases (or_iff_right ristV_ne_bot).mp (Subgroup.bot_or_exists_ne_one _) with ⟨f₂,f₂_in_ristV,f₂_ne_one⟩,
--- -- again since α is Hausdorff there is W nonempty ⊆ V with f₂•''W disjoint from W
+-- -- again since α is Hausdorff there is W nonempty ⊆ V with f₂ •'' W disjoint from W
 --   rcases faithful_moves_point' α f₂_ne_one with ⟨y,ymoved⟩,
 --   let y_in_V : y ∈ V := (rist_supported_in_set f₂_in_ristV) (mem_support.mpr ymoved),
 --   rcases disjoint_nbhd_in open_V y_in_V ymoved with ⟨W,open_W,y_in_W,W_in_V,disjoint_img_W⟩,
@@ -1003,7 +688,7 @@ theorem RegularSupport.regular_interior_closure (U : Set α) :
 #align regular_interior_closure Rubin.RegularSupport.regular_interior_closure
 
 def RegularSupport.RegularSupport (α : Type _) [TopologicalSpace α] [MulAction G α] (g : G) :=
-  Rubin.RegularSupport.InteriorClosure (Rubin.SmulSupport.Support α g)
+  Rubin.RegularSupport.InteriorClosure (Support α g)
 #align regular_support Rubin.RegularSupport.RegularSupport
 
 theorem RegularSupport.regularSupport_regular {g : G} :
@@ -1012,7 +697,7 @@ theorem RegularSupport.regularSupport_regular {g : G} :
 #align regular_regular_support Rubin.RegularSupport.regularSupport_regular
 
 theorem RegularSupport.support_subset_regularSupport [T2Space α] (g : G) :
-    Rubin.SmulSupport.Support α g ⊆ Rubin.RegularSupport.RegularSupport α g :=
+    Support α g ⊆ Rubin.RegularSupport.RegularSupport α g :=
   Rubin.RegularSupport.IsOpen.interiorClosure_subset (Rubin.Topological.support_open g)
 #align support_in_regular_support Rubin.RegularSupport.support_subset_regularSupport
 
@@ -1043,7 +728,7 @@ end Rubin.RegularSupport.RegularSupport
 --   have i_ne_zero : i ≠ (⟨ 0, n_pos ⟩ : fin n), { intro, done },
 --   have hcontra' : g ^ (i : ℕ) • (q : α) ∈ g ^ (i : ℕ) •'' V, exact ⟨ q, hq, rfl ⟩,
 --   have giq_notin_V := Set.disjoint_left.mp (h_disj i (⟨ 0, n_pos ⟩ : fin n) i_ne_zero) hcontra',
---   exact ((by done : g ^ 0•''V = V) ▸ giq_notin_V) hcontra
+--   exact ((by done : g ^ 0 •'' V = V) ▸ giq_notin_V) hcontra
 -- end
 -- lemma moves_inj_period {g : G} {p : α} {n : ℕ} (period_eq_n : period p g = n) : function.injective (λ (i : fin n), g ^ (i : ℕ) • p) := begin
 --   have period_ge_n : ∀ (k : ℕ), 1 ≤ k → k < n → g ^ k • p ≠ p,
@@ -1067,7 +752,7 @@ end Rubin.RegularSupport.RegularSupport
 --   have V'_ss_V : V ⊆ V' := Set.inter_subset_right U V',
 --   have V_open : is_open V := is_open.inter U_open V'_open,
 --   have p_in_V : (p : α) ∈ V := ⟨ subtype.mem p, p_in_V' ⟩,
---   have disj : ∀ (i j : fin n), ¬ i = j → disjoint (↑g ^ ↑i•''V) (↑g ^ ↑j•''V),
+--   have disj : ∀ (i j : fin n), ¬ i = j → disjoint (↑g ^ ↑i •'' V) (↑g ^ ↑j •'' V),
 --   { intros i j i_ne_j W W_ss_giV W_ss_gjV,
 --     exact disj' i j i_ne_j
 --     (Set.subset.trans W_ss_giV (smul''_subset (↑g ^ ↑i) V'_ss_V))

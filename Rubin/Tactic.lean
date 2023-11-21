@@ -1,8 +1,8 @@
 import Mathlib.GroupTheory.Subgroup.Basic
-import Mathlib.GroupTheory.Commutator
-import Mathlib.GroupTheory.GroupAction.Basic
-import Mathlib.GroupTheory.Exponent
-import Mathlib.GroupTheory.Perm.Basic
+-- import Mathlib.GroupTheory.Commutator
+-- import Mathlib.GroupTheory.GroupAction.Basic
+-- import Mathlib.GroupTheory.Exponent
+-- import Mathlib.GroupTheory.Perm.Basic
 
 import Lean.Meta.Tactic.Util
 import Lean.Elab.Tactic.Basic
@@ -36,6 +36,7 @@ theorem smul_succ {G α : Type _} (n : ℕ) [Group G] [MulAction G α] {g : G}
   rw [pow_succ, mul_smul]
 #align smul_succ Rubin.Tactic.smul_succ
 
+-- Note: calling "group" after "group_action₁" might not be a good idea, as they can end up running in a loop
 syntax (name := group_action₁) "group_action₁" (location)?: tactic
 macro_rules
   | `(tactic| group_action₁ $[at $location]?) => `(tactic| simp only [
@@ -55,16 +56,16 @@ macro_rules
 
     one_pow,
     one_zpow,
-    mul_zpow_neg_one,
+    <-mul_zpow_neg_one,
     zpow_zero,
     mul_zpow,
     zpow_sub,
     zpow_ofNat,
-    zpow_neg_one,
+    <-zpow_neg_one,
     <-zpow_mul,
-    zpow_add_one,
-    zpow_one_add,
-    zpow_add,
+    <-zpow_add_one,
+    <-zpow_one_add,
+    <-zpow_add,
 
     Int.ofNat_add,
     Int.ofNat_mul,
@@ -109,5 +110,54 @@ example {G α : Type} [Group G] [MulAction G α] (a b : G) (x y : α) (h : a •
 example (G α : Type _) [Group G] (a b c : G) [MulAction G α] (x : α) :
     ⁅a * b, c⁆ • x = (a * ⁅b, c⁆ * a⁻¹ * ⁅a, c⁆) • x := by
   group_action
+
+section PotentialLoops
+
+variable {G α : Type _}
+variable [Group G]
+variable [MulAction G α]
+variable (g f : G)
+variable (x : α)
+
+example: x = g • f⁻¹ • g⁻¹ • x ↔ g⁻¹ • x = f • g⁻¹ • x := by
+  group_action
+  constructor <;> intro h <;> exact h.symm
+
+example: x = g • f⁻¹ • g⁻¹ • x ↔ g⁻¹ • x = f • g⁻¹ • x := by
+  constructor
+  · intro h
+    group_action at h
+    nth_rewrite 2 [h]
+    group_action
+  · intro h
+    group_action at h
+    nth_rewrite 1 [<-h]
+    group_action
+
+example: x = g • f⁻¹ • g⁻¹ • x ↔ g⁻¹ • x = f⁻¹ • g⁻¹ • x := by
+  constructor
+  · intro h
+    nth_rewrite 1 [h]
+    group_action
+  · intro h
+    group_action at h
+    nth_rewrite 2 [<-h]
+    group_action
+
+example (h: (g * f ^ (-2 : ℤ) * g ^ (-1 : ℤ)) • x = x):
+  g⁻¹ • (g * f ^ (-1 : ℤ) * g ^ (-1 : ℤ)) • x = f • g⁻¹ • x :=
+by
+  group_action
+  exact h
+
+example (h: x = g • f⁻¹ • g⁻¹ • x): True := by
+  group_action at h
+  exact True.intro
+
+example (j: ℕ) (h: g • g ^ j • x = x): True := by
+  group_action at h
+  exact True.intro
+
+end PotentialLoops
 
 end Rubin.Tactic
