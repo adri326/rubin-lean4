@@ -25,7 +25,7 @@ theorem faithful_moves_point' {g : G} (α : Type _) [MulAction G α] [FaithfulSM
 #align faithful_moves_point' Rubin.faithful_moves_point'
 
 theorem faithful_rigid_stabilizer_moves_point {g : G} {U : Set α} :
-    g ∈ rigidStabilizer G U → g ≠ 1 → ∃ x ∈ U, g • x ≠ x :=
+    g ∈ RigidStabilizer G U → g ≠ 1 → ∃ x ∈ U, g • x ≠ x :=
   by
   intro g_rigid g_ne_one
   let ⟨x, xmoved⟩ := Rubin.faithful_moves_point' α g_ne_one
