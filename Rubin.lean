@@ -20,6 +20,8 @@ import Rubin.Tactic
 import Rubin.MulActionExt
 import Rubin.SmulImage
 import Rubin.Support
+import Rubin.Topological
+import Rubin.RigidStabilizer
 
 #align_import rubin
 
@@ -69,169 +71,32 @@ theorem orbit_bot (G : Type _) [Group G] [MulAction G α] (p : α) :
   exact fun h => ⟨1, Eq.trans (one_smul _ p) (Set.mem_singleton_iff.mp h).symm⟩
 #align orbit_bot Rubin.orbit_bot
 
--- comment by Cedric: would be nicer to define just a subset, and then show it is a subgroup
-def rigidStabilizer' (G : Type _) [Group G] [MulAction G α] (U : Set α) : Set G :=
-  {g : G | ∀ x : α, g • x = x ∨ x ∈ U}
-#align rigid_stabilizer' Rubin.rigidStabilizer'
-
-/- ./././Mathport/Syntax/Translate/Basic.lean:641:2: warning: expanding binder collection (x «expr ∉ » U) -/
-def rigidStabilizer (G : Type _) [Group G] [MulAction G α] (U : Set α) : Subgroup G
-    where
-  carrier := {g : G | ∀ (x) (_ : x ∉ U), g • x = x}
-  mul_mem' ha hb x x_notin_U := by rw [mul_smul, hb x x_notin_U, ha x x_notin_U]
-  inv_mem' hg x x_notin_U := smul_eq_iff_inv_smul_eq.mp (hg x x_notin_U)
-  one_mem' x _ := one_smul G x
-#align rigid_stabilizer Rubin.rigidStabilizer
-
-theorem rist_supported_in_set {g : G} {U : Set α} :
-    g ∈ rigidStabilizer G U → Support α g ⊆ U := fun h x x_in_support =>
-  by_contradiction (x_in_support ∘ h x)
-#align rist_supported_in_set Rubin.rist_supported_in_set
-
-theorem rist_ss_rist {U V : Set α} (V_ss_U : V ⊆ U) :
-    (rigidStabilizer G V : Set G) ⊆ (rigidStabilizer G U : Set G) :=
-  by
-  intro g g_in_ristV x x_notin_U
-  have x_notin_V : x ∉ V := by intro x_in_V; exact x_notin_U (V_ss_U x_in_V)
-  exact g_in_ristV x x_notin_V
-#align rist_ss_rist Rubin.rist_ss_rist
-
 end Actions
 
 ----------------------------------------------------------------
-section TopologicalActions
-
-variable [TopologicalSpace α] [TopologicalSpace β]
-
-class Topological.ContinuousMulAction (G α : Type _) [Group G] [TopologicalSpace α] extends
-    MulAction G α where
-  continuous : ∀ g : G, Continuous (@SMul.smul G α _ g)
-#align continuous_mul_action Rubin.Topological.ContinuousMulAction
-
-structure Topological.equivariant_homeomorph (G α β : Type _) [Group G] [TopologicalSpace α]
-    [TopologicalSpace β] [MulAction G α] [MulAction G β] extends Homeomorph α β where
-  equivariant : is_equivariant G toFun
-#align equivariant_homeomorph Rubin.Topological.equivariant_homeomorph
-
-theorem Topological.equivariant_fun [MulAction G α] [MulAction G β]
-    (h : Rubin.Topological.equivariant_homeomorph G α β) :
-    is_equivariant G h.toFun :=
-  h.equivariant
-#align equivariant_fun Rubin.Topological.equivariant_fun
-
-theorem Topological.equivariant_inv [MulAction G α] [MulAction G β]
-    (h : Rubin.Topological.equivariant_homeomorph G α β) :
-    is_equivariant G h.invFun :=
-  by
-  intro g x
-  symm
-  let e := congr_arg h.invFun (h.equivariant g (h.invFun x))
-  rw [h.left_inv _, h.right_inv _] at e
-  exact e
-#align equivariant_inv Rubin.Topological.equivariant_inv
-
-variable [Rubin.Topological.ContinuousMulAction G α]
-
-theorem Topological.img_open_open (g : G) (U : Set α) (h : IsOpen U)
-    [Rubin.Topological.ContinuousMulAction G α] : IsOpen (g •'' U) :=
-  by
-  rw [Rubin.smulImage_eq_inv_preimage]
-  exact Continuous.isOpen_preimage (Rubin.Topological.ContinuousMulAction.continuous g⁻¹) U h
-#align img_open_open Rubin.Topological.img_open_open
-
-theorem Topological.support_open (g : G) [TopologicalSpace α] [T2Space α]
-    [Rubin.Topological.ContinuousMulAction G α] : IsOpen (Support α g) :=
-  by
-  apply isOpen_iff_forall_mem_open.mpr
-  intro x xmoved
-  rcases T2Space.t2 (g • x) x xmoved with ⟨U, V, open_U, open_V, gx_in_U, x_in_V, disjoint_U_V⟩
-  exact
-    ⟨V ∩ (g⁻¹ •'' U), fun y yW =>
-      -- TODO: don't use @-notation here
-      @Disjoint.ne_of_mem α U V disjoint_U_V (g • y)
-      (mem_inv_smulImage.mp (Set.mem_of_mem_inter_right yW))
-      y
-      (Set.mem_of_mem_inter_left yW),
-      IsOpen.inter open_V (Rubin.Topological.img_open_open g⁻¹ U open_U),
-      ⟨x_in_V, mem_inv_smulImage.mpr gx_in_U⟩⟩
-#align support_open Rubin.Topological.support_open
-
-end TopologicalActions
-
-----------------------------------------------------------------
-section FaithfulActions
-
-variable [MulAction G α] [FaithfulSMul G α]
-
-theorem faithful_moves_point₁ {g : G} (h2 : ∀ x : α, g • x = x) : g = 1 :=
-  haveI h3 : ∀ x : α, g • x = (1 : G) • x := fun x => (h2 x).symm ▸ (one_smul G x).symm
-  eq_of_smul_eq_smul h3
-#align faithful_moves_point Rubin.faithful_moves_point₁
-
-theorem faithful_moves_point'₁ {g : G} (α : Type _) [MulAction G α] [FaithfulSMul G α] :
-    g ≠ 1 → ∃ x : α, g • x ≠ x := fun k =>
-  by_contradiction fun h => k <| Rubin.faithful_moves_point₁ <| Classical.not_exists_not.mp h
-#align faithful_moves_point' Rubin.faithful_moves_point'₁
-
-theorem faithful_rigid_stabilizer_moves_point {g : G} {U : Set α} :
-    g ∈ rigidStabilizer G U → g ≠ 1 → ∃ x ∈ U, g • x ≠ x :=
-  by
-  intro g_rigid g_ne_one
-  rcases Rubin.faithful_moves_point'₁ α g_ne_one with ⟨x, xmoved⟩
-  exact ⟨x, rist_supported_in_set g_rigid xmoved, xmoved⟩
-#align faithful_rist_moves_point Rubin.faithful_rigid_stabilizer_moves_point
-
-theorem ne_one_support_nonempty {g : G} : g ≠ 1 → (Support α g).Nonempty :=
-  by
-  intro h1
-  cases' Rubin.faithful_moves_point'₁ α h1 with x h
-  use x
-  exact h
-#align ne_one_support_nempty Rubin.ne_one_support_nonempty
-
-theorem disjoint_commute {f g : G} :
-    Disjoint (Support α f) (Support α g) → Commute f g :=
-  by
-  intro hdisjoint
-  rw [← commutatorElement_eq_one_iff_commute]
-  apply @Rubin.faithful_moves_point₁ _ α
-  intro x
-  rw [commutatorElement_def, mul_smul, mul_smul, mul_smul]
-  cases' @or_not (x ∈ Support α f) with hfmoved hffixed
-  · rw [smul_eq_iff_inv_smul_eq.mp (not_mem_support.mp (Set.disjoint_left.mp hdisjoint hfmoved)),
-      not_mem_support.mp
-        (Set.disjoint_left.mp hdisjoint (inv_smul_mem_support hfmoved)),
-      smul_inv_smul]
-  cases' @or_not (x ∈ Support α g) with hgmoved hgfixed
-  · rw [smul_eq_iff_inv_smul_eq.mp
-        (not_mem_support.mp <|
-          Set.disjoint_right.mp hdisjoint (inv_smul_mem_support hgmoved)),
-      smul_inv_smul, not_mem_support.mp hffixed]
-  · rw [
-      smul_eq_iff_inv_smul_eq.mp (not_mem_support.mp hgfixed),
-      smul_eq_iff_inv_smul_eq.mp (not_mem_support.mp hffixed),
-      not_mem_support.mp hgfixed,
-      not_mem_support.mp hffixed
-    ]
-#align disjoint_commute Rubin.disjoint_commute
-
-end FaithfulActions
-
-----------------------------------------------------------------
 section RubinActions
+open Topology
 
 variable [TopologicalSpace α] [TopologicalSpace β]
 
+-- Note: `𝓝[≠] x` is notation for `nhdsWithin x {[x]}ᶜ`, ie. the neighborhood of x not containing itself
+-- TODO: make this a class?
 def has_no_isolated_points (α : Type _) [TopologicalSpace α] :=
-  ∀ x : α, (nhdsWithin x ({x}ᶜ)) ≠ ⊥
+  ∀ x : α, 𝓝[≠] x ≠ ⊥
 #align has_no_isolated_points Rubin.has_no_isolated_points
 
 def is_locally_dense (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G α] :=
-  ∀ U : Set α, ∀ p ∈ U, p ∈ interior (closure (MulAction.orbit (rigidStabilizer G U) p))
+  ∀ U : Set α,
+  ∀ p ∈ U,
+  p ∈ interior (closure (MulAction.orbit (RigidStabilizer G U) p))
 #align is_locally_dense Rubin.is_locally_dense
 
-structure RubinAction (G α : Type _) extends Group G, TopologicalSpace α, MulAction G α,
-    FaithfulSMul G α where
+structure RubinAction (G α : Type _) extends
+  Group G,
+  TopologicalSpace α,
+  MulAction G α,
+  FaithfulSMul G α
+where
   locally_compact : LocallyCompactSpace α
   hausdorff : T2Space α
   no_isolated_points : Rubin.has_no_isolated_points α
@@ -372,7 +237,7 @@ variable [TopologicalSpace α] [Rubin.Topological.ContinuousMulAction G α] [Fai
 
 def Disjointness.IsLocallyMoving (G α : Type _) [Group G] [TopologicalSpace α]
     [MulAction G α] :=
-  ∀ U : Set α, IsOpen U → Set.Nonempty U → rigidStabilizer G U ≠ ⊥
+  ∀ U : Set α, IsOpen U → Set.Nonempty U → RigidStabilizer G U ≠ ⊥
 #align is_locally_moving Rubin.Disjointness.IsLocallyMoving
 
 -- lemma dense_locally_moving : t2_space α ∧ has_no_isolated_points α ∧ is_locally_dense G α → is_locally_moving G α := begin
@@ -702,7 +567,7 @@ theorem RegularSupport.support_subset_regularSupport [T2Space α] (g : G) :
 #align support_in_regular_support Rubin.RegularSupport.support_subset_regularSupport
 
 theorem RegularSupport.mem_regularSupport (g : G) (U : Set α) :
-    is_regular_open U → g ∈ rigidStabilizer G U → Rubin.RegularSupport.RegularSupport α g ⊆ U :=
+    is_regular_open U → g ∈ RigidStabilizer G U → Rubin.RegularSupport.RegularSupport α g ⊆ U :=
   fun U_ro g_moves =>
   (is_regular_def _).mp U_ro ▸
     Rubin.RegularSupport.interiorClosure_mono (rist_supported_in_set g_moves)

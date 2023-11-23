@@ -114,7 +114,7 @@ theorem smulImage_inter (g : G) {U V : Set α} : g •'' U ∩ V = (g •'' U) �
     Rubin.mem_smulImage, Set.mem_inter_iff]
 #align smul''_inter Rubin.smulImage_inter
 
-theorem smulImage_eq_inv_preimage {g : G} {U : Set α} : g •'' U = (· • ·) g⁻¹ ⁻¹' U :=
+theorem smulImage_eq_inv_preimage {g : G} {U : Set α} : g •'' U = (g⁻¹ • ·) ⁻¹' U :=
   by
   ext
   constructor

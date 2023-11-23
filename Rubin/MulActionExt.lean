@@ -37,6 +37,7 @@ theorem smul_zpow_eq_of_smul_eq {x : α} {g : G} (n : ℤ) :
     exact res
 #align smul_zpow_eq_of_smul_eq Rubin.smul_zpow_eq_of_smul_eq
 
+-- TODO: turn this into a structure?
 def is_equivariant (G : Type _) {β : Type _} [Group G] [MulAction G α]
     [MulAction G β] (f : α → β) :=
   ∀ g : G, ∀ x : α, f (g • x) = g • f x
