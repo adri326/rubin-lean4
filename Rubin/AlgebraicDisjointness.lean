@@ -225,29 +225,86 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
     exact z_moved h₆
 #align proposition_1_1_1 Rubin.proposition_1_1_1
 
--- @[simp] lemma smul''_mul {g h : G} {U : set α} : g •'' (h •'' U) = (g*h) •'' U :=
---   (mul_smul'' g h U).symm
--- lemma disjoint_nbhd_fin {ι : Type*} [fintype ι] {f : ι → G} {x : α} [t2_space α] : (λi : ι, f i • x).injective → ∃U : set α, is_open U ∧ x ∈ U ∧ (∀i j : ι, i ≠ j → disjoint (f i •'' U) (f j •'' U)) := begin
---   intro f_injective,
---   let disjoint_hyp := λi j (i_ne_j : i≠j), let x_moved : ((f j)⁻¹ * f i) • x ≠ x := begin
---     by_contra,
---     let := smul_congr (f j) h,
---     rw [mul_smul, ← mul_smul,mul_right_inv,one_smul] at this,
---     from i_ne_j (f_injective this),
---   end in disjoint_nbhd x_moved,
---   let ι2 := { p : ι×ι // p.1 ≠ p.2 },
---   let U := ⋂(p : ι2), (disjoint_hyp p.1.1 p.1.2 p.2).some,
---   use U,
---   split,
---   exact is_open_Inter (λp : ι2, (disjoint_hyp p.1.1 p.1.2 p.2).some_spec.1),
---   split,
---   exact Set.mem_Inter.mpr (λp : ι2, (disjoint_hyp p.1.1 p.1.2 p.2).some_spec.2.1),
---   intros i j i_ne_j,
---   let U_inc := Set.Inter_subset (λ p : ι2, (disjoint_hyp p.1.1 p.1.2 p.2).some) ⟨⟨i,j⟩,i_ne_j⟩,
---   let := (disjoint_smul'' (f j) (Set.disjoint_of_subset U_inc (smul''_subset ((f j)⁻¹ * (f i)) U_inc) (disjoint_hyp i j i_ne_j).some_spec.2.2)).symm,
---   simp only [subtype.val_eq_coe, smul''_mul, mul_inv_cancel_left] at this,
---   from this
--- end
+@[simp] lemma smulImage_mul {g h : G} {U : Set α} : g •'' (h •'' U) = (g*h) •'' U :=
+  (mul_smulImage g h U)
+
+#check isOpen_iInter_of_finite
+
+lemma smul_inj_moves {ι : Type*} [Fintype ι] [T2Space α]
+  {f : ι → G} {x : α} {i j : ι} (i_ne_j : i ≠ j)
+  (f_smul_inj : Function.Injective (fun i : ι => (f i) • x)) :
+  ((f j)⁻¹ * f i) • x ≠ x := by
+    by_contra h
+    apply i_ne_j
+    apply f_smul_inj
+    group_action
+    group_action at h
+    exact h
+
+def smul_inj_nbhd {ι : Type*} [Fintype ι] [T2Space α]
+  {f : ι → G} {x : α} {i j : ι} (i_ne_j : i ≠ j)
+  (f_smul_inj : Function.Injective (fun i : ι => (f i) • x)) :
+  Set α :=
+  (disjoint_nbhd (smul_inj_moves i_ne_j f_smul_inj)).choose
+
+lemma smul_inj_nbhd_open {ι : Type*} [Fintype ι] [T2Space α]
+  {f : ι → G} {x : α} {i j : ι} (i_ne_j : i ≠ j)
+  (f_smul_inj : Function.Injective (fun i : ι => (f i) • x)) :
+  IsOpen (smul_inj_nbhd i_ne_j f_smul_inj) :=
+by
+  exact (disjoint_nbhd (smul_inj_moves i_ne_j f_smul_inj)).choose_spec.1
+
+lemma smul_inj_nbhd_mem {ι : Type*} [Fintype ι] [T2Space α]
+  {f : ι → G} {x : α} {i j : ι} (i_ne_j : i ≠ j)
+  (f_smul_inj : Function.Injective (fun i : ι => (f i) • x)) :
+  x ∈ (smul_inj_nbhd i_ne_j f_smul_inj) :=
+by
+  exact (disjoint_nbhd (smul_inj_moves i_ne_j f_smul_inj)).choose_spec.2.1
+
+lemma smul_inj_nbhd_disjoint {ι : Type*} [Fintype ι] [T2Space α]
+  {f : ι → G} {x : α} {i j : ι} (i_ne_j : i ≠ j)
+  (f_smul_inj : Function.Injective (fun i : ι => (f i) • x)) :
+  Disjoint
+    (smul_inj_nbhd i_ne_j f_smul_inj)
+    ((f j)⁻¹ * f i •'' (smul_inj_nbhd i_ne_j f_smul_inj)) :=
+by
+  exact (disjoint_nbhd (smul_inj_moves i_ne_j f_smul_inj)).choose_spec.2.2
+
+
+lemma disjoint_nbhd_fin {ι : Type*} [Fintype ι] [T2Space α]
+  {f : ι → G} {x : α} (f_smul_inj : Function.Injective (fun i : ι => (f i) • x)):
+  ∃ U : Set α,
+  IsOpen U ∧ x ∈ U ∧ (∀ (i j : ι), i ≠ j → Disjoint (f i •'' U) (f j •'' U)) :=
+by
+  let ι₂ := { p : ι × ι | p.1 ≠ p.2 }
+  let U := ⋂(p : ι₂), smul_inj_nbhd p.prop f_smul_inj
+  use U
+
+  -- The notations provided afterwards tend to be quite ugly because we used `Exists.choose`,
+  -- but the idea is that this all boils down to applying `Exists.choose_spec`, except in the disjointness case,
+  -- where we transform `Disjoint (f i •'' U) (f j •'' U)` into `Disjoint U ((f i)⁻¹ * f j •'' U)`
+  -- and transform both instances of `U` into `N`, the neighborhood of the chosen `(i, j) ∈ ι₂`
+  repeat' constructor
+  · apply isOpen_iInter_of_finite
+    intro ⟨⟨i, j⟩, i_ne_j⟩
+    apply smul_inj_nbhd_open
+  · apply Set.mem_iInter.mpr
+    intro ⟨⟨i, j⟩, i_ne_j⟩
+    apply smul_inj_nbhd_mem
+  · intro i j i_ne_j
+    let N := smul_inj_nbhd i_ne_j f_smul_inj
+    have U_subset_N : U ⊆ N := Set.iInter_subset
+      (fun (⟨⟨i, j⟩, i_ne_j⟩ : ι₂) => (smul_inj_nbhd i_ne_j f_smul_inj))
+      ⟨⟨i, j⟩, i_ne_j⟩
+
+    rw [disjoint_comm, smulImage_disjoint_mul]
+
+    apply Set.disjoint_of_subset U_subset_N
+    · apply smulImage_subset
+      exact U_subset_N
+    · exact smul_inj_nbhd_disjoint i_ne_j f_smul_inj
+
+
 -- lemma moves_inj {g : G} {x : α} {n : ℕ} (period_ge_n : ∀ (k : ℤ), 1 ≤ k → k < n → g ^ k • x ≠ x) : function.injective (λ (i : fin n), g ^ (i : ℤ) • x) := begin
 --     intros i j same_img,
 --     by_contra i_ne_j,

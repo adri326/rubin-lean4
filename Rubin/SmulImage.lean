@@ -61,6 +61,7 @@ theorem mem_inv_smulImage {x : α} {g : G} {U : Set α} : x ∈ g⁻¹ •'' U �
   exact msi
 #align mem_inv_smul'' Rubin.mem_inv_smulImage
 
+-- TODO: rename to smulImage_mul
 @[simp]
 theorem mul_smulImage (g h : G) (U : Set α) : g •'' (h •'' U) = (g * h) •'' U :=
   by
@@ -134,5 +135,46 @@ theorem smulImage_eq_of_smul_eq {g h : G} {U : Set α} :
   · intro k; let a := congr_arg (g⁻¹ • ·) (hU (h⁻¹ • x) k);
     simp only [smul_inv_smul, inv_smul_smul] at a ; exact Set.mem_of_eq_of_mem a.symm k
 #align smul''_eq_of_smul_eq Rubin.smulImage_eq_of_smul_eq
+
+
+theorem smulImage_subset_inv {G α : Type _} [Group G] [MulAction G α]
+  (f : G) (U V : Set α) :
+  f •'' U ⊆ V ↔ U ⊆ f⁻¹ •'' V :=
+by
+  constructor
+  · intro h
+    apply smulImage_subset f⁻¹ at h
+    rw [mul_smulImage] at h
+    rw [mul_left_inv, one_smulImage] at h
+    exact h
+  · intro h
+    apply smulImage_subset f at h
+    rw [mul_smulImage] at h
+    rw [mul_right_inv, one_smulImage] at h
+    exact h
+
+theorem smulImage_subset_inv' {G α : Type _} [Group G] [MulAction G α]
+  (f : G) (U V : Set α) :
+  f⁻¹ •'' U ⊆ V ↔ U ⊆ f •'' V :=
+by
+  nth_rewrite 2 [<-inv_inv f]
+  exact smulImage_subset_inv f⁻¹ U V
+
+theorem smulImage_disjoint_mul {G α : Type _} [Group G] [MulAction G α]
+  (f g : G) (U : Set α) :
+  Disjoint (f •'' U) (g •'' U) ↔ Disjoint U ((f⁻¹ * g) •'' U) := by
+  constructor
+  · intro h
+    apply disjoint_smulImage f⁻¹ at h
+    repeat rw [mul_smulImage] at h
+    rw [mul_left_inv, one_smulImage] at h
+    exact h
+
+  · intro h
+    apply disjoint_smulImage f at h
+    rw [mul_smulImage] at h
+    rw [<-mul_assoc] at h
+    rw [mul_right_inv, one_mul] at h
+    exact h
 
 end Rubin
