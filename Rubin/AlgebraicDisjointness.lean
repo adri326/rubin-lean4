@@ -3,6 +3,7 @@ import Mathlib.GroupTheory.Subgroup.Basic
 import Mathlib.GroupTheory.Subgroup.Actions
 import Mathlib.GroupTheory.Commutator
 import Mathlib.Topology.Basic
+import Mathlib.Data.Fintype.Perm
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.IntervalCases
 
@@ -34,88 +35,58 @@ by
 
 end LocallyMoving
 
--- def AlgebraicallyDisjoint {G : Type _} [Group G] (f g : G) :=
---   ∀ h : G,
---     ¬Commute f h →
---       ∃ f₁ f₂ : G, Commute f₁ g ∧ Commute f₂ g ∧ Commute ⁅f₁, ⁅f₂, h⁆⁆ g ∧ ⁅f₁, ⁅f₂, h⁆⁆ ≠ 1
--- #align is_algebraically_disjoint Rubin.AlgebraicallyDisjoint
+structure AlgebraicallyDisjointElem {G : Type _} [Group G] (f g h : G) :=
+  non_commute: ¬Commute f h
+  fst : G
+  snd : G
+  fst_commute : Commute fst g
+  snd_commute : Commute snd g
+  comm_elem_commute : Commute ⁅fst, ⁅snd, h⁆⁆ g
+  comm_elem_nontrivial : ⁅fst, ⁅snd, h⁆⁆ ≠ 1
 
--- TODO: move to a different file
-def NonCommuteWith {G : Type _} [Group G] (g : G) : Type* :=
-  { f : G // ¬Commute f g }
+namespace AlgebraicallyDisjointElem
 
-namespace NonCommuteWith
-
-theorem not_commute {G : Type _} [Group G] (g : G) (f : NonCommuteWith g) : ¬Commute f.val g := f.prop
-
-theorem symm {G : Type _} [Group G] (g : G) (f : NonCommuteWith g) : ¬Commute g f.val := by
-  intro h
-  exact f.prop h.symm
-
-def mk {G : Type _} [Group G] {f g : G} (nc: ¬Commute f g) : NonCommuteWith g :=
-  ⟨f, nc⟩
-
-def mk_symm {G : Type _} [Group G] {f g : G} (nc: ¬Commute f g) : NonCommuteWith f :=
-  ⟨g, (by
-    intro h
-    symm at h
-    exact nc h
-  )⟩
+def comm_elem {G : Type _} [Group G] {f g h : G} (disj_elem : AlgebraicallyDisjointElem f g h) : G :=
+  ⁅disj_elem.fst, ⁅disj_elem.snd, h⁆⁆
 
 @[simp]
-theorem coe_mk {G : Type _} [Group G] {f g : G} {nc: ¬Commute f g}: (mk nc).val = f := by
-  unfold mk
+theorem comm_elem_eq {G : Type _} [Group G] {f g h : G} (disj_elem : AlgebraicallyDisjointElem f g h) :
+  disj_elem.comm_elem = ⁅disj_elem.fst, ⁅disj_elem.snd, h⁆⁆ :=
+by
+  unfold comm_elem
   simp
 
-@[simp]
-theorem coe_mk_symm {G : Type _} [Group G] {f g : G} {nc: ¬Commute f g}: (mk_symm nc).val = g := by
-  unfold mk_symm
-  simp
+end AlgebraicallyDisjointElem
 
-end NonCommuteWith
+/--
+A pair (f, g) is said to be "algebraically disjoint" if it can produce an instance of
+[`AlgebraicallyDisjointElem`] for any element `h ∈ G` such that `f` and `h` don't commute.
 
-class AlgebraicallyDisjoint {G : Type _} [Group G] (f g : G) :=
-  pair : ∀ (_h : NonCommuteWith f), G × G
-  pair_commute : ∀ (h : NonCommuteWith f), Commute (pair h).1 g ∧ Commute (pair h).2 g ∧ Commute ⁅(pair h).1, ⁅(pair h).2, h.val⁆⁆ g
-  pair_nontrivial : ∀ (h : NonCommuteWith f), ⁅(pair h).1, ⁅(pair h).2, h.val⁆⁆ ≠ 1
+In other words, `g` is algebraically disjoint from `f` if `∀ h ∈ G`, with `⁅f, h⁆ ≠ 1`,
+there exists a pair `f₁, f₂ ∈ Centralizer(g, G)`,
+so that `⁅f₁, ⁅f₂, h⁆⁆` is a nontrivial element of `Centralizer(g, G)`.
+
+Here the definition of `k ∈ Centralizer(g, G)` is directly unrolled as `Commute k g`.
+
+This is a slightly stronger proposition that plain disjointness, a
+-/
+def AlgebraicallyDisjoint {G : Type _} [Group G] (f g : G) :=
+  ∀ (h : G), ¬Commute f h → AlgebraicallyDisjointElem f g h
 
 theorem AlgebraicallyDisjoint_mk {G : Type _} [Group G] {f g : G}
   (mk_thm : ∀ h : G, ¬Commute f h →
     ∃ f₁ f₂ : G, Commute f₁ g ∧ Commute f₂ g ∧ Commute ⁅f₁, ⁅f₂, h⁆⁆ g ∧ ⁅f₁, ⁅f₂, h⁆⁆ ≠ 1
-  ) : AlgebraicallyDisjoint f g where
-  pair := fun h => ((mk_thm h.val h.symm).choose, (mk_thm h.val h.symm).choose_spec.choose)
-  pair_commute := fun h => by
-    -- Don't look at this. You have been warned.
-    repeat' constructor
-    · exact (mk_thm h.val h.symm).choose_spec.choose_spec.left
-    · exact (mk_thm h.val h.symm).choose_spec.choose_spec.right.left
-    · exact (mk_thm h.val h.symm).choose_spec.choose_spec.right.right.left
-  pair_nontrivial := fun h => by
-    exact (mk_thm h.val h.symm).choose_spec.choose_spec.right.right.right
-
-namespace AlgebraicallyDisjoint
-
-variable {G : Type _}
-variable [Group G]
-variable {f g : G}
-
-def comm_elem (disj : AlgebraicallyDisjoint f g) : ∀ (_h : NonCommuteWith f), G :=
-  fun h =>
-    ⁅(disj.pair h).1, ⁅(disj.pair h).2, h.val⁆⁆
-
-theorem fst_commute (disj : AlgebraicallyDisjoint f g) :
-  ∀ (h : NonCommuteWith f), Commute (disj.pair h).1 g :=
-  fun h => (disj.pair_commute h).1
-
-theorem snd_commute (disj : AlgebraicallyDisjoint f g) :
-  ∀ (h : NonCommuteWith f), Commute (disj.pair h).2 g :=
-  fun h => (disj.pair_commute h).2.1
-
-theorem comm_elem_commute (disj : AlgebraicallyDisjoint f g) :
-  ∀ (h : NonCommuteWith f), Commute (disj.comm_elem h) g :=
-  fun h => (disj.pair_commute h).2.2
-
-end AlgebraicallyDisjoint
+  ) : AlgebraicallyDisjoint f g :=
+fun (h : G) (nc : ¬Commute f h) => {
+  non_commute := nc,
+  fst := (mk_thm h nc).choose
+  snd := (mk_thm h nc).choose_spec.choose
+  fst_commute := (mk_thm h nc).choose_spec.choose_spec.left
+  snd_commute := (mk_thm h nc).choose_spec.choose_spec.right.left
+  comm_elem_commute := (mk_thm h nc).choose_spec.choose_spec.right.right.left
+  comm_elem_nontrivial := by
+    exact (mk_thm h nc).choose_spec.choose_spec.right.right.right
+}
 
 @[simp]
 theorem orbit_bot (G : Type _) [Group G] [MulAction G α] (p : α) :
@@ -509,7 +480,7 @@ by
   exact g12_moves g12_fixed
 
 lemma proposition_1_1_2 [T2Space α] [h_lm : LocallyMoving G α]
-  (f g : G) [h_disj : AlgebraicallyDisjoint f g] : Disjoint (Support α f) (Support α (g^12)) :=
+  (f g : G) (h_disj : AlgebraicallyDisjoint f g) : Disjoint (Support α f) (Support α (g^12)) :=
 by
   by_contra not_disjoint
   let U := Support α f ∩ Support α (g^12)
@@ -556,15 +527,14 @@ by
     · exact z_in_V
 
   -- Since g is algebraically disjoint from f, there exist f₁,f₂ ∈ C_G(g) so that the commutator h' = [f1,[f2,h]] is a nontrivial element of C_G(g)
-  let f' := NonCommuteWith.mk_symm comm_non_trivial
-  let f_pair := h_disj.pair f'
-  let f₁ := f_pair.1
-  let f₂ := f_pair.2
-  let h' := h_disj.comm_elem f'
-  have f₁_commutes : Commute f₁ g := h_disj.fst_commute f'
-  have f₂_commutes : Commute f₂ g := h_disj.snd_commute f'
-  have h'_commutes : Commute h' g := h_disj.comm_elem_commute f'
-  have h'_nontrivial : h' ≠ 1 := h_disj.pair_nontrivial f'
+  let alg_disj_elem := h_disj h comm_non_trivial
+  let f₁ := alg_disj_elem.fst
+  let f₂ := alg_disj_elem.snd
+  let h' := alg_disj_elem.comm_elem
+  have f₁_commutes : Commute f₁ g := alg_disj_elem.fst_commute
+  have f₂_commutes : Commute f₂ g := alg_disj_elem.snd_commute
+  have h'_commutes : Commute h' g := alg_disj_elem.comm_elem_commute
+  have h'_nontrivial : h' ≠ 1 := alg_disj_elem.comm_elem_nontrivial
 
   have support_f₂_h : Support α ⁅f₂,h⁆ ⊆ V ∪ (f₂ •'' V) := by
     calc
@@ -657,31 +627,14 @@ by
   · rw [mem_inv_smulImage]
     exact gk
 
-lemma remark_1_2 (f g : G) [h_disj : AlgebraicallyDisjoint f g]: Commute f g := by
+lemma remark_1_2 (f g : G) (h_disj : AlgebraicallyDisjoint f g): Commute f g := by
   by_contra non_commute
-  let g' := NonCommuteWith.mk_symm non_commute
-  let nontrivial := h_disj.pair_nontrivial g'
-  let idk := h_disj.snd_commute g'
-  simp at nontrivial
+  let disj_elem := h_disj g non_commute
+  let nontrivial := disj_elem.comm_elem_nontrivial
 
-  rw [commutatorElement_eq_one_iff_commute.mpr idk] at nontrivial
+  rw [commutatorElement_eq_one_iff_commute.mpr disj_elem.snd_commute] at nontrivial
   rw [commutatorElement_one_right] at nontrivial
 
   tauto
-
--- section remark_1_3
--- def G := equiv.perm (fin 2)
--- def σ := equiv.swap (0 : fin 2) (1 : fin 2)
--- example : is_algebraically_disjoint σ σ := begin
---   intro h,
---   fin_cases h,
---   intro hyp1,
---   exfalso,
---   swap, intro hyp2, exfalso,
--- -- is commute decidable? cc,
--- sorry -- dec_trivial
--- sorry -- second sorry needed
--- end
--- end remark_1_3
 
 end Rubin

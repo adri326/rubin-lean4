@@ -170,4 +170,5 @@ theorem disjoint_support_comm (f g : G) {U : Set α} :
   group_action
 #align disjoint_support_comm Rubin.disjoint_support_comm
 
+
 end Rubin
