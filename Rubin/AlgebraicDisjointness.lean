@@ -1,8 +1,10 @@
 import Mathlib.GroupTheory.GroupAction.Basic
 import Mathlib.GroupTheory.Subgroup.Basic
 import Mathlib.GroupTheory.Subgroup.Actions
+import Mathlib.GroupTheory.Commutator
 import Mathlib.Topology.Basic
 import Mathlib.Tactic.FinCases
+import Mathlib.Tactic.IntervalCases
 
 import Rubin.RigidStabilizer
 import Rubin.SmulImage
@@ -32,11 +34,88 @@ by
 
 end LocallyMoving
 
-def AlgebraicallyDisjoint {G : Type _} [Group G] (f g : G) :=
-  ∀ h : G,
-    ¬Commute f h →
-      ∃ f₁ f₂ : G, Commute f₁ g ∧ Commute f₂ g ∧ Commute ⁅f₁, ⁅f₂, h⁆⁆ g ∧ ⁅f₁, ⁅f₂, h⁆⁆ ≠ 1
-#align is_algebraically_disjoint Rubin.AlgebraicallyDisjoint
+-- def AlgebraicallyDisjoint {G : Type _} [Group G] (f g : G) :=
+--   ∀ h : G,
+--     ¬Commute f h →
+--       ∃ f₁ f₂ : G, Commute f₁ g ∧ Commute f₂ g ∧ Commute ⁅f₁, ⁅f₂, h⁆⁆ g ∧ ⁅f₁, ⁅f₂, h⁆⁆ ≠ 1
+-- #align is_algebraically_disjoint Rubin.AlgebraicallyDisjoint
+
+-- TODO: move to a different file
+def NonCommuteWith {G : Type _} [Group G] (g : G) : Type* :=
+  { f : G // ¬Commute f g }
+
+namespace NonCommuteWith
+
+theorem not_commute {G : Type _} [Group G] (g : G) (f : NonCommuteWith g) : ¬Commute f.val g := f.prop
+
+theorem symm {G : Type _} [Group G] (g : G) (f : NonCommuteWith g) : ¬Commute g f.val := by
+  intro h
+  exact f.prop h.symm
+
+def mk {G : Type _} [Group G] {f g : G} (nc: ¬Commute f g) : NonCommuteWith g :=
+  ⟨f, nc⟩
+
+def mk_symm {G : Type _} [Group G] {f g : G} (nc: ¬Commute f g) : NonCommuteWith f :=
+  ⟨g, (by
+    intro h
+    symm at h
+    exact nc h
+  )⟩
+
+@[simp]
+theorem coe_mk {G : Type _} [Group G] {f g : G} {nc: ¬Commute f g}: (mk nc).val = f := by
+  unfold mk
+  simp
+
+@[simp]
+theorem coe_mk_symm {G : Type _} [Group G] {f g : G} {nc: ¬Commute f g}: (mk_symm nc).val = g := by
+  unfold mk_symm
+  simp
+
+end NonCommuteWith
+
+class AlgebraicallyDisjoint {G : Type _} [Group G] (f g : G) :=
+  pair : ∀ (_h : NonCommuteWith f), G × G
+  pair_commute : ∀ (h : NonCommuteWith f), Commute (pair h).1 g ∧ Commute (pair h).2 g ∧ Commute ⁅(pair h).1, ⁅(pair h).2, h.val⁆⁆ g
+  pair_nontrivial : ∀ (h : NonCommuteWith f), ⁅(pair h).1, ⁅(pair h).2, h.val⁆⁆ ≠ 1
+
+theorem AlgebraicallyDisjoint_mk {G : Type _} [Group G] {f g : G}
+  (mk_thm : ∀ h : G, ¬Commute f h →
+    ∃ f₁ f₂ : G, Commute f₁ g ∧ Commute f₂ g ∧ Commute ⁅f₁, ⁅f₂, h⁆⁆ g ∧ ⁅f₁, ⁅f₂, h⁆⁆ ≠ 1
+  ) : AlgebraicallyDisjoint f g where
+  pair := fun h => ((mk_thm h.val h.symm).choose, (mk_thm h.val h.symm).choose_spec.choose)
+  pair_commute := fun h => by
+    -- Don't look at this. You have been warned.
+    repeat' constructor
+    · exact (mk_thm h.val h.symm).choose_spec.choose_spec.left
+    · exact (mk_thm h.val h.symm).choose_spec.choose_spec.right.left
+    · exact (mk_thm h.val h.symm).choose_spec.choose_spec.right.right.left
+  pair_nontrivial := fun h => by
+    exact (mk_thm h.val h.symm).choose_spec.choose_spec.right.right.right
+
+namespace AlgebraicallyDisjoint
+
+variable {G : Type _}
+variable [Group G]
+variable {f g : G}
+
+def comm_elem (disj : AlgebraicallyDisjoint f g) : ∀ (_h : NonCommuteWith f), G :=
+  fun h =>
+    ⁅(disj.pair h).1, ⁅(disj.pair h).2, h.val⁆⁆
+
+theorem fst_commute (disj : AlgebraicallyDisjoint f g) :
+  ∀ (h : NonCommuteWith f), Commute (disj.pair h).1 g :=
+  fun h => (disj.pair_commute h).1
+
+theorem snd_commute (disj : AlgebraicallyDisjoint f g) :
+  ∀ (h : NonCommuteWith f), Commute (disj.pair h).2 g :=
+  fun h => (disj.pair_commute h).2.1
+
+theorem comm_elem_commute (disj : AlgebraicallyDisjoint f g) :
+  ∀ (h : NonCommuteWith f), Commute (disj.comm_elem h) g :=
+  fun h => (disj.pair_commute h).2.2
+
+end AlgebraicallyDisjoint
 
 @[simp]
 theorem orbit_bot (G : Type _) [Group G] [MulAction G α] (p : α) :
@@ -141,7 +220,9 @@ by
   · rintro ((h|h)|(h|h)) <;> exact ⟨_, h⟩
 
 -- TODO: modify the proof to be less "let everything"-y, especially the first half
+-- TODO: use the new class thingy to write a cleaner proof?
 lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp_disjoint : Disjoint (Support α f) (Support α g)) : AlgebraicallyDisjoint f g := by
+  apply AlgebraicallyDisjoint_mk
   intros h h_not_commute
   -- h is not the identity on `Support α f`
   have f_h_not_disjoint := (mt (disjoint_commute (G := G) (α := α)) h_not_commute)
@@ -228,8 +309,6 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
 @[simp] lemma smulImage_mul {g h : G} {U : Set α} : g •'' (h •'' U) = (g*h) •'' U :=
   (mul_smulImage g h U)
 
-#check isOpen_iInter_of_finite
-
 lemma smul_inj_moves {ι : Type*} [Fintype ι] [T2Space α]
   {f : ι → G} {x : α} {i j : ι} (i_ne_j : i ≠ j)
   (f_smul_inj : Function.Injective (fun i : ι => (f i) • x)) :
@@ -304,140 +383,292 @@ by
       exact U_subset_N
     · exact smul_inj_nbhd_disjoint i_ne_j f_smul_inj
 
+lemma moves_inj {g : G} {x : α} {n : ℕ} (period_ge_n : ∀ (k : ℤ), 1 ≤ k → k < n → g^k • x ≠ x) :
+  Function.Injective (fun (i : Fin n) => g^(i : ℤ) • x) :=
+by
+  intro a b same_img
+  by_contra a_ne_b
 
--- lemma moves_inj {g : G} {x : α} {n : ℕ} (period_ge_n : ∀ (k : ℤ), 1 ≤ k → k < n → g ^ k • x ≠ x) : function.injective (λ (i : fin n), g ^ (i : ℤ) • x) := begin
---     intros i j same_img,
---     by_contra i_ne_j,
---     let same_img' := congr_arg ((•) (g ^ (-(j : ℤ)))) same_img,
---     simp only [inv_smul_smul] at same_img',
---     rw [← mul_smul,← mul_smul,← zpow_add,← zpow_add,add_comm] at same_img',
---     simp only [add_left_neg, zpow_zero, one_smul] at same_img',
---     let ij := |(i:ℤ) - (j:ℤ)|,
---     rw ← sub_eq_add_neg at same_img',
---     have xfixed : g^ij • x = x := begin
---       cases abs_cases ((i:ℤ) - (j:ℤ)),
---       { rw ← h.1 at same_img', exact same_img' },
---       { rw [smul_eq_iff_inv_smul_eq,← zpow_neg,← h.1] at same_img', exact same_img' }
---     end,
---     have ij_ge_1 : 1 ≤ ij := int.add_one_le_iff.mpr (abs_pos.mpr $ sub_ne_zero.mpr $ norm_num.nat_cast_ne i j ↑i ↑j rfl rfl (fin.vne_of_ne i_ne_j)),
---     let neg_le := int.sub_lt_sub_of_le_of_lt (nat.cast_nonneg i) (nat.cast_lt.mpr (fin.prop _)),
---     rw zero_sub at neg_le,
---     let le_pos := int.sub_lt_sub_of_lt_of_le (nat.cast_lt.mpr (fin.prop _)) (nat.cast_nonneg j),
---     rw sub_zero at le_pos,
---     have ij_lt_n : ij < n := abs_lt.mpr ⟨ neg_le, le_pos ⟩,
---     exact period_ge_n ij ij_ge_1 ij_lt_n xfixed,
--- end
--- lemma int_to_nat (k : ℤ) (k_pos : k ≥ 1) : k = k.nat_abs := begin
---   cases (int.nat_abs_eq k),
---   { exact h },
---   { have : -(k.nat_abs : ℤ) ≤ 0 := neg_nonpos.mpr (int.nat_abs k).cast_nonneg,
---     rw ← h at this, by_contra, linarith }
--- end
--- lemma moves_inj_N {g : G} {x : α} {n : ℕ} (period_ge_n' : ∀ (k : ℕ), 1 ≤ k → k < n → g ^ k • x ≠ x) : function.injective (λ (i : fin n), g ^ (i : ℕ) • x) := begin
---   have period_ge_n : ∀ (k : ℤ), 1 ≤ k → k < n → g ^ k • x ≠ x,
---   { intros k one_le_k k_lt_n,
---     have one_le_k_nat : 1 ≤ k.nat_abs := ((int.coe_nat_le_coe_nat_iff 1 k.nat_abs).1 ((int_to_nat k one_le_k) ▸ one_le_k)),
---     have k_nat_lt_n : k.nat_abs < n := ((int.coe_nat_lt_coe_nat_iff k.nat_abs n).1 ((int_to_nat k one_le_k) ▸ k_lt_n)),
---     have := period_ge_n' k.nat_abs one_le_k_nat k_nat_lt_n,
---     rw [(zpow_coe_nat g k.nat_abs).symm, (int_to_nat k one_le_k).symm] at this,
---     exact this },
---   have := moves_inj period_ge_n,
---   done
--- end
--- lemma moves_1234_of_moves_12 {g : G} {x : α} (xmoves : g^12 • x ≠ x) : function.injective (λi : fin 5, g^(i:ℤ) • x) := begin
---     apply moves_inj,
---     intros k k_ge_1 k_lt_5,
---     by_contra xfixed,
---     have k_div_12 : k * (12 / k) = 12 := begin
---       interval_cases using k_ge_1 k_lt_5; norm_num
---     end,
---     have veryfixed : g^12 • x = x := begin
---       let := smul_zpow_eq_of_smul_eq (12/k) xfixed,
---       rw [← zpow_mul,k_div_12] at this,
---       norm_cast at this
---     end,
---     exact xmoves veryfixed
--- end
--- lemma proposition_1_1_2 (f g : G) [t2_space α] : is_locally_moving G α → is_algebraically_disjoint f g → disjoint (support α f) (support α (g^12)) := begin
---   intros locally_moving alg_disjoint,
--- -- suppose to the contrary that the set U = supp(f) ∩ supp(g^12) is nonempty
---   by_contra not_disjoint,
---   let U := support α f ∩ support α (g^12),
---   have U_nonempty : U.nonempty := Set.not_disjoint_iff_nonempty_inter.mp not_disjoint,
--- -- since X is Hausdorff, we can find a nonempty open set V ⊆ U such that f(V) is disjoint from V and the sets {g^i(V): i=0..4} are pairwise disjoint
---   let x := U_nonempty.some,
---   have five_points : function.injective (λi : fin 5, g^(i:ℤ) • x) := moves_1234_of_moves_12 (mem_support.mp $ (Set.inter_subset_right _ _) U_nonempty.some_mem),
---   rcases disjoint_nbhd_in (is_open.inter (support_open f) (support_open $ g^12)) U_nonempty.some_mem ((Set.inter_subset_left _ _) U_nonempty.some_mem) with ⟨V₀,open_V₀,x_in_V₀,V₀_in_support,disjoint_img_V₀⟩,
---   rcases disjoint_nbhd_fin five_points with ⟨V₁,open_V₁,x_in_V₁,disjoint_img_V₁⟩,
---   simp only at disjoint_img_V₁,
---   let V := V₀ ∩ V₁,
--- -- let h be a nontrivial element of rigid_stabilizer G V, and note that [f,h]≠1 since f(V) is disjoint from V
---   let ristV_ne_bot := locally_moving V (is_open.inter open_V₀ open_V₁) (Set.nonempty_of_mem ⟨x_in_V₀,x_in_V₁⟩),
---   rcases (or_iff_right ristV_ne_bot).mp (Subgroup.bot_or_exists_ne_one _) with ⟨h,h_in_ristV,h_ne_one⟩,
---   have comm_non_trivial : ¬commute f h := begin
---     by_contra comm_trivial,
---     rcases faithful_rist_moves_point h_in_ristV h_ne_one with ⟨z,z_in_V,z_moved⟩,
---     let act_comm := disjoint_support_comm h f (rist_supported_in_set h_in_ristV) (Set.disjoint_of_subset (Set.inter_subset_left V₀ V₁) (smul''_subset f (Set.inter_subset_left V₀ V₁)) disjoint_img_V₀) z z_in_V,
---     rw [commutator_element_eq_one_iff_commute.mpr comm_trivial.symm,one_smul] at act_comm,
---     exact z_moved act_comm.symm,
---   end,
--- -- since g is algebraically disjoint from f, there exist f₁,f₂ ∈ C_G(g) so that the commutator h' = [f1,[f2,h]] is a nontrivial element of C_G(g)
---   rcases alg_disjoint h comm_non_trivial with ⟨f₁,f₂,f₁_commutes,f₂_commutes,h'_commutes,h'_non_trivial⟩,
---   let h' := ⁅f₁,⁅f₂,h⁆⁆,
--- -- now observe that supp([f₂, h]) ⊆ V ∪ f₂(V), and by the same reasoning supp(h')⊆V∪f₁(V)∪f₂(V)∪f₁f₂(V)
---   have support_f₂h : support α ⁅f₂,h⁆ ⊆ V ∪ (f₂ •'' V) := (support_comm α f₂ h).trans (Set.union_subset_union (rist_supported_in_set h_in_ristV) $ smul''_subset f₂ $ rist_supported_in_set h_in_ristV),
---   have support_h' : support α h' ⊆ ⋃(i : fin 2 × fin 2), (f₁^i.1.val*f₂^i.2.val) •'' V := begin
---     let this := (support_comm α f₁ ⁅f₂,h⁆).trans (Set.union_subset_union support_f₂h (smul''_subset f₁ support_f₂h)),
---     rw [smul''_union,← one_smul'' V,← mul_smul'',← mul_smul'',← mul_smul'',mul_one,mul_one] at this,
---     let rw_u := rewrite_Union (λi : fin 2 × fin 2, (f₁^i.1.val*f₂^i.2.val) •'' V),
---     simp only [fin.val_eq_coe, fin.val_zero', pow_zero, mul_one, fin.val_one, pow_one, one_mul] at rw_u,
---     exact rw_u.symm ▸ this,
---   end,
--- -- since h' is nontrivial, it has at least one point p in its support
---   cases faithful_moves_point' α h'_non_trivial with p p_moves,
--- -- since g commutes with h', all five of the points {gi(p):i=0..4} lie in supp(h')
---   have gi_in_support : ∀i : fin 5, g^i.val • p ∈ support α h' := begin
---     intro i,
---     rw mem_support,
---     by_contra p_fixed,
---     rw [← mul_smul,(h'_commutes.pow_right i.val).eq,mul_smul,smul_left_cancel_iff] at p_fixed,
---     exact p_moves p_fixed,
---   end,
--- -- by the pigeonhole principle, one of the four sets V, f₁(V), f₂(V), f₁f₂(V) must contain two of these points, say g^i(p),g^j(p) ∈ k(V) for some 0 ≤ i < j ≤ 4 and k ∈ {1,f₁,f₂,f₁f₂}
---   let pigeonhole : fintype.card (fin 5) > fintype.card (fin 2 × fin 2) := dec_trivial,
---   let choice := λi : fin 5, (Set.mem_Union.mp $ support_h' $ gi_in_support i).some,
---   rcases finset.exists_ne_map_eq_of_card_lt_of_maps_to pigeonhole (λ(i : fin 5) _, finset.mem_univ (choice i)) with ⟨i,_,j,_,i_ne_j,same_choice⟩,
---   clear h_1_w h_1_h_h_w pigeonhole,
---   let k := f₁^(choice i).1.val*f₂^(choice i).2.val,
---   have same_k : f₁^(choice j).1.val*f₂^(choice j).2.val = k := by { simp only at same_choice,
--- rw ← same_choice },
---   have g_i : g^i.val • p ∈ k •'' V := (Set.mem_Union.mp $ support_h' $ gi_in_support i).some_spec,
---   have g_j : g^j.val • p ∈ k •'' V := same_k ▸ (Set.mem_Union.mp $ support_h' $ gi_in_support j).some_spec,
--- -- but since g^(j−i)(V) is disjoint from V and k commutes with g, we know that g^(j−i)k(V) is disjoint from k(V), a contradiction since g^i(p) and g^j(p) both lie in k(V).
---   have g_disjoint : disjoint ((g^i.val)⁻¹ •'' V) ((g^j.val)⁻¹ •'' V) := begin
---     let := (disjoint_smul'' (g^(-(i.val+j.val : ℤ))) (disjoint_img_V₁ i j i_ne_j)).symm,
---     rw [← mul_smul'',← mul_smul'',← zpow_add,← zpow_add] at this,
---     simp only [fin.val_eq_coe, neg_add_rev, coe_coe, neg_add_cancel_right, zpow_neg, zpow_coe_nat, neg_add_cancel_comm] at this,
---     from Set.disjoint_of_subset (smul''_subset _ (Set.inter_subset_right V₀ V₁)) (smul''_subset _ (Set.inter_subset_right V₀ V₁)) this
---   end,
---   have k_commutes : commute k g := commute.mul_left (f₁_commutes.pow_left (choice i).1.val) (f₂_commutes.pow_left (choice i).2.val),
---   have g_k_disjoint : disjoint ((g^i.val)⁻¹ •'' (k •'' V)) ((g^j.val)⁻¹ •'' (k •'' V)) := begin
---     let this := disjoint_smul'' k g_disjoint,
---     rw [← mul_smul'',← mul_smul'',← inv_pow g i.val,← inv_pow g j.val,
---         ← (k_commutes.symm.inv_left.pow_left i.val).eq,
---         ← (k_commutes.symm.inv_left.pow_left j.val).eq,
---        mul_smul'',inv_pow g i.val,mul_smul'' (g⁻¹^j.val) k V,inv_pow g j.val] at this,
---     from this
---   end,
---   exact Set.disjoint_left.mp g_k_disjoint (mem_inv_smul''.mpr g_i) (mem_inv_smul''.mpr g_j)
--- end
--- lemma remark_1_2 (f g : G) : is_algebraically_disjoint f g → commute f g := begin
---   intro alg_disjoint,
---   by_contra non_commute,
---   rcases alg_disjoint g non_commute with ⟨_,_,_,b,_,d⟩,
---   rw [commutator_element_eq_one_iff_commute.mpr b,commutator_element_one_right] at d,
---   tauto
--- end
+  let abs_diff := |(a : ℤ) - (b : ℤ)|
+
+  apply period_ge_n abs_diff _ _ _
+  {
+    show 1 ≤ abs_diff
+    unfold_let
+    rw [<-zero_add 1, Int.add_one_le_iff]
+    apply abs_pos.mpr
+    apply sub_ne_zero.mpr
+    simp
+    apply Fin.vne_of_ne
+    apply a_ne_b
+  }
+  {
+    show abs_diff < (n : ℤ)
+    apply abs_lt.mpr
+    constructor
+    · rw [<-zero_sub]
+      apply Int.sub_lt_sub_of_le_of_lt <;> simp
+    · rw [<-sub_zero (n : ℤ)]
+      apply Int.sub_lt_sub_of_lt_of_le <;> simp
+  }
+  {
+    show g^abs_diff • x = x
+
+    simp at same_img
+    group_action at same_img
+    rw [neg_add_eq_sub] at same_img
+
+    cases abs_cases ((a : ℤ) - (b : ℤ)) with
+    | inl h =>
+      unfold_let
+      rw [h.1]
+      exact same_img
+    | inr h =>
+      unfold_let
+      rw [h.1]
+      rw [smul_eq_iff_eq_inv_smul]
+      group_action
+      symm
+      exact same_img
+  }
+
+-- Note: this can be strengthened to `k ≥ 0`
+lemma natAbs_eq_of_pos' (k : ℤ) (k_ge_one : k ≥ 1) : k = k.natAbs := by
+  cases Int.natAbs_eq k with
+  | inl _ => assumption
+  | inr h =>
+    exfalso
+    have k_lt_one : k < 1 := by
+      calc
+        k ≤ 0 := by
+          rw [h]
+          apply nonpos_of_neg_nonneg
+          rw [neg_neg]
+          apply Int.ofNat_nonneg
+        _ < 1 := by norm_num
+    exact ((lt_iff_not_ge _ _).mp k_lt_one) k_ge_one
+
+lemma period_ge_n_cast {g : G} {x : α} {n : ℕ} :
+  (∀ (k : ℕ), 1 ≤ k → k < n → g ^ k • x ≠ x) →
+  (∀ (k : ℤ), 1 ≤ k → k < n → g ^ k • x ≠ x) :=
+by
+  intro period_ge_n'
+  intro k one_le_k k_lt_n
+
+  have one_le_abs_k : 1 ≤ k.natAbs := by
+    rw [<-Nat.cast_le (α := ℤ)]
+    norm_num
+    calc
+      1 ≤ k := one_le_k
+      _ ≤ |k| := le_abs_self k
+  have abs_k_lt_n : k.natAbs < n := by
+    rw [<-Nat.cast_lt (α := ℤ)]
+    norm_num
+    calc
+      |k| = k := abs_of_pos one_le_k
+      _ < n := k_lt_n
+  have res := period_ge_n' k.natAbs one_le_abs_k abs_k_lt_n
+
+  rw [<-zpow_ofNat, Int.coe_natAbs, abs_of_pos _] at res
+  exact res
+  exact one_le_k
+
+instance {g : G} {x : α} {n : ℕ} :
+  Coe
+    (∀ (k : ℕ), 1 ≤ k → k < n → g ^ k • x ≠ x)
+    (∀ (k : ℤ), 1 ≤ k → k < n → g ^ k • x ≠ x)
+where
+  coe := period_ge_n_cast
+
+lemma moves_1234_of_moves_12 {g : G} {x : α} (g12_moves : g^12 • x ≠ x) :
+  Function.Injective (fun i : Fin 5 => g^(i : ℤ) • x) :=
+by
+  apply moves_inj
+  intros k k_ge_1 k_lt_5
+  simp at k_lt_5
+
+  by_contra x_fixed
+  have k_div_12 : k ∣ 12 := by
+    -- Note: norm_num does not support ℤ.dvd yet, nor ℤ.mod, nor Int.natAbs, nor Int.div, etc.
+    have h: (12 : ℤ) = (12 : ℕ) := by norm_num
+    rw [h, Int.ofNat_dvd_right]
+    apply Nat.dvd_of_mod_eq_zero
+
+    interval_cases k
+    all_goals unfold Int.natAbs
+    all_goals norm_num
+
+  have g12_fixed : g^12 • x = x := by
+    rw [<-zpow_ofNat]
+    simp
+    rw [<-Int.mul_ediv_cancel' k_div_12]
+    have res := smul_zpow_eq_of_smul_eq (12/k) x_fixed
+    group_action at res
+    exact res
+
+  exact g12_moves g12_fixed
+
+lemma proposition_1_1_2 [T2Space α] [h_lm : LocallyMoving G α]
+  (f g : G) [h_disj : AlgebraicallyDisjoint f g] : Disjoint (Support α f) (Support α (g^12)) :=
+by
+  by_contra not_disjoint
+  let U := Support α f ∩ Support α (g^12)
+  have U_nonempty : U.Nonempty := by
+    apply Set.not_disjoint_iff_nonempty_inter.mp
+    exact not_disjoint
+
+  -- Since G is Hausdorff, we can find a nonempty set V ⊆ such that f(V) is disjoint from V and the sets {g^i(V): i=0..4} are pairwise disjoint
+  let x := U_nonempty.some
+  have x_in_U : x ∈ U := Set.Nonempty.some_mem U_nonempty
+  have fx_moves : f • x ≠ x := Set.inter_subset_left _ _ x_in_U
+
+  have five_points : Function.Injective (fun i : Fin 5 => g^(i : ℤ) • x) := by
+    apply moves_1234_of_moves_12
+    exact (Set.inter_subset_right _ _ x_in_U)
+  have U_open: IsOpen U := (IsOpen.inter (support_open f) (support_open (g^12)))
+
+  let ⟨V₀, V₀_open, x_in_V₀, V₀_in_support, disjoint_img_V₀⟩ := disjoint_nbhd_in U_open x_in_U fx_moves
+  let ⟨V₁, V₁_open, x_in_V₁, disjoint_img_V₁⟩ := disjoint_nbhd_fin five_points
+
+  let V := V₀ ∩ V₁
+  -- Let h be a nontrivial element of the RigidStabilizer G V
+  let ⟨h, ⟨h_in_ristV, h_ne_one⟩⟩ := h_lm.get_nontrivial_rist_elem (IsOpen.inter V₀_open V₁_open) (Set.nonempty_of_mem ⟨x_in_V₀, x_in_V₁⟩)
+
+  have V_disjoint_smulImage: Disjoint V (f •'' V) := by
+    apply Set.disjoint_of_subset
+    · exact Set.inter_subset_left _ _
+    · apply smulImage_subset
+      exact Set.inter_subset_left _ _
+    · exact disjoint_img_V₀
+
+  have comm_non_trivial : ¬Commute f h := by
+    by_contra comm_trivial
+    let ⟨z, z_in_V, z_moved⟩ := faithful_rigid_stabilizer_moves_point h_in_ristV h_ne_one
+    apply z_moved
+
+    nth_rewrite 2 [<-one_smul G z]
+    rw [<-commutatorElement_eq_one_iff_commute.mpr comm_trivial.symm]
+    symm
+
+    apply disjoint_support_comm h f
+    · exact rist_supported_in_set h_in_ristV
+    · exact V_disjoint_smulImage
+    · exact z_in_V
+
+  -- Since g is algebraically disjoint from f, there exist f₁,f₂ ∈ C_G(g) so that the commutator h' = [f1,[f2,h]] is a nontrivial element of C_G(g)
+  let f' := NonCommuteWith.mk_symm comm_non_trivial
+  let f_pair := h_disj.pair f'
+  let f₁ := f_pair.1
+  let f₂ := f_pair.2
+  let h' := h_disj.comm_elem f'
+  have f₁_commutes : Commute f₁ g := h_disj.fst_commute f'
+  have f₂_commutes : Commute f₂ g := h_disj.snd_commute f'
+  have h'_commutes : Commute h' g := h_disj.comm_elem_commute f'
+  have h'_nontrivial : h' ≠ 1 := h_disj.pair_nontrivial f'
+
+  have support_f₂_h : Support α ⁅f₂,h⁆ ⊆ V ∪ (f₂ •'' V) := by
+    calc
+      Support α ⁅f₂, h⁆ ⊆ Support α h ∪ (f₂ •'' Support α h) := support_comm α f₂ h
+      _ ⊆ V ∪ (f₂ •'' Support α h) := by
+        apply Set.union_subset_union_left
+        exact rist_supported_in_set h_in_ristV
+      _ ⊆ V ∪ (f₂ •'' V) := by
+        apply Set.union_subset_union_right
+        apply smulImage_subset
+        exact rist_supported_in_set h_in_ristV
+  have support_h' : Support α h' ⊆ ⋃(i : Fin 2 × Fin 2), (f₁^(i.1.val) * f₂^(i.2.val)) •'' V := by
+    rw [rewrite_Union]
+    simp (config := {zeta := false})
+    rw [<-smulImage_mul, <-smulImage_union]
+    calc
+      Support α h' ⊆ Support α ⁅f₂,h⁆ ∪ (f₁ •'' Support α ⁅f₂, h⁆) := support_comm α f₁ ⁅f₂,h⁆
+      _ ⊆ V ∪ (f₂ •'' V) ∪ (f₁ •'' Support α ⁅f₂, h⁆) := by
+        apply Set.union_subset_union_left
+        exact support_f₂_h
+      _ ⊆ V ∪ (f₂ •'' V) ∪ (f₁ •'' V ∪ (f₂ •'' V)) := by
+        apply Set.union_subset_union_right
+        apply smulImage_subset f₁
+        exact support_f₂_h
+
+  -- Since h' is nontrivial, it has at least one point p in its support
+  let ⟨p, p_moves⟩ := faithful_moves_point' α h'_nontrivial
+  -- Since g commutes with h', all five of the points {gi(p):i=0..4} lie in supp(h')
+  have gi_in_support : ∀ (i: Fin 5), g^(i.val) • p ∈ Support α h' := by
+    intro i
+    rw [mem_support]
+    by_contra p_fixed
+    rw [<-mul_smul, h'_commutes.pow_right, mul_smul] at p_fixed
+    group_action at p_fixed
+    exact p_moves p_fixed
+
+  -- The next section gets tricky, so let us clear away some stuff first :3
+  clear h'_commutes h'_nontrivial
+  clear V₀_open x_in_V₀ V₀_in_support disjoint_img_V₀
+  clear V₁_open x_in_V₁
+  clear five_points h_in_ristV h_ne_one V_disjoint_smulImage
+  clear support_f₂_h
+
+  -- by the pigeonhole principle, one of the four sets V, f₁(V), f₂(V), f₁f₂(V) must contain two of these points,
+  -- say g^i(p),g^j(p) ∈ k(V) for some 0 ≤ i < j ≤ 4 and k ∈ {1,f₁,f₂,f₁f₂}
+  let pigeonhole : Fintype.card (Fin 5) > Fintype.card (Fin 2 × Fin 2) := by trivial
+  let choice_pred := fun (i : Fin 5) => (Set.mem_iUnion.mp (support_h' (gi_in_support i)))
+  let choice := fun (i : Fin 5) => (choice_pred i).choose
+  let ⟨i, _, j, _, i_ne_j, same_choice⟩ := Finset.exists_ne_map_eq_of_card_lt_of_maps_to
+    pigeonhole
+    (fun (i : Fin 5) _ => Finset.mem_univ (choice i))
+
+  let k := f₁^(choice i).1.val * f₂^(choice i).2.val
+  have same_k : f₁^(choice j).1.val * f₂^(choice j).2.val = k := by rw [<-same_choice]
+  have gi : g^i.val • p ∈ k •'' V := (choice_pred i).choose_spec
+  have gk : g^j.val • p ∈ k •'' V := by
+    have gk' := (choice_pred j).choose_spec
+    rw [same_k] at gk'
+    exact gk'
+
+  -- Since g^(j-i)(V) is disjoint from V and k commutes with g,
+  -- we know that g^(j−i)k(V) is disjoint from k(V),
+  -- which leads to a contradiction since g^i(p) and g^j(p) both lie in k(V).
+
+  have g_disjoint : Disjoint ((g^i.val)⁻¹ •'' V) ((g^j.val)⁻¹ •'' V) := by
+    apply smulImage_disjoint_subset (Set.inter_subset_right V₀ V₁)
+    group
+    rw [smulImage_disjoint_inv_pow]
+    group
+    apply disjoint_img_V₁
+    symm; exact i_ne_j
+
+  have k_commutes: Commute k g := by
+    apply Commute.mul_left
+    · exact f₁_commutes.pow_left _
+    · exact f₂_commutes.pow_left _
+  clear f₁_commutes f₂_commutes
+
+  have g_k_disjoint : Disjoint ((g^i.val)⁻¹ •'' (k •'' V)) ((g^j.val)⁻¹ •'' (k •'' V)) := by
+    repeat rw [mul_smulImage]
+    repeat rw [<-inv_pow]
+    repeat rw [k_commutes.symm.inv_left.pow_left]
+    repeat rw [<-mul_smulImage k]
+    repeat rw [inv_pow]
+    exact disjoint_smulImage k g_disjoint
+
+  apply Set.disjoint_left.mp g_k_disjoint
+  · rw [mem_inv_smulImage]
+    exact gi
+  · rw [mem_inv_smulImage]
+    exact gk
+
+lemma remark_1_2 (f g : G) [h_disj : AlgebraicallyDisjoint f g]: Commute f g := by
+  by_contra non_commute
+  let g' := NonCommuteWith.mk_symm non_commute
+  let nontrivial := h_disj.pair_nontrivial g'
+  let idk := h_disj.snd_commute g'
+  simp at nontrivial
+
+  rw [commutatorElement_eq_one_iff_commute.mpr idk] at nontrivial
+  rw [commutatorElement_one_right] at nontrivial
+
+  tauto
+
 -- section remark_1_3
 -- def G := equiv.perm (fin 2)
 -- def σ := equiv.swap (0 : fin 2) (1 : fin 2)

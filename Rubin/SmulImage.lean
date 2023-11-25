@@ -161,8 +161,8 @@ by
   exact smulImage_subset_inv f⁻¹ U V
 
 theorem smulImage_disjoint_mul {G α : Type _} [Group G] [MulAction G α]
-  (f g : G) (U : Set α) :
-  Disjoint (f •'' U) (g •'' U) ↔ Disjoint U ((f⁻¹ * g) •'' U) := by
+  (f g : G) (U V : Set α) :
+  Disjoint (f •'' U) (g •'' V) ↔ Disjoint U ((f⁻¹ * g) •'' V) := by
   constructor
   · intro h
     apply disjoint_smulImage f⁻¹ at h
@@ -176,5 +176,21 @@ theorem smulImage_disjoint_mul {G α : Type _} [Group G] [MulAction G α]
     rw [<-mul_assoc] at h
     rw [mul_right_inv, one_mul] at h
     exact h
+
+theorem smulImage_disjoint_inv_pow {G α : Type _} [Group G] [MulAction G α]
+  (g : G) (i j : ℤ) (U V : Set α) :
+  Disjoint (g^i •'' U) (g^j •'' V) ↔ Disjoint (g^(-j) •'' U) (g^(-i) •'' V) :=
+by
+  rw [smulImage_disjoint_mul]
+  rw [<-zpow_neg, <-zpow_add, add_comm, zpow_add, zpow_neg]
+  rw [<-inv_inv (g^j)]
+  rw [<-smulImage_disjoint_mul]
+  simp
+
+theorem smulImage_disjoint_subset {G α : Type _} [Group G] [MulAction G α]
+  {f g : G} {U V : Set α} (h_sub: U ⊆ V):
+  Disjoint (f •'' V) (g •'' V) → Disjoint (f •'' U) (g •'' U) :=
+by
+  apply Set.disjoint_of_subset (smulImage_subset _ h_sub) (smulImage_subset _ h_sub)
 
 end Rubin

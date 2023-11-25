@@ -39,7 +39,7 @@ theorem smul_succ {G α : Type _} (n : ℕ) [Group G] [MulAction G α] {g : G}
 -- Note: calling "group" after "group_action₁" might not be a good idea, as they can end up running in a loop
 syntax (name := group_action₁) "group_action₁" (location)?: tactic
 macro_rules
-  | `(tactic| group_action₁ $[at $location]?) => `(tactic| simp only [
+  | `(tactic| group_action₁ $[at $location]?) => `(tactic| simp (config := {zeta := false}) only [
     smul_smul,
     Rubin.Tactic.smul_eq_smul_inv,
     Rubin.Tactic.smul_succ,
@@ -60,7 +60,7 @@ macro_rules
     zpow_zero,
     mul_zpow,
     zpow_sub,
-    zpow_ofNat,
+    <-zpow_ofNat,
     <-zpow_neg_one,
     <-zpow_mul,
     <-zpow_add_one,
@@ -155,6 +155,10 @@ example (h: x = g • f⁻¹ • g⁻¹ • x): True := by
   exact True.intro
 
 example (j: ℕ) (h: g • g ^ j • x = x): True := by
+  group_action at h
+  exact True.intro
+
+example (i: Fin 5) (p : α) (h: f • g ^ i.val • p = g ^ i.val • p): True := by
   group_action at h
   exact True.intro
 

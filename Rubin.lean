@@ -23,6 +23,7 @@ import Rubin.Support
 import Rubin.Topological
 import Rubin.RigidStabilizer
 import Rubin.Period
+import Rubin.AlgebraicDisjointness
 
 #align_import rubin
 
