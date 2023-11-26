@@ -88,6 +88,10 @@ fun (h : G) (nc : ¬Commute f h) => {
     exact (mk_thm h nc).choose_spec.choose_spec.right.right.right
 }
 
+-- This is an idea of having a Prop version of AlgebraicallyDisjoint, but it sounds painful to work with
+-- def IsAlgebraicallyDisjoint {G : Type _} [Group G] (f g : G): Prop :=
+--   ∀ (h : G), ¬Commute f h → ∃ (f₁ f₂ : G), ∃ (elem : AlgebraicallyDisjointElem f g h), elem.fst = f₁ ∧ elem.snd = f₂
+
 @[simp]
 theorem orbit_bot (G : Type _) [Group G] [MulAction G α] (p : α) :
     MulAction.orbit (⊥ : Subgroup G) p = {p} :=
@@ -190,6 +194,7 @@ by
       <;> simp only [h, true_or, or_true]
   · rintro ((h|h)|(h|h)) <;> exact ⟨_, h⟩
 
+-- TODO: move to Rubin.lean
 -- TODO: modify the proof to be less "let everything"-y, especially the first half
 -- TODO: use the new class thingy to write a cleaner proof?
 lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp_disjoint : Disjoint (Support α f) (Support α g)) : AlgebraicallyDisjoint f g := by
@@ -208,7 +213,7 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
 
   -- Re-use the Hausdoff property of α again, this time yielding W ⊆ V
   let ⟨y, y_moved⟩ := faithful_moves_point' α f₂_ne_one
-  have y_in_V := (rist_supported_in_set f₂_in_rist_V) (mem_support.mpr y_moved)
+  have y_in_V := (rigidStabilizer_support.mp f₂_in_rist_V) (mem_support.mpr y_moved)
   let ⟨W, W_open, y_in_W, W_in_V, disjoint_img_W⟩ := disjoint_nbhd_in V_open y_in_V y_moved
 
   -- Let f₁ be a nontrivial element of RigidStabilizer G W
@@ -220,13 +225,13 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
   · apply disjoint_commute (α := α)
     apply Set.disjoint_of_subset_left _ supp_disjoint
     calc
-      Support α f₁ ⊆ W := rist_supported_in_set f₁_in_rist_W
+      Support α f₁ ⊆ W := rigidStabilizer_support.mp f₁_in_rist_W
       W ⊆ V := W_in_V
       V ⊆ Support α f := V_in_support
   · apply disjoint_commute (α := α)
     apply Set.disjoint_of_subset_left _ supp_disjoint
     calc
-      Support α f₂ ⊆ V := rist_supported_in_set f₂_in_rist_V
+      Support α f₂ ⊆ V := rigidStabilizer_support.mp f₂_in_rist_V
       V ⊆ Support α f := V_in_support
 
   -- We claim that [f₁, [f₂, h]] is a nontrivial elelement of Centralizer G g
@@ -237,14 +242,14 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
     symm
     apply disjoint_support_comm f₂ h _ disjoint_img_V
     · exact W_in_V z_in_W
-    · exact rist_supported_in_set f₂_in_rist_V
+    · exact rigidStabilizer_support.mp f₂_in_rist_V
 
   constructor
   · -- then `k*f₁⁻¹*k⁻¹` is supported on k W = f₂ W,
     -- so [f₁,k] is supported on W ∪ f₂ W ⊆ V ⊆ support f, so commutes with g.
     apply disjoint_commute (α := α)
     apply Set.disjoint_of_subset_left _ supp_disjoint
-    have supp_f₁_subset_W := (rist_supported_in_set f₁_in_rist_W)
+    have supp_f₁_subset_W := (rigidStabilizer_support.mp f₁_in_rist_W)
 
     show Support α ⁅f₁, ⁅f₂, h⁆⁆ ⊆ Support α f
     calc
@@ -259,14 +264,14 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
       _ ⊆ V ∪ V := by
         apply Set.union_subset_union_right
         apply smulImage_subset_in_support f₂ W V W_in_V
-        exact rist_supported_in_set f₂_in_rist_V
+        exact rigidStabilizer_support.mp f₂_in_rist_V
       _ ⊆ V := by rw [Set.union_self]
       _ ⊆ Support α f := V_in_support
 
   · -- finally, [f₁,k] agrees with f₁ on W, so is not the identity.
     have h₄: ∀ z ∈ W, ⁅f₁, k⁆ • z = f₁ • z := by
       apply disjoint_support_comm f₁ k
-      exact rist_supported_in_set f₁_in_rist_W
+      exact rigidStabilizer_support.mp f₁_in_rist_W
       rw [<-smulImage_eq_of_smul_eq h₂]
       exact disjoint_img_W
     let ⟨z, z_in_W, z_moved⟩ := faithful_rigid_stabilizer_moves_point f₁_in_rist_W f₁_ne_one
@@ -522,7 +527,7 @@ by
     symm
 
     apply disjoint_support_comm h f
-    · exact rist_supported_in_set h_in_ristV
+    · exact rigidStabilizer_support.mp h_in_ristV
     · exact V_disjoint_smulImage
     · exact z_in_V
 
@@ -541,11 +546,11 @@ by
       Support α ⁅f₂, h⁆ ⊆ Support α h ∪ (f₂ •'' Support α h) := support_comm α f₂ h
       _ ⊆ V ∪ (f₂ •'' Support α h) := by
         apply Set.union_subset_union_left
-        exact rist_supported_in_set h_in_ristV
+        exact rigidStabilizer_support.mp h_in_ristV
       _ ⊆ V ∪ (f₂ •'' V) := by
         apply Set.union_subset_union_right
         apply smulImage_subset
-        exact rist_supported_in_set h_in_ristV
+        exact rigidStabilizer_support.mp h_in_ristV
   have support_h' : Support α h' ⊆ ⋃(i : Fin 2 × Fin 2), (f₁^(i.1.val) * f₂^(i.2.val)) •'' V := by
     rw [rewrite_Union]
     simp (config := {zeta := false})

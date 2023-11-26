@@ -29,7 +29,7 @@ theorem faithful_rigid_stabilizer_moves_point {g : G} {U : Set α} :
   by
   intro g_rigid g_ne_one
   let ⟨x, xmoved⟩ := Rubin.faithful_moves_point' α g_ne_one
-  exact ⟨x, rist_supported_in_set g_rigid xmoved, xmoved⟩
+  exact ⟨x, rigidStabilizer_support.mp g_rigid xmoved, xmoved⟩
 #align faithful_rist_moves_point Rubin.faithful_rigid_stabilizer_moves_point
 
 theorem ne_one_support_nonempty {g : G} : g ≠ 1 → (Support α g).Nonempty :=

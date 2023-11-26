@@ -12,6 +12,7 @@ namespace Rubin
 
 section Continuity
 
+-- TODO: don't have this extend MulAction
 class ContinuousMulAction (G α : Type _) [Group G] [TopologicalSpace α] extends
     MulAction G α where
   continuous : ∀ g : G, Continuous (fun x: α => g • x)
@@ -92,17 +93,12 @@ class LocallyDense (G α : Type _) [Group G] [TopologicalSpace α] extends MulAc
     p ∈ interior (closure (MulAction.orbit (RigidStabilizer G U) p))
 #align is_locally_dense Rubin.LocallyDense
 
-namespace LocallyDense
-
-lemma nonEmpty {G α : Type _} [Group G] [TopologicalSpace α] [LocallyDense G α]:
+lemma LocallyDense.nonEmpty {G α : Type _} [Group G] [TopologicalSpace α] [LocallyDense G α]:
   ∀ {U : Set α},
   Set.Nonempty U →
   ∃ p ∈ U, p ∈ interior (closure (MulAction.orbit (RigidStabilizer G U) p)) := by
   intros U H_ne
   exact ⟨H_ne.some, H_ne.some_mem, LocallyDense.isLocallyDense U H_ne.some H_ne.some_mem⟩
-
-end LocallyDense
-
 
 end Other
 

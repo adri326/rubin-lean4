@@ -24,6 +24,7 @@ import Rubin.Topological
 import Rubin.RigidStabilizer
 import Rubin.Period
 import Rubin.AlgebraicDisjointness
+import Rubin.RegularSupport
 
 #align_import rubin
 
@@ -63,82 +64,20 @@ where
 
 end RubinActions
 
-----------------------------------------------------------------
-section Rubin.RegularSupport.RegularSupport
+section proposition_2_1
 
-variable [TopologicalSpace α] [Rubin.ContinuousMulAction G α]
+variable {G α : Type _}
+variable [Group G]
+variable [MulAction G α]
+variable [TopologicalSpace α]
+variable [T2Space α]
 
-def RegularSupport.InteriorClosure (U : Set α) :=
-  interior (closure U)
-#align interior_closure Rubin.RegularSupport.InteriorClosure
+lemma proposition_2_1 (f : G) :
+  Set.centralizer { g^12 | (g : G) (_ : AlgebraicallyDisjoint f g) } = RigidStabilizer G (RegularSupport α f) :=
+by
+  sorry
 
-theorem RegularSupport.is_open_interiorClosure (U : Set α) :
-    IsOpen (Rubin.RegularSupport.InteriorClosure U) :=
-  isOpen_interior
-#align is_open_interior_closure Rubin.RegularSupport.is_open_interiorClosure
-
-theorem RegularSupport.interiorClosure_mono {U V : Set α} :
-    U ⊆ V → Rubin.RegularSupport.InteriorClosure U ⊆ Rubin.RegularSupport.InteriorClosure V :=
-  interior_mono ∘ closure_mono
-#align interior_closure_mono Rubin.RegularSupport.interiorClosure_mono
-
-def is_regular_open (U : Set α) :=
-  Rubin.RegularSupport.InteriorClosure U = U
-#align set.is_regular_open Rubin.is_regular_open
-
-theorem is_regular_def (U : Set α) :
-    is_regular_open U ↔ Rubin.RegularSupport.InteriorClosure U = U := by rfl
-#align set.is_regular_def Rubin.is_regular_def
-
-theorem RegularSupport.IsOpen.in_closure {U : Set α} : IsOpen U → U ⊆ interior (closure U) :=
-  by
-  intro U_open x x_in_U
-  apply interior_mono subset_closure
-  rw [U_open.interior_eq]
-  exact x_in_U
-#align is_open.in_closure Rubin.RegularSupport.IsOpen.in_closure
-
-theorem RegularSupport.IsOpen.interiorClosure_subset {U : Set α} :
-    IsOpen U → U ⊆ Rubin.RegularSupport.InteriorClosure U := fun h =>
-  (subset_interior_iff_isOpen.mpr h).trans (interior_mono subset_closure)
-#align is_open.interior_closure_subset Rubin.RegularSupport.IsOpen.interiorClosure_subset
-
-theorem RegularSupport.regular_interior_closure (U : Set α) :
-    is_regular_open (Rubin.RegularSupport.InteriorClosure U) :=
-  by
-  rw [is_regular_def]
-  apply Set.Subset.antisymm
-  exact interior_mono ((closure_mono interior_subset).trans (subset_of_eq closure_closure))
-  exact (subset_of_eq interior_interior.symm).trans (interior_mono subset_closure)
-#align regular_interior_closure Rubin.RegularSupport.regular_interior_closure
-
-def RegularSupport.RegularSupport (α : Type _) [TopologicalSpace α] [MulAction G α] (g : G) :=
-  Rubin.RegularSupport.InteriorClosure (Support α g)
-#align regular_support Rubin.RegularSupport.RegularSupport
-
-theorem RegularSupport.regularSupport_regular {g : G} :
-    is_regular_open (Rubin.RegularSupport.RegularSupport α g) :=
-  Rubin.RegularSupport.regular_interior_closure _
-#align regular_regular_support Rubin.RegularSupport.regularSupport_regular
-
-theorem RegularSupport.support_subset_regularSupport [T2Space α] (g : G) :
-    Support α g ⊆ Rubin.RegularSupport.RegularSupport α g :=
-  Rubin.RegularSupport.IsOpen.interiorClosure_subset (Rubin.support_open g)
-#align support_in_regular_support Rubin.RegularSupport.support_subset_regularSupport
-
-theorem RegularSupport.mem_regularSupport (g : G) (U : Set α) :
-    is_regular_open U → g ∈ RigidStabilizer G U → Rubin.RegularSupport.RegularSupport α g ⊆ U :=
-  fun U_ro g_moves =>
-  (is_regular_def _).mp U_ro ▸
-    Rubin.RegularSupport.interiorClosure_mono (rist_supported_in_set g_moves)
-#align mem_regular_support Rubin.RegularSupport.mem_regularSupport
-
--- FIXME: Weird naming?
-def RegularSupport.AlgebraicCentralizer (f : G) : Set G :=
-  {h | ∃ g, h = g ^ 12 ∧ AlgebraicallyDisjoint f g}
-#align algebraic_centralizer Rubin.RegularSupport.AlgebraicCentralizer
-
-end Rubin.RegularSupport.RegularSupport
+end proposition_2_1
 
 -- ----------------------------------------------------------------
 -- section finite_exponent
