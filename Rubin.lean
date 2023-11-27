@@ -198,87 +198,59 @@ by
 
 section proposition_2_1
 
+-- TODO: put in a different file and introduce some QoL theorems
 def AlgebraicSubgroup {G : Type _} [Group G] (f : G) : Set G :=
   (fun g : G => g^12) '' { g : G | IsAlgebraicallyDisjoint f g }
 
+def AlgebraicCentralizer {G: Type _} (α : Type _) [Group G] [MulAction G α] (f : G) : Set G :=
+  Set.centralizer (AlgebraicSubgroup f)
 
--- TODO: WIP, can't seem to be able to construct a set U that fulfills all the conditions
-lemma open_disj_of_not_support_subset_rsupp {G α : Type _}
-  [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [T2Space α] [h_fsm : FaithfulSMul G α]
-  [h_lm : LocallyMoving G α]
+-- Given the statement `¬Support α h ⊆ RegularSupport α f`,
+-- we construct an open subset within `Support α h \ RegularSupport α f`,
+-- and we show that it is non-empty, open and (by construction) disjoint from `Support α f`.
+lemma open_set_from_supp_not_subset_rsupp {G α : Type _}
+  [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [T2Space α]
   {f h : G} (not_support_subset_rsupp : ¬Support α h ⊆ RegularSupport α f):
   ∃ V : Set α, V ⊆ Support α h ∧ Set.Nonempty V ∧ IsOpen V ∧ Disjoint V (Support α f) :=
 by
-  have v_exists := by
-    rw [Set.not_subset] at not_support_subset_rsupp
-    exact not_support_subset_rsupp
-  let ⟨v, ⟨v_in_supp, v_notin_rsupp⟩⟩ := v_exists
-
-  have v_notin_supp_f : v ∉ Support α f := by
-    intro h₁
-    exact v_notin_rsupp (support_subset_regularSupport h₁)
-
-  let U := interior (Support α h \ Support α f)
-  have U_open : IsOpen U := by simp
-  have U_subset_supp_h : U ⊆ Support α h := by
-    calc
-      U ⊆ (Support α h \ Support α f) := interior_subset
-      _ ⊆ Support α h := Set.diff_subset _ _
+  let U := Support α h \ closure (RegularSupport α f)
+  have U_open : IsOpen U := by
+    unfold_let
+    rw [Set.diff_eq_compl_inter]
+    apply IsOpen.inter
+    · simp
+    · exact support_open _
+  have U_subset_supp_h : U ⊆ Support α h := by simp; apply Set.diff_subset
   have U_disj_supp_f : Disjoint U (Support α f) := by
-    by_contra h_contra
-    rw [Set.not_disjoint_iff] at h_contra
-    let ⟨x, x_in_U, x_in_supp_F⟩ := h_contra
-    unfold_let at x_in_U
-    have x_in_diff := interior_subset x_in_U
-    exact x_in_diff.2 x_in_supp_F
+    apply Set.disjoint_of_subset_right
+    · exact subset_closure
+    · simp
+      rw [Set.diff_eq_compl_inter]
+      apply Disjoint.inter_left
+      apply Disjoint.closure_right; swap; simp
 
-  have U_nonempty : Set.Nonempty U := by
-    by_contra U_empty
-    rw [Set.not_nonempty_iff_eq_empty] at U_empty
-    have v_moved : h • v ≠ v := by rw [<-mem_support]; assumption
-    let ⟨W, ⟨W_open, v_in_W, W_subset_supp_h, W_disj_img⟩⟩ := disjoint_nbhd_in (support_open _) v_in_supp v_moved
-    let V := W \ {v}
-    have V_open : IsOpen V := W_open.sdiff isClosed_singleton
-    sorry
+      rw [Set.disjoint_compl_left_iff_subset]
+      apply subset_trans
+      exact subset_closure
+      apply closure_mono
+      apply support_subset_regularSupport
 
-  use U
+  have U_nonempty : Set.Nonempty U; swap
+  exact ⟨U, U_subset_supp_h, U_nonempty, U_open, U_disj_supp_f⟩
 
-  -- Stuff I attempted so far:
-  -- let U := Support α h \ closure (Support α f)
-  -- have U_open : IsOpen U := by
-  --   apply IsOpen.sdiff
-  --   exact support_open h
-  --   simp
+  -- We prove that U isn't empty by contradiction:
+  -- if it is empty, then `Support α h \ closure (RegularSupport α f) = ∅`,
+  -- so we can show that `Support α h ⊆ RegularSupport α f`,
+  -- contradicting with our initial hypothesis.
+  by_contra U_empty
+  apply not_support_subset_rsupp
+  show Support α h ⊆ RegularSupport α f
 
-  -- let V := U \ {v}
-  -- have V_open : IsOpen V := by
-  --   apply IsOpen.sdiff
-  --   · apply IsOpen.sdiff
-  --     exact support_open h
-  --     simp
-  --   · exact isClosed_singleton
-  -- have U_subset_support : U ⊆ Support α h := Set.diff_subset _ _
-  -- have V_subset_support : V ⊆ Support α h := by
-  --   -- Mathlib kind of letting me down on this one:
-  --   unfold_let
-  --   repeat rw [Set.diff_eq]
-  --   intro x x_in
-  --   exact x_in.left.left
-  -- have V_disj_support : Disjoint V (Support α f) := by
-  --   intro S
-  --   simp
-  --   intro S_subset
-  --   intro S_support
-  --   intro x x_in_S
-  --   have h₁ := S_subset x_in_S
-  --   simp at h₁
-  --   have h₂ := S_support x_in_S
-  --   simp at h₂
-  --   have h₃ := not_mem_of_not_mem_closure h₁.left.right
-  --   exact h₃ h₂
-
-  -- use V
-
+  apply subset_of_diff_closure_regular_empty
+  · apply regularSupport_regular
+  · exact support_open _
+  · rw [Set.not_nonempty_iff_eq_empty] at U_empty
+    exact U_empty
 
 lemma nontrivial_pow_from_exponent_eq_zero {G : Type _} [Group G]
   (exp_eq_zero : Monoid.exponent G = 0) :
@@ -321,50 +293,41 @@ lemma proposition_2_1 {G α : Type _}
   [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [T2Space α]
   [LocallyMoving G α] [h_faithful : FaithfulSMul G α]
   (f : G) :
-  Set.centralizer (AlgebraicSubgroup f) = RigidStabilizer G (RegularSupport α f) :=
+  AlgebraicCentralizer α f = RigidStabilizer G (RegularSupport α f) :=
 by
   apply Set.eq_of_subset_of_subset
   swap
   {
     intro h h_in_rist
     simp at h_in_rist
-    let U := RegularSupport α f
+    unfold AlgebraicCentralizer
     rw [Set.mem_centralizer_iff]
     intro g g_in_S
     simp [AlgebraicSubgroup] at g_in_S
     let ⟨g', ⟨g'_alg_disj, g_eq_g'⟩⟩ := g_in_S
     have supp_disj := proposition_1_1_2 f g' g'_alg_disj (α := α)
 
-    have supp_αf_open : IsOpen (Support α f) := support_open f
-    have supp_αg_open : IsOpen (Support α g) := support_open g
-
-    have rsupp_disj : Disjoint (RegularSupport α f) (Support α g) := by
+    apply Commute.eq
+    symm
+    apply commute_if_rigidStabilizer_and_disjoint (α := α)
+    · exact h_in_rist
+    · show Disjoint (RegularSupport α f) (Support α g)
       have cl_supp_disj : Disjoint (closure (Support α f)) (Support α g)
-      {
-        rw [<-g_eq_g']
-        apply Set.disjoint_of_subset_left _ supp_disj
-        show closure (Support α f) ⊆ Support α f
-        -- TODO: figure out how to prove this
-        sorry
-      }
+      swap
 
       apply Set.disjoint_of_subset _ _ cl_supp_disj
       · rw [RegularSupport.def]
         exact interior_subset
       · rfl
-
-    apply Commute.eq
-    symm
-    apply commute_if_rigidStabilizer_and_disjoint (α := α)
-    · exact h_in_rist
-    · exact rsupp_disj
+      · rw [<-g_eq_g']
+        exact Disjoint.closure_left supp_disj (support_open _)
   }
 
   intro h h_in_centralizer
   by_contra h_notin_rist
   simp at h_notin_rist
   rw [rigidStabilizer_support] at h_notin_rist
-  let ⟨V, V_in_supp_h, V_nonempty, V_open, V_disj_supp_f⟩ := open_disj_of_not_support_subset_rsupp h_notin_rist
+  let ⟨V, V_in_supp_h, V_nonempty, V_open, V_disj_supp_f⟩ := open_set_from_supp_not_subset_rsupp h_notin_rist
   let ⟨v, v_in_V⟩ := V_nonempty
   have v_moved := V_in_supp_h v_in_V
   rw [mem_support] at v_moved

@@ -30,6 +30,8 @@ theorem InteriorClosure.def (U : Set α) : InteriorClosure U = interior (closure
 @[simp]
 theorem InteriorClosure.fdef : InteriorClosure = (interior ∘ (closure (α := α))) := by ext; simp
 
+-- A set `U` is said to be regular if the interior of the closure of `U` is equal to `U`.
+-- Notably, a regular set is also open, and the interior of a regular set is equal to itself.
 def Regular (U : Set α) : Prop :=
   InteriorClosure U = U
 
@@ -37,6 +39,13 @@ def Regular (U : Set α) : Prop :=
 theorem Regular.def (U : Set α) : Regular U ↔ interior (closure U) = U :=
   by simp [Regular]
 #align set.is_regular_def Rubin.Regular.def
+
+@[simp]
+theorem Regular.eq {U : Set α} (U_reg : Regular U) : interior (closure U) = U :=
+  (Regular.def U).mp U_reg
+
+instance Regular.instCoe {U : Set α} : Coe (Regular U) (interior (closure U) = U) where
+  coe := Regular.eq
 
 theorem interiorClosure_open (U : Set α) : IsOpen (InteriorClosure U) := by simp
 #align is_open_interior_closure Rubin.interiorClosure_open

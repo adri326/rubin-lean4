@@ -69,7 +69,8 @@ so that `⁅f₁, ⁅f₂, h⁆⁆` is a nontrivial element of `Centralizer(g, G
 
 Here the definition of `k ∈ Centralizer(g, G)` is directly unrolled as `Commute k g`.
 
-This is a slightly stronger proposition that plain disjointness, a
+This is a slightly weaker proposition than plain disjointness,
+but it is easier to derive from the hypothesis of Rubin's theorem.
 -/
 def AlgebraicallyDisjoint {G : Type _} [Group G] (f g : G) :=
   ∀ (h : G), ¬Commute f h → AlgebraicallyDisjointElem f g h
@@ -89,7 +90,18 @@ fun (h : G) (nc : ¬Commute f h) => {
     exact (mk_thm h nc).choose_spec.choose_spec.right.right.right
 }
 
--- This is an idea of having a Prop version of AlgebraicallyDisjoint, but it sounds painful to work with
+/--
+This definition simply wraps `AlgebraicallyDisjoint` as a `Prop`.
+It is equivalent to it, although since `AlgebraicallyDisjoint` isn't a `Prop`,
+an `↔` (iff) statement joining the two cannot be written.
+
+You should consider using it when proving `↔`/`∧` kinds of theorems, or when tools like `cases` are needed,
+as the base `AlgebraicallyDisjoint` isn't a `Prop` and won't work with those.
+
+The two `Coe` and `CoeFn` instances provided around this type make it essentially transparent —
+you can use an instance of `AlgebraicallyDisjoint` in place of a `IsAlgebraicallyDisjoint` and vice-versa.
+You might need to add the odd `↑` (coe) operator to make Lean happy.
+--/
 def IsAlgebraicallyDisjoint {G : Type _} [Group G] (f g : G): Prop :=
   ∀ (h : G), ¬Commute f h → ∃ (f₁ f₂ : G), ∃ (elem : AlgebraicallyDisjointElem f g h), elem.fst = f₁ ∧ elem.snd = f₂
 
