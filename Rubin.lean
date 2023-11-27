@@ -64,105 +64,354 @@ where
 
 end RubinActions
 
+lemma lemma_2_2 (G: Type _) {α : Type _} [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [FaithfulSMul G α]
+  [T2Space α] [h_lm : LocallyMoving G α]
+  {U : Set α} (U_open : IsOpen U) (U_nonempty : Set.Nonempty U) :
+  Monoid.exponent (RigidStabilizer G U) = 0 :=
+by
+  by_contra exp_ne_zero
+
+  let ⟨p, ⟨g, g_in_ristU⟩, n, p_in_U, n_pos, hpgn, n_eq_Sup⟩ := Period.period_from_exponent U U_nonempty exp_ne_zero
+  simp at hpgn
+  let ⟨V', V'_open, p_in_V', disj'⟩ := disjoint_nbhd_fin (smul_injective_within_period hpgn)
+
+  let V := U ∩ V'
+  have V_open : IsOpen V := U_open.inter V'_open
+  have p_in_V : p ∈ V := ⟨p_in_U, p_in_V'⟩
+  have disj : ∀ (i j : Fin n), i ≠ j → Disjoint (g ^ (i : ℕ) •'' V) (g ^ (j : ℕ) •'' V) := by
+    intro i j i_ne_j
+    apply Set.disjoint_of_subset
+    · apply smulImage_subset
+      apply Set.inter_subset_right
+    · apply smulImage_subset
+      apply Set.inter_subset_right
+    exact disj' i j i_ne_j
+
+  let ⟨h, h_in_ristV, h_ne_one⟩ := h_lm.get_nontrivial_rist_elem V_open (Set.nonempty_of_mem p_in_V)
+  have hg_in_ristU : h * g ∈ RigidStabilizer G U := by
+    simp [RigidStabilizer]
+    intro x x_notin_U
+    rw [mul_smul]
+    rw [g_in_ristU _ x_notin_U]
+    have x_notin_V : x ∉ V := fun x_in_V => x_notin_U x_in_V.left
+    rw [h_in_ristV _ x_notin_V]
+  let ⟨q, q_in_V, hq_ne_q ⟩ := faithful_rigid_stabilizer_moves_point h_in_ristV h_ne_one
+  have gpowi_q_notin_V : ∀ (i : Fin n), (i : ℕ) > 0 → g ^ (i : ℕ) • q ∉ V := by
+    apply smulImage_distinct_of_disjoint_exp n_pos disj
+    exact q_in_V
+
+  -- We have (hg)^i q = g^i q for all 0 < i < n
+  have hgpow_eq_gpow : ∀ (i : Fin n), (h * g) ^ (i : ℕ) • q = g ^ (i : ℕ) • q := by
+    intro ⟨i, i_lt_n⟩
+    simp
+    induction i with
+    | zero => simp
+    | succ i' IH =>
+      have i'_lt_n: i' < n := Nat.lt_of_succ_lt i_lt_n
+      have IH := IH i'_lt_n
+      rw [smul_succ]
+      rw [IH]
+      rw [smul_succ]
+      rw [mul_smul]
+      rw [<-smul_succ]
+
+      -- We can show that `g^(Nat.succ i') • q ∉ V`,
+      -- which means that with `h` in `RigidStabilizer G V`, `h` fixes that point
+      apply h_in_ristV (g^(Nat.succ i') • q)
+
+      let i'₂ : Fin n := ⟨Nat.succ i', i_lt_n⟩
+      have h_eq: Nat.succ i' = (i'₂ : ℕ) := by simp
+      rw [h_eq]
+      apply smulImage_distinct_of_disjoint_exp
+      · exact n_pos
+      · exact disj
+      · exact q_in_V
+      · simp
+
+  -- Combined with `g^i • q ≠ q`, this yields `(hg)^i • q ≠ q` for all `0 < i < n`
+  have hgpow_moves : ∀ (i : Fin n), 0 < (i : ℕ) → (h*g)^(i : ℕ) • q ≠ q := by
+    intro ⟨i, i_lt_n⟩ i_pos
+    simp at i_pos
+    rw [hgpow_eq_gpow]
+    simp
+    by_contra h'
+    apply gpowi_q_notin_V ⟨i, i_lt_n⟩
+    exact i_pos
+    simp (config := {zeta := false}) only []
+    rw [h']
+    exact q_in_V
+
+  -- This even holds for `i = n`
+  have hgpown_moves : (h * g) ^ n • q ≠ q := by
+    -- Rewrite (hg)^n • q = h * g^n • q
+    rw [<-Nat.succ_pred n_pos.ne.symm]
+    rw [pow_succ]
+    have h_eq := hgpow_eq_gpow ⟨Nat.pred n, Nat.pred_lt_self n_pos⟩
+    simp at h_eq
+    rw [mul_smul, h_eq, <-mul_smul, mul_assoc, <-pow_succ]
+    rw [<-Nat.succ_eq_add_one, Nat.succ_pred n_pos.ne.symm]
+
+    -- We first eliminate `g^n • q` by proving that `n = Period g q`
+    have period_gq_eq_n : Period.period q g = n := by
+      apply ge_antisymm
+      {
+        apply Period.notfix_le_period'
+        · exact n_pos
+        · apply Period.period_pos'
+          · exact Set.nonempty_of_mem p_in_U
+          · exact exp_ne_zero
+          · exact q_in_V.left
+          · exact g_in_ristU
+        · intro i i_pos
+          rw [<-hgpow_eq_gpow]
+          apply hgpow_moves i i_pos
+      }
+      {
+        rw [n_eq_Sup]
+        apply Period.period_le_Sup_periods'
+        · exact Set.nonempty_of_mem p_in_U
+        · exact exp_ne_zero
+        · exact q_in_V.left
+        · exact g_in_ristU
+      }
+
+    rw [mul_smul, <-period_gq_eq_n]
+    rw [Period.pow_period_fix]
+    -- Finally, we have `h • q ≠ q`
+    exact hq_ne_q
+
+  -- Finally, we derive a contradiction
+  have ⟨period_hg_pos, period_hg_le_n⟩ := Period.zero_lt_period_le_Sup_periods U_nonempty exp_ne_zero ⟨q, q_in_V.left⟩ ⟨h * g, hg_in_ristU⟩
+  simp at period_hg_pos
+  simp at period_hg_le_n
+  rw [<-n_eq_Sup] at period_hg_le_n
+  cases (lt_or_eq_of_le period_hg_le_n) with
+  | inl period_hg_lt_n =>
+      apply hgpow_moves ⟨Period.period q (h * g), period_hg_lt_n⟩
+      exact period_hg_pos
+      simp
+      apply Period.pow_period_fix
+  | inr period_hg_eq_n =>
+      apply hgpown_moves
+      rw [<-period_hg_eq_n]
+      apply Period.pow_period_fix
+
 section proposition_2_1
 
-variable {G α : Type _}
-variable [Group G]
-variable [MulAction G α]
-variable [TopologicalSpace α]
-variable [T2Space α]
+def AlgebraicSubgroup {G : Type _} [Group G] (f : G) : Set G :=
+  (fun g : G => g^12) '' { g : G | IsAlgebraicallyDisjoint f g }
 
-lemma proposition_2_1 (f : G) :
-  Set.centralizer { g^12 | (g : G) (_ : AlgebraicallyDisjoint f g) } = RigidStabilizer G (RegularSupport α f) :=
+
+-- TODO: WIP, can't seem to be able to construct a set U that fulfills all the conditions
+lemma open_disj_of_not_support_subset_rsupp {G α : Type _}
+  [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [T2Space α] [h_fsm : FaithfulSMul G α]
+  [h_lm : LocallyMoving G α]
+  {f h : G} (not_support_subset_rsupp : ¬Support α h ⊆ RegularSupport α f):
+  ∃ V : Set α, V ⊆ Support α h ∧ Set.Nonempty V ∧ IsOpen V ∧ Disjoint V (Support α f) :=
 by
-  sorry
+  have v_exists := by
+    rw [Set.not_subset] at not_support_subset_rsupp
+    exact not_support_subset_rsupp
+  let ⟨v, ⟨v_in_supp, v_notin_rsupp⟩⟩ := v_exists
+
+  have v_notin_supp_f : v ∉ Support α f := by
+    intro h₁
+    exact v_notin_rsupp (support_subset_regularSupport h₁)
+
+  let U := interior (Support α h \ Support α f)
+  have U_open : IsOpen U := by simp
+  have U_subset_supp_h : U ⊆ Support α h := by
+    calc
+      U ⊆ (Support α h \ Support α f) := interior_subset
+      _ ⊆ Support α h := Set.diff_subset _ _
+  have U_disj_supp_f : Disjoint U (Support α f) := by
+    by_contra h_contra
+    rw [Set.not_disjoint_iff] at h_contra
+    let ⟨x, x_in_U, x_in_supp_F⟩ := h_contra
+    unfold_let at x_in_U
+    have x_in_diff := interior_subset x_in_U
+    exact x_in_diff.2 x_in_supp_F
+
+  have U_nonempty : Set.Nonempty U := by
+    by_contra U_empty
+    rw [Set.not_nonempty_iff_eq_empty] at U_empty
+    have v_moved : h • v ≠ v := by rw [<-mem_support]; assumption
+    let ⟨W, ⟨W_open, v_in_W, W_subset_supp_h, W_disj_img⟩⟩ := disjoint_nbhd_in (support_open _) v_in_supp v_moved
+    let V := W \ {v}
+    have V_open : IsOpen V := W_open.sdiff isClosed_singleton
+    sorry
+
+  use U
+
+  -- Stuff I attempted so far:
+  -- let U := Support α h \ closure (Support α f)
+  -- have U_open : IsOpen U := by
+  --   apply IsOpen.sdiff
+  --   exact support_open h
+  --   simp
+
+  -- let V := U \ {v}
+  -- have V_open : IsOpen V := by
+  --   apply IsOpen.sdiff
+  --   · apply IsOpen.sdiff
+  --     exact support_open h
+  --     simp
+  --   · exact isClosed_singleton
+  -- have U_subset_support : U ⊆ Support α h := Set.diff_subset _ _
+  -- have V_subset_support : V ⊆ Support α h := by
+  --   -- Mathlib kind of letting me down on this one:
+  --   unfold_let
+  --   repeat rw [Set.diff_eq]
+  --   intro x x_in
+  --   exact x_in.left.left
+  -- have V_disj_support : Disjoint V (Support α f) := by
+  --   intro S
+  --   simp
+  --   intro S_subset
+  --   intro S_support
+  --   intro x x_in_S
+  --   have h₁ := S_subset x_in_S
+  --   simp at h₁
+  --   have h₂ := S_support x_in_S
+  --   simp at h₂
+  --   have h₃ := not_mem_of_not_mem_closure h₁.left.right
+  --   exact h₃ h₂
+
+  -- use V
+
+
+lemma nontrivial_pow_from_exponent_eq_zero {G : Type _} [Group G]
+  (exp_eq_zero : Monoid.exponent G = 0) :
+  ∀ (n : ℕ), n > 0 → ∃ g : G, g^n ≠ 1 :=
+by
+  intro n n_pos
+  rw [Monoid.exponent_eq_zero_iff] at exp_eq_zero
+  unfold Monoid.ExponentExists at exp_eq_zero
+  rw [<-Classical.not_forall_not, Classical.not_not] at exp_eq_zero
+  simp at exp_eq_zero
+  exact exp_eq_zero n n_pos
+
+lemma Commute.inv {G : Type _} [Group G] {f g : G} : Commute f g → Commute f g⁻¹ := by
+  unfold Commute SemiconjBy
+  intro h
+  have h₁ : f = g * f * g⁻¹ := by
+    nth_rw 1 [<-mul_one f]
+    rw [<-mul_right_inv g, <-mul_assoc]
+    rw [h]
+  nth_rw 2 [h₁]
+  group
+
+lemma Commute.inv_iff {G : Type _} [Group G] {f g : G} : Commute f g ↔ Commute f g⁻¹ := ⟨
+  Commute.inv,
+  by
+    nth_rw 2 [<-inv_inv g]
+    apply Commute.inv
+⟩
+
+lemma Commute.inv_iff₂ {G : Type _} [Group G] {f g : G} : Commute f g ↔ Commute f⁻¹ g := ⟨
+  Commute.symm ∘ Commute.inv_iff.mp ∘ Commute.symm,
+  Commute.symm ∘ Commute.inv_iff.mpr ∘ Commute.symm
+⟩
+
+lemma Commute.into {G : Type _} [Group G] {f g : G} : Commute f g → f * g = g * f := by
+  unfold Commute SemiconjBy
+  tauto
+
+lemma proposition_2_1 {G α : Type _}
+  [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [T2Space α]
+  [LocallyMoving G α] [h_faithful : FaithfulSMul G α]
+  (f : G) :
+  Set.centralizer (AlgebraicSubgroup f) = RigidStabilizer G (RegularSupport α f) :=
+by
+  apply Set.eq_of_subset_of_subset
+  swap
+  {
+    intro h h_in_rist
+    simp at h_in_rist
+    let U := RegularSupport α f
+    rw [Set.mem_centralizer_iff]
+    intro g g_in_S
+    simp [AlgebraicSubgroup] at g_in_S
+    let ⟨g', ⟨g'_alg_disj, g_eq_g'⟩⟩ := g_in_S
+    have supp_disj := proposition_1_1_2 f g' g'_alg_disj (α := α)
+
+    have supp_αf_open : IsOpen (Support α f) := support_open f
+    have supp_αg_open : IsOpen (Support α g) := support_open g
+
+    have rsupp_disj : Disjoint (RegularSupport α f) (Support α g) := by
+      have cl_supp_disj : Disjoint (closure (Support α f)) (Support α g)
+      {
+        rw [<-g_eq_g']
+        apply Set.disjoint_of_subset_left _ supp_disj
+        show closure (Support α f) ⊆ Support α f
+        -- TODO: figure out how to prove this
+        sorry
+      }
+
+      apply Set.disjoint_of_subset _ _ cl_supp_disj
+      · rw [RegularSupport.def]
+        exact interior_subset
+      · rfl
+
+    apply Commute.eq
+    symm
+    apply commute_if_rigidStabilizer_and_disjoint (α := α)
+    · exact h_in_rist
+    · exact rsupp_disj
+  }
+
+  intro h h_in_centralizer
+  by_contra h_notin_rist
+  simp at h_notin_rist
+  rw [rigidStabilizer_support] at h_notin_rist
+  let ⟨V, V_in_supp_h, V_nonempty, V_open, V_disj_supp_f⟩ := open_disj_of_not_support_subset_rsupp h_notin_rist
+  let ⟨v, v_in_V⟩ := V_nonempty
+  have v_moved := V_in_supp_h v_in_V
+  rw [mem_support] at v_moved
+
+  have ⟨W, W_open, v_in_W, W_subset_support, disj_W_img⟩ := disjoint_nbhd_in V_open v_in_V v_moved
+
+  have mono_exp := lemma_2_2 G W_open (Set.nonempty_of_mem v_in_W)
+  let ⟨⟨g, g_in_rist⟩, g12_ne_one⟩ := nontrivial_pow_from_exponent_eq_zero mono_exp 12 (by norm_num)
+  simp at g12_ne_one
+
+  have disj_supports : Disjoint (Support α f) (Support α g) := by
+    apply Set.disjoint_of_subset_right
+    · apply rigidStabilizer_support.mp
+      exact g_in_rist
+    · apply Set.disjoint_of_subset_right
+      · exact W_subset_support
+      · exact V_disj_supp_f.symm
+  have alg_disj_f_g := proposition_1_1_1 _ _ disj_supports
+  have g12_in_algebraic_subgroup : g^12 ∈ AlgebraicSubgroup f := by
+    simp [AlgebraicSubgroup]
+    use g
+    constructor
+    exact ↑alg_disj_f_g
+    rfl
+
+  have h_nc_g12 : ¬Commute (g^12) h := by
+    have supp_g12_sub_W : Support α (g^12) ⊆ W := by
+      rw [rigidStabilizer_support] at g_in_rist
+      calc
+        Support α (g^12) ⊆ Support α g := by apply support_pow
+        _ ⊆ W := g_in_rist
+    have supp_g12_disj_hW : Disjoint (Support α (g^12)) (h •'' W) := by
+      apply Set.disjoint_of_subset_left
+      swap
+      · exact disj_W_img
+      · exact supp_g12_sub_W
+
+    exact not_commute_of_disj_support_smulImage
+      g12_ne_one
+      supp_g12_sub_W
+      supp_g12_disj_hW
+
+  apply h_nc_g12
+  exact h_in_centralizer _ g12_in_algebraic_subgroup
+
 
 end proposition_2_1
-
--- ----------------------------------------------------------------
--- section finite_exponent
--- lemma coe_nat_fin {n i : ℕ} (h : i < n) : ∃ (i' : fin n), i = i' := ⟨ ⟨ i, h ⟩, rfl ⟩
--- variables [topological_space α] [continuous_mul_action G α] [has_faithful_smul G α]
--- lemma distinct_images_from_disjoint {g : G} {V : set α} {n : ℕ}
---   (n_pos : 0 < n)
---   (h_disj : ∀ (i j : fin n) (i_ne_j : i ≠ j), disjoint (g ^ (i : ℕ) •'' V) (g ^ (j : ℕ) •'' V)) :
---   ∀ (q : α) (hq : q ∈ V) (i : fin n), (i : ℕ) > 0 → g ^ (i : ℕ) • (q : α) ∉ V :=
--- begin
---   intros q hq i i_pos hcontra,
---   have i_ne_zero : i ≠ (⟨ 0, n_pos ⟩ : fin n), { intro, done },
---   have hcontra' : g ^ (i : ℕ) • (q : α) ∈ g ^ (i : ℕ) •'' V, exact ⟨ q, hq, rfl ⟩,
---   have giq_notin_V := Set.disjoint_left.mp (h_disj i (⟨ 0, n_pos ⟩ : fin n) i_ne_zero) hcontra',
---   exact ((by done : g ^ 0 •'' V = V) ▸ giq_notin_V) hcontra
--- end
--- lemma moves_inj_period {g : G} {p : α} {n : ℕ} (period_eq_n : period p g = n) : function.injective (λ (i : fin n), g ^ (i : ℕ) • p) := begin
---   have period_ge_n : ∀ (k : ℕ), 1 ≤ k → k < n → g ^ k • p ≠ p,
---   { intros k one_le_k k_lt_n gkp_eq_p,
---     have := period_le_fix (nat.succ_le_iff.mp one_le_k) gkp_eq_p,
---     rw period_eq_n at this,
---     linarith },
---   exact moves_inj_N period_ge_n
--- end
--- lemma lemma_2_2 {α : Type u_2} [topological_space α] [continuous_mul_action G α] [has_faithful_smul G α] [t2_space α]
---   (U : set α) (U_open : is_open U) (locally_moving : is_locally_moving G α) :
---   U.nonempty → monoid.exponent (rigid_stabilizer G U) = 0 :=
--- begin
---   intro U_nonempty,
---   by_contra exp_ne_zero,
---   rcases (period_from_exponent U U_nonempty exp_ne_zero) with ⟨ p, g, n, n_pos, hpgn, n_eq_Sup ⟩,
---   rcases disjoint_nbhd_fin (moves_inj_period hpgn) with ⟨ V', V'_open, p_in_V', disj' ⟩,
---   dsimp at disj',
---   let V := U ∩ V',
---   have V_ss_U : V ⊆ U := Set.inter_subset_left U V',
---   have V'_ss_V : V ⊆ V' := Set.inter_subset_right U V',
---   have V_open : is_open V := is_open.inter U_open V'_open,
---   have p_in_V : (p : α) ∈ V := ⟨ subtype.mem p, p_in_V' ⟩,
---   have disj : ∀ (i j : fin n), ¬ i = j → disjoint (↑g ^ ↑i •'' V) (↑g ^ ↑j •'' V),
---   { intros i j i_ne_j W W_ss_giV W_ss_gjV,
---     exact disj' i j i_ne_j
---     (Set.subset.trans W_ss_giV (smul''_subset (↑g ^ ↑i) V'_ss_V))
---     (Set.subset.trans W_ss_gjV (smul''_subset (↑g ^ ↑j) V'_ss_V)) },
---   have ristV_ne_bot := locally_moving V V_open (Set.nonempty_of_mem p_in_V),
---   rcases (or_iff_right ristV_ne_bot).mp (Subgroup.bot_or_exists_ne_one _) with ⟨h,h_in_ristV,h_ne_one⟩,
---   rcases faithful_rist_moves_point h_in_ristV h_ne_one with ⟨ q, q_in_V, hq_ne_q ⟩,
---   have hg_in_ristU : (h : G) * (g : G) ∈ rigid_stabilizer G U := (rigid_stabilizer G U).mul_mem' (rist_ss_rist V_ss_U h_in_ristV) (subtype.mem g),
---   have giq_notin_V : ∀ (i : fin n), (i : ℕ) > 0 → g ^ (i : ℕ) • (q : α) ∉ V := distinct_images_from_disjoint n_pos disj q q_in_V,
---   have giq_ne_q : ∀ (i : fin n), (i : ℕ) > 0 → g ^ (i : ℕ) • (q : α) ≠ (q : α),
---   { intros i i_pos giq_eq_q, exact (giq_eq_q ▸ (giq_notin_V i i_pos)) q_in_V, },
---   have q_in_U : q ∈ U, { have : q ∈ U ∩ V' := q_in_V, exact this.1 },
---   -- We have (hg)^i q = g^i q for all 0 < i < n
---   have pow_hgq_eq_pow_gq : ∀ (i : fin n), (i : ℕ) < n → (h * g) ^ (i : ℕ) • q = (g : G) ^ (i : ℕ) • q,
---   { intros i, induction (i : ℕ) with i',
---     { intro, repeat {rw pow_zero} },
---     { intro succ_i'_lt_n,
---       rw [smul_succ, ih (nat.lt_of_succ_lt succ_i'_lt_n), smul_smul, mul_assoc, ← smul_smul, ← smul_smul, ← smul_succ],
---       have image_q_notin_V : g ^ i'.succ • q ∉ V,
---       { have i'succ_ne_zero := ne_zero.pos i'.succ,
---         exact giq_notin_V (⟨ i'.succ, succ_i'_lt_n ⟩ : fin n) i'succ_ne_zero },
---       exact by_contradiction (λ c, c (by_contradiction (λ c', image_q_notin_V ((rist_supported_in_set h_in_ristV) c')))) } },
---   -- Combined with g^i q ≠ q, this yields (hg)^i q ≠ q for all 0 < i < n
---   have hgiq_ne_q : ∀ (i : fin n), (i : ℕ) > 0 → (h * g) ^ (i : ℕ) • q ≠ q,
---   { intros i i_pos, rw pow_hgq_eq_pow_gq i (fin.is_lt i), by_contra c, exact (giq_notin_V i i_pos) (c.symm ▸ q_in_V) },
---   -- This even holds for i = n
---   have hgnq_ne_q : (h * g) ^ n • q ≠ q,
---   { -- Rewrite (hg)^n q = hg^n q
---     have npred_lt_n : n.pred < n, exact (nat.succ_pred_eq_of_pos n_pos) ▸ (lt_add_one n.pred),
---     rcases coe_nat_fin npred_lt_n with ⟨ i', i'_eq_pred_n ⟩,
---     have hgi'q_eq_gi'q := pow_hgq_eq_pow_gq i' (i'_eq_pred_n ▸ npred_lt_n),
---     have : n = (i' : ℕ).succ := i'_eq_pred_n ▸ (nat.succ_pred_eq_of_pos n_pos).symm,
---     rw [this, smul_succ, hgi'q_eq_gi'q, ← smul_smul, ← smul_succ, ← this],
---     -- Now it follows from g^n q = q and h q ≠ q
---     have n_le_period_qg := notfix_le_period' n_pos ((zero_lt_period_le_Sup_periods U_nonempty exp_ne_zero (⟨ q, q_in_U ⟩ : U) g)).1 giq_ne_q,
---     have period_qg_le_n := (zero_lt_period_le_Sup_periods U_nonempty exp_ne_zero (⟨ q, q_in_U ⟩ : U) g).2, rw ← n_eq_Sup at period_qg_le_n,
---     exact (ge_antisymm period_qg_le_n n_le_period_qg).symm ▸ ((pow_period_fix q (g : G)).symm ▸ hq_ne_q) },
---   -- Finally, we derive a contradiction
---   have period_pos_le_n := zero_lt_period_le_Sup_periods U_nonempty exp_ne_zero (⟨ q, q_in_U ⟩ : U) (⟨ h * g, hg_in_ristU ⟩ : rigid_stabilizer G U),
---   rw ← n_eq_Sup at period_pos_le_n,
---   cases (lt_or_eq_of_le period_pos_le_n.2),
---   { exact (hgiq_ne_q (⟨ (period (q : α) ((h : G) * (g : G))), h_1 ⟩ : fin n) period_pos_le_n.1) (pow_period_fix (q : α) ((h : G) * (g : G))) },
---   { exact hgnq_ne_q (h_1 ▸ (pow_period_fix (q : α) ((h : G) * (g : G)))) }
--- end
--- lemma proposition_2_1 [t2_space α] (f : G) : is_locally_moving G α → (algebraic_centralizer f).centralizer = rigid_stabilizer G (regular_support α f) := sorry
--- end finite_exponent
 -- variables [topological_space α] [topological_space β] [continuous_mul_action G α] [continuous_mul_action G β]
 -- noncomputable theorem rubin (hα : rubin_action G α) (hβ : rubin_action G β) : equivariant_homeomorph G α β := sorry
 end Rubin

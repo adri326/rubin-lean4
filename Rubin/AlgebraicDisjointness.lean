@@ -11,6 +11,7 @@ import Rubin.RigidStabilizer
 import Rubin.SmulImage
 import Rubin.Topological
 import Rubin.FaithfulAction
+import Rubin.Period
 
 namespace Rubin
 
@@ -89,8 +90,39 @@ fun (h : G) (nc : ¬Commute f h) => {
 }
 
 -- This is an idea of having a Prop version of AlgebraicallyDisjoint, but it sounds painful to work with
--- def IsAlgebraicallyDisjoint {G : Type _} [Group G] (f g : G): Prop :=
---   ∀ (h : G), ¬Commute f h → ∃ (f₁ f₂ : G), ∃ (elem : AlgebraicallyDisjointElem f g h), elem.fst = f₁ ∧ elem.snd = f₂
+def IsAlgebraicallyDisjoint {G : Type _} [Group G] (f g : G): Prop :=
+  ∀ (h : G), ¬Commute f h → ∃ (f₁ f₂ : G), ∃ (elem : AlgebraicallyDisjointElem f g h), elem.fst = f₁ ∧ elem.snd = f₂
+
+namespace IsAlgebraicallyDisjoint
+
+variable {G : Type _} [Group G]
+variable {f g: G}
+
+noncomputable def elim
+  (is_alg_disj: IsAlgebraicallyDisjoint f g) :
+  AlgebraicallyDisjoint f g :=
+fun h nc => (is_alg_disj h nc).choose_spec.choose_spec.choose
+
+def mk (alg_disj : AlgebraicallyDisjoint f g) : IsAlgebraicallyDisjoint f g :=
+fun h nc =>
+  let elem := alg_disj h nc
+  ⟨
+    elem.fst,
+    elem.snd,
+    elem,
+    rfl,
+    rfl
+  ⟩
+
+noncomputable instance coeFnAlgebraicallyDisjoint : CoeFun
+  (IsAlgebraicallyDisjoint f g)
+  (fun _ => AlgebraicallyDisjoint f g) where
+  coe := elim
+
+instance coeAlgebraicallyDisjoint : Coe (AlgebraicallyDisjoint f g) (IsAlgebraicallyDisjoint f g) where
+  coe := mk
+
+end IsAlgebraicallyDisjoint
 
 @[simp]
 theorem orbit_bot (G : Type _) [Group G] [MulAction G α] (p : α) :
@@ -456,6 +488,25 @@ instance {g : G} {x : α} {n : ℕ} :
 where
   coe := period_ge_n_cast
 
+-- TODO: remove the unneeded `n` parameter
+theorem smul_injective_within_period {g : G} {p : α} {n : ℕ}
+  (period_eq_n : Period.period p g = n) :
+  Function.Injective (fun (i : Fin n) => g ^ (i : ℕ) • p) :=
+by
+  have zpow_fix : (fun (i : Fin n) => g ^ (i : ℕ) • p) = (fun (i : Fin n) => g ^ (i : ℤ) • p) := by
+    ext x
+    simp
+  rw [zpow_fix]
+  apply moves_inj
+  intro k one_le_k k_lt_n
+
+  apply Period.moves_within_period'
+  exact one_le_k
+  rw [period_eq_n]
+  exact k_lt_n
+#align moves_inj_period Rubin.smul_injective_within_period
+
+-- TODO: move to Rubin.lean
 lemma moves_1234_of_moves_12 {g : G} {x : α} (g12_moves : g^12 • x ≠ x) :
   Function.Injective (fun i : Fin 5 => g^(i : ℤ) • x) :=
 by

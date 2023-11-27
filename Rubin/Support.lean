@@ -170,5 +170,63 @@ theorem disjoint_support_comm (f g : G) {U : Set α} :
   group_action
 #align disjoint_support_comm Rubin.disjoint_support_comm
 
+lemma empty_of_subset_disjoint {α : Type _} {U V : Set α} :
+  Disjoint U V → U ⊆ V → U = ∅ :=
+by
+  intro disj subset
+  apply Set.eq_of_subset_of_subset <;> try simp
+  intro x x_in_U
+  simp
+  apply disjoint_not_mem disj
+  exact x_in_U
+  exact subset x_in_U
+
+theorem not_commute_of_disj_support_smulImage {G α : Type _}
+  [Group G] [MulAction G α] [FaithfulSMul G α]
+  {f g : G} {U : Set α} (f_ne_one : f ≠ 1)
+  (subset : Support α f ⊆ U)
+  (disj : Disjoint (Support α f) (g •'' U)) :
+  ¬Commute f g :=
+by
+  intro h_comm
+  have h₀ : ∀ x ∈ U, x ∉ Support α f := by
+    intro x x_in_U
+    unfold Commute SemiconjBy at h_comm
+    have gx_in_img := (mem_smulImage' g).mp x_in_U
+    have h₁ : g • f • x = g • x := by
+      have res := disjoint_not_mem₂ disj gx_in_img
+      rw [not_mem_support] at res
+      rw [<-mul_smul] at res
+      rw [h_comm] at res
+      rw [mul_smul] at res
+      exact res
+    have h₂ : f • x = x := by
+      rw [<-one_smul G (f • x)]
+      nth_rw 2 [<-one_smul G x]
+      rw [<-mul_left_inv g]
+      rw [mul_smul]
+      rw [mul_smul]
+      nth_rw 1 [h₁]
+    rw [<-not_mem_support] at h₂
+    exact h₂
+
+  have h₀' : Disjoint (Support α f) U := by
+    intro T; simp
+    intro T_ss_supp T_ss_U
+    intro x x_in_T
+    apply h₀
+    exact T_ss_U x_in_T
+    exact T_ss_supp x_in_T
+
+  have support_empty : Support α f = ∅ := empty_of_subset_disjoint h₀' subset
+
+  apply f_ne_one
+  apply smul_left_injective' (α := α)
+  ext x
+  simp
+  by_contra h
+  rw [<-ne_eq, <-mem_support] at h
+  apply Set.eq_empty_iff_forall_not_mem.mp support_empty
+  exact h
 
 end Rubin

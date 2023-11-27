@@ -104,7 +104,6 @@ def RegularSupport (g: G) : Set α :=
   InteriorClosure (Support α g)
 #align regular_support Rubin.RegularSupport
 
-@[simp]
 theorem RegularSupport.def {G : Type _} (α : Type _)
   [Group G] [MulAction G α] [TopologicalSpace α]
   (g: G) : RegularSupport α g = interior (closure (Support α g)) :=

@@ -43,4 +43,32 @@ def is_equivariant (G : Type _) {β : Type _} [Group G] [MulAction G α]
   ∀ g : G, ∀ x : α, f (g • x) = g • f x
 #align is_equivariant Rubin.is_equivariant
 
+lemma disjoint_not_mem {α : Type _} {U V : Set α} (disj: Disjoint U V) :
+  ∀ {x : α}, x ∈ U → x ∉ V :=
+by
+  intro x x_in_U x_in_V
+  apply disj <;> try simp
+  · exact Set.singleton_subset_iff.mpr x_in_U
+  · rw [Set.singleton_subset_iff]
+    exact x_in_V
+  · rfl
+
+lemma disjoint_not_mem₂ {α : Type _} {U V : Set α} (disj: Disjoint U V) :
+  ∀ {x : α}, x ∈ V → x ∉ U := disjoint_not_mem disj.symm
+
+lemma fixes_inv {G α : Type _} [Group G] [MulAction G α] {g : G} {x : α}:
+  g • x = x ↔ g⁻¹ • x = x :=
+by
+  constructor
+  {
+    intro h
+    nth_rw 1 [<-h]
+    rw [<-mul_smul, mul_left_inv, one_smul]
+  }
+  {
+    intro h
+    nth_rw 1 [<-h]
+    rw [<-mul_smul, mul_right_inv, one_smul]
+  }
+
 end Rubin
