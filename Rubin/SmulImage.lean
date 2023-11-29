@@ -66,14 +66,13 @@ by
   rw [mem_smulImage]
   rw [<-mul_smul, mul_left_inv, one_smul]
 
--- TODO: rename to smulImage_mul
 @[simp]
-theorem mul_smulImage (g h : G) (U : Set α) : g •'' (h •'' U) = (g * h) •'' U :=
+theorem smulImage_mul (g h : G) (U : Set α) : g •'' (h •'' U) = (g * h) •'' U :=
   by
   ext
   rw [Rubin.mem_smulImage, Rubin.mem_smulImage, Rubin.mem_smulImage, ←
     mul_smul, mul_inv_rev]
-#align mul_smul'' Rubin.mul_smulImage
+#align mul_smul'' Rubin.smulImage_mul
 
 @[simp]
 theorem one_smulImage (U : Set α) : (1 : G) •'' U = U :=
@@ -82,7 +81,7 @@ theorem one_smulImage (U : Set α) : (1 : G) •'' U = U :=
   rw [Rubin.mem_smulImage, inv_one, one_smul]
 #align one_smul'' Rubin.one_smulImage
 
-theorem disjoint_smulImage (g : G) {U V : Set α} :
+theorem smulImage_disjoint (g : G) {U V : Set α} :
     Disjoint U V → Disjoint (g •'' U) (g •'' V) :=
   by
   intro disjoint_U_V
@@ -91,13 +90,23 @@ theorem disjoint_smulImage (g : G) {U V : Set α} :
   intro x x_in_gU
   by_contra h
   exact (disjoint_U_V (mem_smulImage.mp x_in_gU)) (mem_smulImage.mp h)
-#align disjoint_smul'' Rubin.disjoint_smulImage
+#align disjoint_smul'' Rubin.smulImage_disjoint
 
-namespace SmulImage
-theorem congr (g : G) {U V : Set α} : U = V → g •'' U = g •'' V :=
+theorem SmulImage.congr (g : G) {U V : Set α} : U = V → g •'' U = g •'' V :=
   congr_arg fun W : Set α => g •'' W
 #align smul''_congr Rubin.SmulImage.congr
-end SmulImage
+
+theorem SmulImage.inv_congr (g: G) {U V : Set α} : g •'' U = g •'' V → U = V :=
+by
+  intro h
+  rw [<-one_smulImage (G := G) U]
+  rw [<-one_smulImage (G := G) V]
+  rw [<-mul_left_inv g]
+  repeat rw [<-smulImage_mul]
+  exact SmulImage.congr g⁻¹ h
+
+theorem smulImage_inv {g: G} {U V : Set α} (img_eq : g •'' U = g •'' V) : U = V :=
+  SmulImage.inv_congr g img_eq
 
 theorem smulImage_subset (g : G) {U V : Set α} : U ⊆ V → g •'' U ⊆ g •'' V :=
   by
@@ -149,12 +158,12 @@ by
   constructor
   · intro h
     apply smulImage_subset f⁻¹ at h
-    rw [mul_smulImage] at h
+    rw [smulImage_mul] at h
     rw [mul_left_inv, one_smulImage] at h
     exact h
   · intro h
     apply smulImage_subset f at h
-    rw [mul_smulImage] at h
+    rw [smulImage_mul] at h
     rw [mul_right_inv, one_smulImage] at h
     exact h
 
@@ -170,14 +179,14 @@ theorem smulImage_disjoint_mul {G α : Type _} [Group G] [MulAction G α]
   Disjoint (f •'' U) (g •'' V) ↔ Disjoint U ((f⁻¹ * g) •'' V) := by
   constructor
   · intro h
-    apply disjoint_smulImage f⁻¹ at h
-    repeat rw [mul_smulImage] at h
+    apply smulImage_disjoint f⁻¹ at h
+    repeat rw [smulImage_mul] at h
     rw [mul_left_inv, one_smulImage] at h
     exact h
 
   · intro h
-    apply disjoint_smulImage f at h
-    rw [mul_smulImage] at h
+    apply smulImage_disjoint f at h
+    rw [smulImage_mul] at h
     rw [<-mul_assoc] at h
     rw [mul_right_inv, one_mul] at h
     exact h
@@ -200,7 +209,7 @@ by
 
 -- States that if `g^i •'' V` and `g^j •'' V` are disjoint for any `i ≠ j` and `x ∈ V`
 -- then `g^i • x` will always lie outside of `V`.
-lemma smulImage_distinct_of_disjoint_exp {G α : Type _} [Group G] [MulAction G α] {g : G} {V : Set α} {n : ℕ}
+lemma smulImage_distinct_of_disjoint_pow {G α : Type _} [Group G] [MulAction G α] {g : G} {V : Set α} {n : ℕ}
   (n_pos : 0 < n)
   (h_disj : ∀ (i j : Fin n), i ≠ j → Disjoint (g ^ (i : ℕ) •'' V) (g ^ (j : ℕ) •'' V)) :
   ∀ (x : α) (_hx : x ∈ V) (i : Fin n), 0 < (i : ℕ) → g ^ (i : ℕ) • (x : α) ∉ V :=
@@ -216,6 +225,6 @@ by
   have h_notin_V := Set.disjoint_left.mp (h_disj i (⟨0, n_pos⟩ : Fin n) i_ne_zero) h_contra
   simp only [pow_zero, one_smulImage] at h_notin_V
   exact h_notin_V
-#align distinct_images_from_disjoint Rubin.smulImage_distinct_of_disjoint_exp
+#align distinct_images_from_disjoint Rubin.smulImage_distinct_of_disjoint_pow
 
 end Rubin

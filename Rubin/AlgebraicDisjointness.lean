@@ -156,7 +156,7 @@ variable [ContinuousMulAction G α]
 variable [FaithfulSMul G α]
 
 instance dense_locally_moving [T2Space α]
-  (H_nip : has_no_isolated_points α)
+  [H_nip : HasNoIsolatedPoints α]
   (H_ld : LocallyDense G α) :
   LocallyMoving G α
 where
@@ -164,7 +164,8 @@ where
     intros U _ H_nonempty
     by_contra h_rs
     have ⟨elem, ⟨_, some_in_orbit⟩⟩ := H_ld.nonEmpty H_nonempty
-    have H_nebot := has_no_isolated_points_neBot H_nip elem
+    -- Note: This is automatic now :)
+    -- have H_nebot := has_no_isolated_points_neBot elem
     rw [h_rs] at some_in_orbit
     simp at some_in_orbit
 
@@ -325,9 +326,6 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
     have h₆ : ⁅f₁, ⁅f₂, h⁆⁆ • z = z := by rw [h₅, one_smul]
     exact z_moved h₆
 #align proposition_1_1_1 Rubin.proposition_1_1_1
-
-@[simp] lemma smulImage_mul {g h : G} {U : Set α} : g •'' (h •'' U) = (g*h) •'' U :=
-  (mul_smulImage g h U)
 
 lemma smul_inj_moves {ι : Type*} [Fintype ι] [T2Space α]
   {f : ι → G} {x : α} {i j : ι} (i_ne_j : i ≠ j)
@@ -682,12 +680,12 @@ by
   clear f₁_commutes f₂_commutes
 
   have g_k_disjoint : Disjoint ((g^i.val)⁻¹ •'' (k •'' V)) ((g^j.val)⁻¹ •'' (k •'' V)) := by
-    repeat rw [mul_smulImage]
+    repeat rw [smulImage_mul]
     repeat rw [<-inv_pow]
     repeat rw [k_commutes.symm.inv_left.pow_left]
-    repeat rw [<-mul_smulImage k]
+    repeat rw [<-smulImage_mul k]
     repeat rw [inv_pow]
-    exact disjoint_smulImage k g_disjoint
+    exact smulImage_disjoint k g_disjoint
 
   apply Set.disjoint_left.mp g_k_disjoint
   · rw [mem_inv_smulImage]

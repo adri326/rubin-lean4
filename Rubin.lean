@@ -58,7 +58,7 @@ structure RubinAction (G α : Type _) extends
 where
   locally_compact : LocallyCompactSpace α
   hausdorff : T2Space α
-  no_isolated_points : Rubin.has_no_isolated_points α
+  no_isolated_points : HasNoIsolatedPoints α
   locallyDense : LocallyDense G α
 #align rubin_action Rubin.RubinAction
 
@@ -97,7 +97,7 @@ by
     rw [h_in_ristV _ x_notin_V]
   let ⟨q, q_in_V, hq_ne_q ⟩ := faithful_rigid_stabilizer_moves_point h_in_ristV h_ne_one
   have gpowi_q_notin_V : ∀ (i : Fin n), (i : ℕ) > 0 → g ^ (i : ℕ) • q ∉ V := by
-    apply smulImage_distinct_of_disjoint_exp n_pos disj
+    apply smulImage_distinct_of_disjoint_pow n_pos disj
     exact q_in_V
 
   -- We have (hg)^i q = g^i q for all 0 < i < n
@@ -122,7 +122,7 @@ by
       let i'₂ : Fin n := ⟨Nat.succ i', i_lt_n⟩
       have h_eq: Nat.succ i' = (i'₂ : ℕ) := by simp
       rw [h_eq]
-      apply smulImage_distinct_of_disjoint_exp
+      apply smulImage_distinct_of_disjoint_pow
       · exact n_pos
       · exact disj
       · exact q_in_V
@@ -246,7 +246,7 @@ by
   apply not_support_subset_rsupp
   show Support α h ⊆ RegularSupport α f
 
-  apply subset_of_diff_closure_regular_empty
+  apply subset_from_diff_closure_eq_empty
   · apply regularSupport_regular
   · exact support_open _
   · rw [Set.not_nonempty_iff_eq_empty] at U_empty

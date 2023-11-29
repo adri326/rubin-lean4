@@ -7,97 +7,9 @@ import Mathlib.Topology.Separation
 import Rubin.Tactic
 import Rubin.Support
 import Rubin.Topological
+import Rubin.InteriorClosure
 
 namespace Rubin
-
-section InteriorClosure
-
-variable {α : Type _}
-variable [TopologicalSpace α]
-
--- Defines a kind of "regularization" transformation made to sets,
--- by calling `closure` followed by `interior` on it.
---
--- A set is then said to be regular if the InteriorClosure does not modify it.
-def InteriorClosure (U : Set α) : Set α :=
-  interior (closure U)
-#align interior_closure Rubin.InteriorClosure
-
-@[simp]
-theorem InteriorClosure.def (U : Set α) : InteriorClosure U = interior (closure U) :=
-  by simp [InteriorClosure]
-
-@[simp]
-theorem InteriorClosure.fdef : InteriorClosure = (interior ∘ (closure (α := α))) := by ext; simp
-
--- A set `U` is said to be regular if the interior of the closure of `U` is equal to `U`.
--- Notably, a regular set is also open, and the interior of a regular set is equal to itself.
-def Regular (U : Set α) : Prop :=
-  InteriorClosure U = U
-
-@[simp]
-theorem Regular.def (U : Set α) : Regular U ↔ interior (closure U) = U :=
-  by simp [Regular]
-#align set.is_regular_def Rubin.Regular.def
-
-@[simp]
-theorem Regular.eq {U : Set α} (U_reg : Regular U) : interior (closure U) = U :=
-  (Regular.def U).mp U_reg
-
-instance Regular.instCoe {U : Set α} : Coe (Regular U) (interior (closure U) = U) where
-  coe := Regular.eq
-
-theorem interiorClosure_open (U : Set α) : IsOpen (InteriorClosure U) := by simp
-#align is_open_interior_closure Rubin.interiorClosure_open
-
-theorem interiorClosure_subset {U : Set α} :
-  IsOpen U → U ⊆ InteriorClosure U :=
-by
-  intro h
-  apply subset_trans
-  exact subset_interior_iff_isOpen.mpr h
-  apply interior_mono
-  exact subset_closure
-#align is_open.interior_closure_subset Rubin.interiorClosure_subset
-
-theorem interiorClosure_regular (U : Set α) : Regular (InteriorClosure U) :=
-by
-  apply Set.eq_of_subset_of_subset <;> unfold InteriorClosure
-  {
-    apply interior_mono
-    nth_rw 2 [<-closure_closure (s := U)]
-    apply closure_mono
-    exact interior_subset
-  }
-  {
-    nth_rw 1 [<-interior_interior]
-    apply interior_mono
-    exact subset_closure
-  }
-#align regular_interior_closure Rubin.interiorClosure_regular
-
-theorem interiorClosure_mono (U V : Set α) :
-  U ⊆ V → InteriorClosure U ⊆ InteriorClosure V
-:= interior_mono ∘ closure_mono
-#align interior_closure_mono Rubin.interiorClosure_mono
-
-theorem monotone_interior_closure : Monotone (InteriorClosure (α := α))
-:= fun a b =>
-  interiorClosure_mono a b
-
-theorem regular_open (U : Set α) : Regular U → IsOpen U :=
-by
-  intro h_reg
-  rw [<-h_reg]
-  simp
-
-theorem regular_interior (U : Set α) : Regular U → interior U = U :=
-by
-  intro h_reg
-  rw [<-h_reg]
-  simp
-
-end InteriorClosure
 
 section RegularSupport_def
 
