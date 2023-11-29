@@ -64,6 +64,292 @@ where
 
 end RubinActions
 
+section AlgebraicDisjointness
+
+variable {G α : Type _}
+variable [TopologicalSpace α]
+variable [Group G]
+variable [ContinuousMulAction G α]
+variable [FaithfulSMul G α]
+
+-- TODO: modify the proof to be less "let everything"-y, especially the first half
+lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp_disjoint : Disjoint (Support α f) (Support α g)) : AlgebraicallyDisjoint f g := by
+  apply AlgebraicallyDisjoint_mk
+  intros h h_not_commute
+  -- h is not the identity on `Support α f`
+  have f_h_not_disjoint := (mt (disjoint_commute (G := G) (α := α)) h_not_commute)
+  have ⟨x, ⟨x_in_supp_f, x_in_supp_h⟩⟩ := Set.not_disjoint_iff.mp f_h_not_disjoint
+  have hx_ne_x := mem_support.mp x_in_supp_h
+
+  -- Since α is Hausdoff, there is a nonempty V ⊆ Support α f, with h •'' V disjoint from V
+  have ⟨V, V_open, x_in_V, V_in_support, disjoint_img_V⟩ := disjoint_nbhd_in (support_open f) x_in_supp_f hx_ne_x
+
+  -- let f₂ be a nontrivial element of the RigidStabilizer G V
+  let ⟨f₂, f₂_in_rist_V, f₂_ne_one⟩ := h_lm.get_nontrivial_rist_elem V_open (Set.nonempty_of_mem x_in_V)
+
+  -- Re-use the Hausdoff property of α again, this time yielding W ⊆ V
+  let ⟨y, y_moved⟩ := faithful_moves_point' α f₂_ne_one
+  have y_in_V := (rigidStabilizer_support.mp f₂_in_rist_V) (mem_support.mpr y_moved)
+  let ⟨W, W_open, y_in_W, W_in_V, disjoint_img_W⟩ := disjoint_nbhd_in V_open y_in_V y_moved
+
+  -- Let f₁ be a nontrivial element of RigidStabilizer G W
+  let ⟨f₁, f₁_in_rist_W, f₁_ne_one⟩ := h_lm.get_nontrivial_rist_elem W_open (Set.nonempty_of_mem y_in_W)
+
+  use f₁
+  use f₂
+  constructor <;> try constructor
+  · apply disjoint_commute (α := α)
+    apply Set.disjoint_of_subset_left _ supp_disjoint
+    calc
+      Support α f₁ ⊆ W := rigidStabilizer_support.mp f₁_in_rist_W
+      W ⊆ V := W_in_V
+      V ⊆ Support α f := V_in_support
+  · apply disjoint_commute (α := α)
+    apply Set.disjoint_of_subset_left _ supp_disjoint
+    calc
+      Support α f₂ ⊆ V := rigidStabilizer_support.mp f₂_in_rist_V
+      V ⊆ Support α f := V_in_support
+
+  -- We claim that [f₁, [f₂, h]] is a nontrivial elelement of Centralizer G g
+  let k := ⁅f₂, h⁆
+  have h₂ : ∀ z ∈ W, f₂ • z = k • z := by
+    intro z z_in_W
+    simp
+    symm
+    apply disjoint_support_comm f₂ h _ disjoint_img_V
+    · exact W_in_V z_in_W
+    · exact rigidStabilizer_support.mp f₂_in_rist_V
+
+  constructor
+  · -- then `k*f₁⁻¹*k⁻¹` is supported on k W = f₂ W,
+    -- so [f₁,k] is supported on W ∪ f₂ W ⊆ V ⊆ support f, so commutes with g.
+    apply disjoint_commute (α := α)
+    apply Set.disjoint_of_subset_left _ supp_disjoint
+    have supp_f₁_subset_W := (rigidStabilizer_support.mp f₁_in_rist_W)
+
+    show Support α ⁅f₁, ⁅f₂, h⁆⁆ ⊆ Support α f
+    calc
+      Support α ⁅f₁, k⁆ = Support α ⁅k, f₁⁆ := by rw [<-commutatorElement_inv, support_inv]
+      _ ⊆ Support α f₁ ∪ (k •'' Support α f₁) := support_comm α k f₁
+      _ ⊆ W ∪ (k •'' Support α f₁) := Set.union_subset_union_left _ supp_f₁_subset_W
+      _ ⊆ W ∪ (k •'' W) := by
+        apply Set.union_subset_union_right
+        exact (smulImage_subset k supp_f₁_subset_W)
+      _ = W ∪ (f₂ •'' W) := by rw [<-smulImage_eq_of_smul_eq h₂]
+      _ ⊆ V ∪ (f₂ •'' W) := Set.union_subset_union_left _ W_in_V
+      _ ⊆ V ∪ V := by
+        apply Set.union_subset_union_right
+        apply smulImage_subset_in_support f₂ W V W_in_V
+        exact rigidStabilizer_support.mp f₂_in_rist_V
+      _ ⊆ V := by rw [Set.union_self]
+      _ ⊆ Support α f := V_in_support
+
+  · -- finally, [f₁,k] agrees with f₁ on W, so is not the identity.
+    have h₄: ∀ z ∈ W, ⁅f₁, k⁆ • z = f₁ • z := by
+      apply disjoint_support_comm f₁ k
+      exact rigidStabilizer_support.mp f₁_in_rist_W
+      rw [<-smulImage_eq_of_smul_eq h₂]
+      exact disjoint_img_W
+    let ⟨z, z_in_W, z_moved⟩ := faithful_rigid_stabilizer_moves_point f₁_in_rist_W f₁_ne_one
+
+    by_contra h₅
+    rw [<-h₄ z z_in_W] at z_moved
+    have h₆ : ⁅f₁, ⁅f₂, h⁆⁆ • z = z := by rw [h₅, one_smul]
+    exact z_moved h₆
+#align proposition_1_1_1 Rubin.proposition_1_1_1
+
+
+-- TODO: move to Rubin.lean
+lemma moves_1234_of_moves_12 {g : G} {x : α} (g12_moves : g^12 • x ≠ x) :
+  Function.Injective (fun i : Fin 5 => g^(i : ℤ) • x) :=
+by
+  apply moves_inj
+  intros k k_ge_1 k_lt_5
+  simp at k_lt_5
+
+  by_contra x_fixed
+  have k_div_12 : k ∣ 12 := by
+    -- Note: norm_num does not support ℤ.dvd yet, nor ℤ.mod, nor Int.natAbs, nor Int.div, etc.
+    have h: (12 : ℤ) = (12 : ℕ) := by norm_num
+    rw [h, Int.ofNat_dvd_right]
+    apply Nat.dvd_of_mod_eq_zero
+
+    interval_cases k
+    all_goals unfold Int.natAbs
+    all_goals norm_num
+
+  have g12_fixed : g^12 • x = x := by
+    rw [<-zpow_ofNat]
+    simp
+    rw [<-Int.mul_ediv_cancel' k_div_12]
+    have res := smul_zpow_eq_of_smul_eq (12/k) x_fixed
+    group_action at res
+    exact res
+
+  exact g12_moves g12_fixed
+
+lemma proposition_1_1_2 [T2Space α] [h_lm : LocallyMoving G α]
+  (f g : G) (h_disj : AlgebraicallyDisjoint f g) : Disjoint (Support α f) (Support α (g^12)) :=
+by
+  by_contra not_disjoint
+  let U := Support α f ∩ Support α (g^12)
+  have U_nonempty : U.Nonempty := by
+    apply Set.not_disjoint_iff_nonempty_inter.mp
+    exact not_disjoint
+
+  -- Since G is Hausdorff, we can find a nonempty set V ⊆ such that f(V) is disjoint from V and the sets {g^i(V): i=0..4} are pairwise disjoint
+  let x := U_nonempty.some
+  have x_in_U : x ∈ U := Set.Nonempty.some_mem U_nonempty
+  have fx_moves : f • x ≠ x := Set.inter_subset_left _ _ x_in_U
+
+  have five_points : Function.Injective (fun i : Fin 5 => g^(i : ℤ) • x) := by
+    apply moves_1234_of_moves_12
+    exact (Set.inter_subset_right _ _ x_in_U)
+  have U_open: IsOpen U := (IsOpen.inter (support_open f) (support_open (g^12)))
+
+  let ⟨V₀, V₀_open, x_in_V₀, V₀_in_support, disjoint_img_V₀⟩ := disjoint_nbhd_in U_open x_in_U fx_moves
+  let ⟨V₁, V₁_open, x_in_V₁, disjoint_img_V₁⟩ := disjoint_nbhd_fin five_points
+
+  let V := V₀ ∩ V₁
+  -- Let h be a nontrivial element of the RigidStabilizer G V
+  let ⟨h, ⟨h_in_ristV, h_ne_one⟩⟩ := h_lm.get_nontrivial_rist_elem (IsOpen.inter V₀_open V₁_open) (Set.nonempty_of_mem ⟨x_in_V₀, x_in_V₁⟩)
+
+  have V_disjoint_smulImage: Disjoint V (f •'' V) := by
+    apply Set.disjoint_of_subset
+    · exact Set.inter_subset_left _ _
+    · apply smulImage_subset
+      exact Set.inter_subset_left _ _
+    · exact disjoint_img_V₀
+
+  have comm_non_trivial : ¬Commute f h := by
+    by_contra comm_trivial
+    let ⟨z, z_in_V, z_moved⟩ := faithful_rigid_stabilizer_moves_point h_in_ristV h_ne_one
+    apply z_moved
+
+    nth_rewrite 2 [<-one_smul G z]
+    rw [<-commutatorElement_eq_one_iff_commute.mpr comm_trivial.symm]
+    symm
+
+    apply disjoint_support_comm h f
+    · exact rigidStabilizer_support.mp h_in_ristV
+    · exact V_disjoint_smulImage
+    · exact z_in_V
+
+  -- Since g is algebraically disjoint from f, there exist f₁,f₂ ∈ C_G(g) so that the commutator h' = [f1,[f2,h]] is a nontrivial element of C_G(g)
+  let alg_disj_elem := h_disj h comm_non_trivial
+  let f₁ := alg_disj_elem.fst
+  let f₂ := alg_disj_elem.snd
+  let h' := alg_disj_elem.comm_elem
+  have f₁_commutes : Commute f₁ g := alg_disj_elem.fst_commute
+  have f₂_commutes : Commute f₂ g := alg_disj_elem.snd_commute
+  have h'_commutes : Commute h' g := alg_disj_elem.comm_elem_commute
+  have h'_nontrivial : h' ≠ 1 := alg_disj_elem.comm_elem_nontrivial
+
+  have support_f₂_h : Support α ⁅f₂,h⁆ ⊆ V ∪ (f₂ •'' V) := by
+    calc
+      Support α ⁅f₂, h⁆ ⊆ Support α h ∪ (f₂ •'' Support α h) := support_comm α f₂ h
+      _ ⊆ V ∪ (f₂ •'' Support α h) := by
+        apply Set.union_subset_union_left
+        exact rigidStabilizer_support.mp h_in_ristV
+      _ ⊆ V ∪ (f₂ •'' V) := by
+        apply Set.union_subset_union_right
+        apply smulImage_subset
+        exact rigidStabilizer_support.mp h_in_ristV
+  have support_h' : Support α h' ⊆ ⋃(i : Fin 2 × Fin 2), (f₁^(i.1.val) * f₂^(i.2.val)) •'' V := by
+    rw [rewrite_Union]
+    simp (config := {zeta := false})
+    rw [<-smulImage_mul, <-smulImage_union]
+    calc
+      Support α h' ⊆ Support α ⁅f₂,h⁆ ∪ (f₁ •'' Support α ⁅f₂, h⁆) := support_comm α f₁ ⁅f₂,h⁆
+      _ ⊆ V ∪ (f₂ •'' V) ∪ (f₁ •'' Support α ⁅f₂, h⁆) := by
+        apply Set.union_subset_union_left
+        exact support_f₂_h
+      _ ⊆ V ∪ (f₂ •'' V) ∪ (f₁ •'' V ∪ (f₂ •'' V)) := by
+        apply Set.union_subset_union_right
+        apply smulImage_subset f₁
+        exact support_f₂_h
+
+  -- Since h' is nontrivial, it has at least one point p in its support
+  let ⟨p, p_moves⟩ := faithful_moves_point' α h'_nontrivial
+  -- Since g commutes with h', all five of the points {gi(p):i=0..4} lie in supp(h')
+  have gi_in_support : ∀ (i: Fin 5), g^(i.val) • p ∈ Support α h' := by
+    intro i
+    rw [mem_support]
+    by_contra p_fixed
+    rw [<-mul_smul, h'_commutes.pow_right, mul_smul] at p_fixed
+    group_action at p_fixed
+    exact p_moves p_fixed
+
+  -- The next section gets tricky, so let us clear away some stuff first :3
+  clear h'_commutes h'_nontrivial
+  clear V₀_open x_in_V₀ V₀_in_support disjoint_img_V₀
+  clear V₁_open x_in_V₁
+  clear five_points h_in_ristV h_ne_one V_disjoint_smulImage
+  clear support_f₂_h
+
+  -- by the pigeonhole principle, one of the four sets V, f₁(V), f₂(V), f₁f₂(V) must contain two of these points,
+  -- say g^i(p),g^j(p) ∈ k(V) for some 0 ≤ i < j ≤ 4 and k ∈ {1,f₁,f₂,f₁f₂}
+  let pigeonhole : Fintype.card (Fin 5) > Fintype.card (Fin 2 × Fin 2) := by trivial
+  let choice_pred := fun (i : Fin 5) => (Set.mem_iUnion.mp (support_h' (gi_in_support i)))
+  let choice := fun (i : Fin 5) => (choice_pred i).choose
+  let ⟨i, _, j, _, i_ne_j, same_choice⟩ := Finset.exists_ne_map_eq_of_card_lt_of_maps_to
+    pigeonhole
+    (fun (i : Fin 5) _ => Finset.mem_univ (choice i))
+
+  let k := f₁^(choice i).1.val * f₂^(choice i).2.val
+  have same_k : f₁^(choice j).1.val * f₂^(choice j).2.val = k := by rw [<-same_choice]
+  have gi : g^i.val • p ∈ k •'' V := (choice_pred i).choose_spec
+  have gk : g^j.val • p ∈ k •'' V := by
+    have gk' := (choice_pred j).choose_spec
+    rw [same_k] at gk'
+    exact gk'
+
+  -- Since g^(j-i)(V) is disjoint from V and k commutes with g,
+  -- we know that g^(j−i)k(V) is disjoint from k(V),
+  -- which leads to a contradiction since g^i(p) and g^j(p) both lie in k(V).
+
+  have g_disjoint : Disjoint ((g^i.val)⁻¹ •'' V) ((g^j.val)⁻¹ •'' V) := by
+    apply smulImage_disjoint_subset (Set.inter_subset_right V₀ V₁)
+    group
+    rw [smulImage_disjoint_inv_pow]
+    group
+    apply disjoint_img_V₁
+    symm; exact i_ne_j
+
+  have k_commutes: Commute k g := by
+    apply Commute.mul_left
+    · exact f₁_commutes.pow_left _
+    · exact f₂_commutes.pow_left _
+  clear f₁_commutes f₂_commutes
+
+  have g_k_disjoint : Disjoint ((g^i.val)⁻¹ •'' (k •'' V)) ((g^j.val)⁻¹ •'' (k •'' V)) := by
+    repeat rw [smulImage_mul]
+    repeat rw [<-inv_pow]
+    repeat rw [k_commutes.symm.inv_left.pow_left]
+    repeat rw [<-smulImage_mul k]
+    repeat rw [inv_pow]
+    exact smulImage_disjoint k g_disjoint
+
+  apply Set.disjoint_left.mp g_k_disjoint
+  · rw [mem_inv_smulImage]
+    exact gi
+  · rw [mem_inv_smulImage]
+    exact gk
+
+lemma remark_1_2 (f g : G) (h_disj : AlgebraicallyDisjoint f g): Commute f g := by
+  by_contra non_commute
+  let disj_elem := h_disj g non_commute
+  let nontrivial := disj_elem.comm_elem_nontrivial
+
+  rw [commutatorElement_eq_one_iff_commute.mpr disj_elem.snd_commute] at nontrivial
+  rw [commutatorElement_one_right] at nontrivial
+
+  tauto
+
+end AlgebraicDisjointness
+
+section RigidStabilizer
+
 lemma lemma_2_2 (G: Type _) {α : Type _} [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [FaithfulSMul G α]
   [T2Space α] [h_lm : LocallyMoving G α]
   {U : Set α} (U_open : IsOpen U) (U_nonempty : Set.Nonempty U) :
@@ -196,8 +482,6 @@ by
       rw [<-period_hg_eq_n]
       apply Period.pow_period_fix
 
-section proposition_2_1
-
 -- TODO: put in a different file and introduce some QoL theorems
 def AlgebraicSubgroup {G : Type _} [Group G] (f : G) : Set G :=
   (fun g : G => g^12) '' { g : G | IsAlgebraicallyDisjoint f g }
@@ -262,32 +546,6 @@ by
   rw [<-Classical.not_forall_not, Classical.not_not] at exp_eq_zero
   simp at exp_eq_zero
   exact exp_eq_zero n n_pos
-
-lemma Commute.inv {G : Type _} [Group G] {f g : G} : Commute f g → Commute f g⁻¹ := by
-  unfold Commute SemiconjBy
-  intro h
-  have h₁ : f = g * f * g⁻¹ := by
-    nth_rw 1 [<-mul_one f]
-    rw [<-mul_right_inv g, <-mul_assoc]
-    rw [h]
-  nth_rw 2 [h₁]
-  group
-
-lemma Commute.inv_iff {G : Type _} [Group G] {f g : G} : Commute f g ↔ Commute f g⁻¹ := ⟨
-  Commute.inv,
-  by
-    nth_rw 2 [<-inv_inv g]
-    apply Commute.inv
-⟩
-
-lemma Commute.inv_iff₂ {G : Type _} [Group G] {f g : G} : Commute f g ↔ Commute f⁻¹ g := ⟨
-  Commute.symm ∘ Commute.inv_iff.mp ∘ Commute.symm,
-  Commute.symm ∘ Commute.inv_iff.mpr ∘ Commute.symm
-⟩
-
-lemma Commute.into {G : Type _} [Group G] {f g : G} : Commute f g → f * g = g * f := by
-  unfold Commute SemiconjBy
-  tauto
 
 lemma proposition_2_1 {G α : Type _}
   [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [T2Space α]
@@ -373,8 +631,9 @@ by
   apply h_nc_g12
   exact h_in_centralizer _ g12_in_algebraic_subgroup
 
+end RigidStabilizer
 
-end proposition_2_1
+
 -- variables [topological_space α] [topological_space β] [continuous_mul_action G α] [continuous_mul_action G β]
 -- noncomputable theorem rubin (hα : rubin_action G α) (hβ : rubin_action G β) : equivariant_homeomorph G α β := sorry
 end Rubin
