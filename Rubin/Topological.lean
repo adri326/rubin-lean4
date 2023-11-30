@@ -13,11 +13,22 @@ namespace Rubin
 
 section Continuity
 
--- TODO: don't have this extend MulAction
+-- TODO: don't have this extend MulAction and move this somewhere else
 class ContinuousMulAction (G α : Type _) [Group G] [TopologicalSpace α] extends
     MulAction G α where
   continuous : ∀ g : G, Continuous (fun x: α => g • x)
 #align continuous_mul_action Rubin.ContinuousMulAction
+
+theorem continuousMulAction_elem_continuous {G : Type _} (α : Type _)
+  [Group G] [TopologicalSpace α] [hc : ContinuousMulAction G α] (g : G):
+  ∀ (S : Set α), IsOpen S → IsOpen (g •'' S) ∧ IsOpen ((g⁻¹) •'' S) :=
+by
+  intro S S_open
+  repeat rw [smulImage_eq_inv_preimage]
+  rw [inv_inv]
+  constructor
+  · exact (hc.continuous g⁻¹).isOpen_preimage _ S_open
+  · exact (hc.continuous g).isOpen_preimage _ S_open
 
 -- TODO: give this a notation?
 structure EquivariantHomeomorph (G α β : Type _) [Group G] [TopologicalSpace α]

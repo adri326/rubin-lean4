@@ -63,6 +63,13 @@ by
   apply interiorClosure_mono
   exact h
 
+theorem regularSupport_subset_closure_support {g : G} :
+  RegularSupport α g ⊆ closure (Support α g) :=
+by
+  unfold RegularSupport
+  simp
+  exact interior_subset
+
 theorem regularSupport_subset_of_rigidStabilizer {g : G} {U : Set α} (U_reg : Regular U) :
   g ∈ RigidStabilizer G U → RegularSupport α g ⊆ U :=
 by
@@ -85,5 +92,13 @@ by
 #align mem_regular_support Rubin.regularSupport_subset_of_rigidStabilizer
 
 end RegularSupport_continuous
+
+theorem regularSupport_smulImage {G α : Type _} [Group G] [TopologicalSpace α] [ContinuousMulAction G α]
+  {f g : G} :
+  f •'' (RegularSupport α g) = RegularSupport α (f * g * f⁻¹) :=
+by
+  unfold RegularSupport
+  rw [support_conjugate]
+  rw [interiorClosure_smulImage _ _ (continuousMulAction_elem_continuous α f)]
 
 end Rubin

@@ -229,4 +229,32 @@ by
   apply Set.eq_empty_iff_forall_not_mem.mp support_empty
   exact h
 
+theorem support_eq: Support α f = Support α g ↔ ∀ (x : α), (f • x = x ∧ g • x = x) ∨ (f • x ≠ x ∧ g • x ≠ x) := by
+  constructor
+  · intro h
+    intro x
+    by_cases x_in? : x ∈ Support α f
+    · right
+      have gx_ne_x := by rw [h] at x_in?; exact x_in?
+      exact ⟨x_in?, gx_ne_x⟩
+    · left
+      have fx_eq_x : f • x = x := by rw [<-not_mem_support]; exact x_in?
+      have gx_eq_x : g • x = x := by rw [<-not_mem_support, <-h]; exact x_in?
+      exact ⟨fx_eq_x, gx_eq_x⟩
+  · intro h
+    ext x
+    constructor
+    · intro fx_ne_x
+      rw [mem_support] at fx_ne_x
+      rw [mem_support]
+      cases h x with
+      | inl h₁ => exfalso; exact fx_ne_x h₁.left
+      | inr h₁ => exact h₁.right
+    · intro gx_ne_x
+      rw [mem_support] at gx_ne_x
+      rw [mem_support]
+      cases h x with
+      | inl h₁ => exfalso; exact gx_ne_x h₁.right
+      | inr h₁ => exact h₁.left
+
 end Rubin

@@ -71,4 +71,13 @@ by
     rw [<-mul_smul, mul_right_inv, one_smul]
   }
 
+lemma exists_smul_ne {G : Type _} (α : Type _) [Group G] [MulAction G α] [h_f : FaithfulSMul G α]
+  {f g : G} (f_ne_g : f ≠ g) : ∃ (x : α), f • x ≠ g • x :=
+by
+  by_contra h
+  rw [Classical.not_exists_not] at h
+  apply f_ne_g
+  apply h_f.eq_of_smul_eq_smul
+  exact h
+
 end Rubin

@@ -105,15 +105,26 @@ by
   repeat rw [<-smulImage_mul]
   exact SmulImage.congr g⁻¹ h
 
-theorem smulImage_inv {g: G} {U V : Set α} (img_eq : g •'' U = g •'' V) : U = V :=
-  SmulImage.inv_congr g img_eq
+theorem smulImage_inv (g: G) (U V : Set α) : g •'' U = V ↔ U = g⁻¹ •'' V := by
+  nth_rw 2 [<-one_smulImage (G := G) U]
+  rw [<-mul_left_inv g, <-smulImage_mul]
+  constructor
+  · intro h
+    rw [SmulImage.congr]
+    exact h
+  · intro h
+    apply SmulImage.inv_congr at h
+    exact h
 
+-- TODO: rename to smulImage_mono
 theorem smulImage_subset (g : G) {U V : Set α} : U ⊆ V → g •'' U ⊆ g •'' V :=
   by
   intro h1 x
   rw [Rubin.mem_smulImage, Rubin.mem_smulImage]
   exact fun h2 => h1 h2
 #align smul''_subset Rubin.smulImage_subset
+
+def smulImage_mono (g : G) {U V : Set α} : U ⊆ V → g •'' U ⊆ g •'' V := smulImage_subset g
 
 theorem smulImage_union (g : G) {U V : Set α} : g •'' U ∪ V = (g •'' U) ∪ (g •'' V) :=
   by
@@ -128,6 +139,56 @@ theorem smulImage_inter (g : G) {U V : Set α} : g •'' U ∩ V = (g •'' U) �
   rw [Set.mem_inter_iff, Rubin.mem_smulImage, Rubin.mem_smulImage,
     Rubin.mem_smulImage, Set.mem_inter_iff]
 #align smul''_inter Rubin.smulImage_inter
+
+theorem smulImage_sUnion (g : G) {S : Set (Set α)} : g •'' (⋃₀ S) = ⋃₀ {g •'' T | T ∈ S} :=
+by
+  ext x
+  constructor
+  · intro h
+    rw [mem_smulImage, Set.mem_sUnion] at h
+    rw [Set.mem_sUnion]
+    let ⟨T, ⟨T_in_S, ginv_x_in_T⟩⟩ := h
+    simp
+    use T
+    constructor; trivial
+    rw [mem_smulImage]
+    exact ginv_x_in_T
+  · intro h
+    rw [Set.mem_sUnion] at h
+    rw [mem_smulImage, Set.mem_sUnion]
+    simp at h
+    let ⟨T, ⟨T_in_S, x_in_gT⟩⟩ := h
+    use T
+    constructor; trivial
+    rw [<-mem_smulImage]
+    exact x_in_gT
+
+theorem smulImage_sInter (g : G) {S : Set (Set α)} : g •'' (⋂₀ S) = ⋂₀ {g •'' T | T ∈ S} :=
+by
+  ext x
+  constructor
+  · intro h
+    rw [mem_smulImage, Set.mem_sInter] at h
+    rw [Set.mem_sInter]
+    simp
+    intro T T_in_S
+    rw [mem_smulImage]
+    exact h T T_in_S
+  · intro h
+    rw [Set.mem_sInter] at h
+    rw [mem_smulImage, Set.mem_sInter]
+    intro T T_in_S
+    rw [<-mem_smulImage]
+    simp at h
+    exact h T T_in_S
+
+@[simp]
+theorem smulImage_compl (g : G) (U : Set α) : (g •'' U)ᶜ = g •'' Uᶜ :=
+by
+  ext x
+  rw [Set.mem_compl_iff]
+  repeat rw [mem_smulImage]
+  rw [Set.mem_compl_iff]
 
 theorem smulImage_eq_inv_preimage {g : G} {U : Set α} : g •'' U = (g⁻¹ • ·) ⁻¹' U :=
   by

@@ -1,6 +1,8 @@
 import Mathlib.Topology.Basic
 import Mathlib.Topology.Separation
 
+import Rubin.SmulImage
+
 namespace Rubin
 
 variable {α : Type _}
@@ -188,5 +190,101 @@ by
     exact disj
   · exact (interiorClosure_subset U'_open) u_in_U'
   · exact (interiorClosure_subset V'_open) v_in_V'
+
+theorem regular_inter {U V : Set α} : Regular U → Regular V → Regular (U ∩ V) :=
+by
+  intro U_reg V_reg
+  simp
+  have UV_open : IsOpen (U ∩ V) := IsOpen.inter U_reg.isOpen V_reg.isOpen
+
+  apply Set.eq_of_subset_of_subset
+  · simp
+    constructor
+    · nth_rw 2 [<-U_reg]
+      apply interiorClosure_mono
+      simp
+    · nth_rw 2 [<-V_reg]
+      apply interiorClosure_mono
+      simp
+  · apply interiorClosure_subset
+    exact UV_open
+
+theorem regular_sInter {S : Set (Set α)} (S_finite : Set.Finite S) (all_reg : ∀ U ∈ S, Regular U):
+  Regular (⋂₀ S) :=
+Set.Finite.induction_on' S_finite (by simp) (by
+  intro U S' U_in_S _ _ IH
+  rw [Set.sInter_insert]
+  apply regular_inter
+  · exact all_reg _ U_in_S
+  · exact IH
+)
+
+theorem smulImage_interior {G : Type _} [Group G] [MulAction G α]
+  (g : G) (U : Set α)
+  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)):
+  interior (g •'' U) = g •'' interior U :=
+by
+  unfold interior
+  rw [smulImage_sUnion]
+  simp
+  ext x
+  simp
+  constructor
+  · intro ⟨T, ⟨T_open, T_sub⟩, x_in_T⟩
+    use g⁻¹ •'' T
+    repeat' apply And.intro
+    · exact (g_continuous T T_open).right
+    · rw [smulImage_subset_inv]
+      rw [inv_inv]
+      exact T_sub
+    · rw [smulImage_mul, mul_right_inv, one_smulImage]
+      exact x_in_T
+  · intro ⟨T, ⟨T_open, T_sub⟩, x_in_T⟩
+    use g •'' T
+    repeat' apply And.intro
+    · exact (g_continuous T T_open).left
+    · apply smulImage_mono
+      exact T_sub
+    · exact x_in_T
+
+theorem smulImage_closure {G : Type _} [Group G] [MulAction G α]
+  (g : G) (U : Set α)
+  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)):
+  closure (g •'' U) = g •'' closure U :=
+by
+  have g_continuous' : ∀ S : Set α, IsClosed S → IsClosed (g •'' S) ∧ IsClosed (g⁻¹ •'' S) := by
+    intro S S_closed
+    rw [<-isOpen_compl_iff] at S_closed
+    repeat rw [<-isOpen_compl_iff]
+    repeat rw [smulImage_compl]
+    exact g_continuous _ S_closed
+  unfold closure
+  rw [smulImage_sInter]
+  simp
+  ext x
+  simp
+  constructor
+  · intro IH T' T T_closed U_ss_T T'_eq
+    rw [<-T'_eq]
+    clear T' T'_eq
+    apply IH
+    · exact (g_continuous' _ T_closed).left
+    · apply smulImage_mono
+      exact U_ss_T
+  · intro IH T T_closed gU_ss_T
+    apply IH
+    · exact (g_continuous' _ T_closed).right
+    · rw [<-smulImage_subset_inv]
+      exact gU_ss_T
+    · simp
+
+theorem interiorClosure_smulImage {G : Type _} [Group G] [MulAction G α]
+  (g : G) (U : Set α)
+  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)) :
+  InteriorClosure (g •'' U) = g •'' InteriorClosure U :=
+by
+  simp
+  rw [<-smulImage_interior _ _ g_continuous]
+  rw [<-smulImage_closure _ _ g_continuous]
 
 end Rubin
