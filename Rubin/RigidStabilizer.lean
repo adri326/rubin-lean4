@@ -118,4 +118,24 @@ by
     }
   }
 
+theorem rigidStabilizer_inter (U V : Set α) :
+  RigidStabilizer G (U ∩ V) = RigidStabilizer G U ⊓ RigidStabilizer G V :=
+by
+  ext x
+  simp
+  repeat rw [rigidStabilizer_support]
+  rw [Set.subset_inter_iff]
+
+theorem rigidStabilizer_empty (G α: Type _) [Group G] [MulAction G α] [FaithfulSMul G α]:
+  RigidStabilizer G (α := α) ∅ = ⊥ :=
+by
+  rw [Subgroup.eq_bot_iff_forall]
+  intro f f_in_rist
+  rw [<-Subgroup.mem_carrier] at f_in_rist
+  apply eq_of_smul_eq_smul (α := α)
+
+  intro x
+  rw [f_in_rist x (Set.not_mem_empty x)]
+  simp
+
 end Rubin

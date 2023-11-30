@@ -59,6 +59,8 @@ by
 
 end AlgebraicallyDisjointElem
 
+-- Also known as `η_G(f)`.
+
 /--
 A pair (f, g) is said to be "algebraically disjoint" if it can produce an instance of
 [`AlgebraicallyDisjointElem`] for any element `h ∈ G` such that `f` and `h` don't commute.

@@ -120,15 +120,47 @@ by
 theorem interiorClosure_interior {S : Set α} : interior (InteriorClosure S) = (InteriorClosure S) :=
 regular_interior (interiorClosure_regular S)
 
-theorem disjoint_interiorClosure_left {U V : Set α} (V_open : IsOpen V)
-  (disj : Disjoint U V) : Disjoint (InteriorClosure U) V :=
+theorem disjoint_interiorClosure_left {U V : Set α} (V_open : IsOpen V) :
+  Disjoint U V → Disjoint (InteriorClosure U) V :=
 by
+  intro disj
   apply Set.disjoint_of_subset_left interior_subset
   exact Disjoint.closure_left disj V_open
 
 theorem disjoint_interiorClosure_right {U V : Set α} (U_open : IsOpen U)
   (disj : Disjoint U V) : Disjoint U (InteriorClosure V) :=
   (disjoint_interiorClosure_left U_open (Disjoint.symm disj)).symm
+
+theorem disjoint_interiorClosure_left_iff {U V : Set α} (U_open : IsOpen U) (V_open : IsOpen V) :
+  Disjoint U V ↔ Disjoint (InteriorClosure U) V :=
+by
+  constructor
+  exact disjoint_interiorClosure_left V_open
+
+  intro disj
+  apply Set.disjoint_of_subset_left
+  · exact subset_closure
+  · rw [<-interiorClosure_closure U_open]
+    exact Disjoint.closure_left disj V_open
+
+theorem disjoint_interiorClosure_iff {U V : Set α} (U_open : IsOpen U) (V_open : IsOpen V) :
+  Disjoint U V ↔ Disjoint (InteriorClosure U) (InteriorClosure V) :=
+by
+  constructor
+  {
+    intro disj
+    apply disjoint_interiorClosure_left (interiorClosure_regular V).isOpen
+    apply disjoint_interiorClosure_right U_open
+    exact disj
+  }
+  {
+    intro disj
+    rw [disjoint_interiorClosure_left_iff U_open V_open]
+    symm
+    rw [disjoint_interiorClosure_left_iff V_open (interiorClosure_open _)]
+    symm
+    exact disj
+  }
 
 theorem subset_from_diff_closure_eq_empty {U V : Set α}
   (U_regular : Regular U) (V_open : IsOpen V) (V_diff_cl_empty : V \ closure U = ∅) :

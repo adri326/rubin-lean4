@@ -348,7 +348,7 @@ lemma remark_1_2 (f g : G) (h_disj : AlgebraicallyDisjoint f g): Commute f g := 
 
 end AlgebraicDisjointness
 
-section RigidStabilizer
+section RegularSupport
 
 lemma lemma_2_2 (G: Type _) {α : Type _} [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [FaithfulSMul G α]
   [T2Space α] [h_lm : LocallyMoving G α]
@@ -482,12 +482,13 @@ by
       rw [<-period_hg_eq_n]
       apply Period.pow_period_fix
 
+-- This is referred to as `ξ_G^12(f)`
 -- TODO: put in a different file and introduce some QoL theorems
 def AlgebraicSubgroup {G : Type _} [Group G] (f : G) : Set G :=
   (fun g : G => g^12) '' { g : G | IsAlgebraicallyDisjoint f g }
 
-def AlgebraicCentralizer {G: Type _} (α : Type _) [Group G] [MulAction G α] (f : G) : Set G :=
-  Set.centralizer (AlgebraicSubgroup f)
+def AlgebraicCentralizer {G: Type _} [Group G] (f : G) : Subgroup G :=
+  Subgroup.centralizer (AlgebraicSubgroup f)
 
 -- Given the statement `¬Support α h ⊆ RegularSupport α f`,
 -- we construct an open subset within `Support α h \ RegularSupport α f`,
@@ -547,19 +548,22 @@ by
   simp at exp_eq_zero
   exact exp_eq_zero n n_pos
 
+
 lemma proposition_2_1 {G α : Type _}
   [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [T2Space α]
   [LocallyMoving G α] [h_faithful : FaithfulSMul G α]
   (f : G) :
-  AlgebraicCentralizer α f = RigidStabilizer G (RegularSupport α f) :=
+  AlgebraicCentralizer f = RigidStabilizer G (RegularSupport α f) :=
 by
-  apply Set.eq_of_subset_of_subset
+  ext h
+
+  constructor
   swap
   {
-    intro h h_in_rist
+    intro h_in_rist
     simp at h_in_rist
     unfold AlgebraicCentralizer
-    rw [Set.mem_centralizer_iff]
+    rw [Subgroup.mem_centralizer_iff]
     intro g g_in_S
     simp [AlgebraicSubgroup] at g_in_S
     let ⟨g', ⟨g'_alg_disj, g_eq_g'⟩⟩ := g_in_S
@@ -581,7 +585,7 @@ by
         exact Disjoint.closure_left supp_disj (support_open _)
   }
 
-  intro h h_in_centralizer
+  intro h_in_centralizer
   by_contra h_notin_rist
   simp at h_notin_rist
   rw [rigidStabilizer_support] at h_notin_rist
@@ -631,7 +635,69 @@ by
   apply h_nc_g12
   exact h_in_centralizer _ g12_in_algebraic_subgroup
 
-end RigidStabilizer
+-- Small lemma for remark 2.3
+theorem rigidStabilizer_inter_bot_iff_regularSupport_disj {G α : Type _}
+  [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [LocallyMoving G α] [FaithfulSMul G α]
+  {f g : G} :
+  RigidStabilizer G (RegularSupport α f) ⊓ RigidStabilizer G (RegularSupport α g) = ⊥
+  ↔ Disjoint (RegularSupport α f) (RegularSupport α g) :=
+by
+  rw [<-rigidStabilizer_inter]
+  constructor
+  {
+    intro rist_disj
+
+    by_contra rsupp_not_disj
+    rw [Set.not_disjoint_iff] at rsupp_not_disj
+    let ⟨x, x_in_rsupp_f, x_in_rsupp_g⟩ := rsupp_not_disj
+
+    have rsupp_open: IsOpen (RegularSupport α f ∩ RegularSupport α g) := by
+      apply IsOpen.inter <;> exact regularSupport_open _ _
+
+    -- The contradiction occurs by applying the definition of LocallyMoving:
+    apply LocallyMoving.locally_moving (G := G) _ rsupp_open _ rist_disj
+
+    exact ⟨x, x_in_rsupp_f, x_in_rsupp_g⟩
+  }
+  {
+    intro rsupp_disj
+    rw [Set.disjoint_iff_inter_eq_empty] at rsupp_disj
+    rw [rsupp_disj]
+
+    by_contra rist_ne_bot
+    rw [<-ne_eq, Subgroup.ne_bot_iff_exists_ne_one] at rist_ne_bot
+    let ⟨⟨h, h_in_rist⟩, h_ne_one⟩ := rist_ne_bot
+    simp at h_ne_one
+    apply h_ne_one
+    rw [rigidStabilizer_empty] at h_in_rist
+    rw [Subgroup.mem_bot] at h_in_rist
+    exact h_in_rist
+  }
+
+
+/--
+This demonstrates that the disjointness of the supports of two elements `f` and `g`
+can be proven without knowing anything about how `f` and `g` act on `α`
+(bar the more global properties of the group action).
+
+We could prove that the intersection of the algebraic centralizers of `f` and `g` is trivial
+purely within group theory, and then apply this theorem to know that their support
+in `α` will be disjoint.
+--/
+lemma remark_2_3 {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α]
+  [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α] {f g : G} :
+  (AlgebraicCentralizer f) ⊓ (AlgebraicCentralizer g) = ⊥ → Disjoint (Support α f) (Support α g) :=
+by
+  intro alg_disj
+  rw [disjoint_interiorClosure_iff (support_open _) (support_open _)]
+  simp
+  repeat rw [<-RegularSupport.def]
+  rw [<-rigidStabilizer_inter_bot_iff_regularSupport_disj]
+
+  repeat rw [<-proposition_2_1]
+  exact alg_disj
+
+end RegularSupport
 
 
 -- variables [topological_space α] [topological_space β] [continuous_mul_action G α] [continuous_mul_action G β]
