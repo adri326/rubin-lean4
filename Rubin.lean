@@ -20,7 +20,7 @@ import Rubin.Tactic
 import Rubin.MulActionExt
 import Rubin.SmulImage
 import Rubin.Support
-import Rubin.Topological
+import Rubin.Topology
 import Rubin.RigidStabilizer
 import Rubin.Period
 import Rubin.AlgebraicDisjointness
@@ -69,6 +69,7 @@ section AlgebraicDisjointness
 variable {G α : Type _}
 variable [TopologicalSpace α]
 variable [Group G]
+variable [MulAction G α]
 variable [ContinuousMulAction G α]
 variable [FaithfulSMul G α]
 
@@ -350,7 +351,8 @@ end AlgebraicDisjointness
 
 section RegularSupport
 
-lemma lemma_2_2 (G: Type _) {α : Type _} [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [FaithfulSMul G α]
+lemma lemma_2_2 (G: Type _) {α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  [ContinuousMulAction G α] [FaithfulSMul G α]
   [T2Space α] [h_lm : LocallyMoving G α]
   {U : Set α} (U_open : IsOpen U) (U_nonempty : Set.Nonempty U) :
   Monoid.exponent (RigidStabilizer G U) = 0 :=
@@ -494,7 +496,7 @@ def AlgebraicCentralizer {G: Type _} [Group G] (f : G) : Subgroup G :=
 -- we construct an open subset within `Support α h \ RegularSupport α f`,
 -- and we show that it is non-empty, open and (by construction) disjoint from `Support α f`.
 lemma open_set_from_supp_not_subset_rsupp {G α : Type _}
-  [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [T2Space α]
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] [T2Space α]
   {f h : G} (not_support_subset_rsupp : ¬Support α h ⊆ RegularSupport α f):
   ∃ V : Set α, V ⊆ Support α h ∧ Set.Nonempty V ∧ IsOpen V ∧ Disjoint V (Support α f) :=
 by
@@ -550,7 +552,7 @@ by
 
 
 lemma proposition_2_1 {G α : Type _}
-  [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [T2Space α]
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] [T2Space α]
   [LocallyMoving G α] [h_faithful : FaithfulSMul G α]
   (f : G) :
   AlgebraicCentralizer f = RigidStabilizer G (RegularSupport α f) :=
@@ -637,7 +639,7 @@ by
 
 -- Small lemma for remark 2.3
 theorem rigidStabilizer_inter_bot_iff_regularSupport_disj {G α : Type _}
-  [Group G] [TopologicalSpace α] [ContinuousMulAction G α] [LocallyMoving G α] [FaithfulSMul G α]
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] [LocallyMoving G α] [FaithfulSMul G α]
   {f g : G} :
   RigidStabilizer G (RegularSupport α f) ⊓ RigidStabilizer G (RegularSupport α g) = ⊥
   ↔ Disjoint (RegularSupport α f) (RegularSupport α g) :=
@@ -684,7 +686,7 @@ We could prove that the intersection of the algebraic centralizers of `f` and `g
 purely within group theory, and then apply this theorem to know that their support
 in `α` will be disjoint.
 --/
-lemma remark_2_3 {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α]
+lemma remark_2_3 {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α] [MulAction G α]
   [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α] {f g : G} :
   (AlgebraicCentralizer f) ⊓ (AlgebraicCentralizer g) = ⊥ → Disjoint (Support α f) (Support α g) :=
 by

@@ -2,8 +2,7 @@ import Mathlib.Logic.Equiv.Defs
 import Mathlib.Topology.Basic
 import Mathlib.Topology.Homeomorph
 
--- TODO: extract ContinuousMulAction into its own file, or into MulActionExt?
-import Rubin.Topological
+import Rubin.Topology
 import Rubin.RegularSupport
 
 structure HomeoGroup (α : Type _) [TopologicalSpace α] extends

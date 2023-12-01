@@ -80,4 +80,28 @@ by
   apply h_f.eq_of_smul_eq_smul
   exact h
 
+@[simp]
+theorem orbit_bot {G : Type _} [Group G] {H : Subgroup G} (H_eq_bot : H = ⊥):
+  ∀ (g : G), MulAction.orbit H g = {g} :=
+by
+  intro g
+  ext x
+  rw [MulAction.mem_orbit_iff]
+  simp
+  rw [H_eq_bot]
+  simp
+  constructor <;> tauto
+
+@[simp]
+theorem orbit_bot₂ {G : Type _} [Group G] {α : Type _} [MulAction G α] (H : Subgroup G) (H_eq_bot : H = ⊥):
+  ∀ (x : α), MulAction.orbit H x = {x} :=
+by
+  intro g
+  ext x
+  rw [MulAction.mem_orbit_iff]
+  simp
+  rw [H_eq_bot]
+  simp
+  constructor <;> tauto
+
 end Rubin

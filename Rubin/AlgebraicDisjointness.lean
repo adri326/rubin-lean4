@@ -9,32 +9,12 @@ import Mathlib.Tactic.IntervalCases
 
 import Rubin.RigidStabilizer
 import Rubin.SmulImage
-import Rubin.Topological
+import Rubin.Topology
 import Rubin.FaithfulAction
 import Rubin.Period
+import Rubin.LocallyDense
 
 namespace Rubin
-
-class LocallyMoving (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G α] :=
-  locally_moving: ∀ U : Set α, IsOpen U → Set.Nonempty U → RigidStabilizer G U ≠ ⊥
-#align is_locally_moving Rubin.LocallyMoving
-
-namespace LocallyMoving
-
-theorem get_nontrivial_rist_elem {G α : Type _}
-  [Group G]
-  [TopologicalSpace α]
-  [MulAction G α]
-  [h_lm : LocallyMoving G α]
-  {U: Set α}
-  (U_open : IsOpen U)
-  (U_nonempty : U.Nonempty) :
-  ∃ x : G, x ∈ RigidStabilizer G U ∧ x ≠ 1 :=
-by
-  have rist_ne_bot := h_lm.locally_moving U U_open U_nonempty
-  exact (or_iff_right rist_ne_bot).mp (Subgroup.bot_or_exists_ne_one _)
-
-end LocallyMoving
 
 structure AlgebraicallyDisjointElem {G : Type _} [Group G] (f g h : G) :=
   non_commute: ¬Commute f h
@@ -138,93 +118,13 @@ instance coeAlgebraicallyDisjoint : Coe (AlgebraicallyDisjoint f g) (IsAlgebraic
 
 end IsAlgebraicallyDisjoint
 
-@[simp]
-theorem orbit_bot (G : Type _) [Group G] [MulAction G α] (p : α) :
-    MulAction.orbit (⊥ : Subgroup G) p = {p} :=
-  by
-  ext1
-  rw [MulAction.mem_orbit_iff]
-  constructor
-  · rintro ⟨⟨_, g_bot⟩, g_to_x⟩
-    rw [← g_to_x, Set.mem_singleton_iff, Subgroup.mk_smul]
-    exact (Subgroup.mem_bot.mp g_bot).symm ▸ one_smul _ _
-  exact fun h => ⟨1, Eq.trans (one_smul _ p) (Set.mem_singleton_iff.mp h).symm⟩
-#align orbit_bot Rubin.orbit_bot
-
+-- TODO: find a better home for these lemmas
 variable {G α : Type _}
 variable [Group G]
 variable [TopologicalSpace α]
+variable [MulAction G α]
 variable [ContinuousMulAction G α]
 variable [FaithfulSMul G α]
-
-instance dense_locally_moving [T2Space α]
-  [H_nip : HasNoIsolatedPoints α]
-  (H_ld : LocallyDense G α) :
-  LocallyMoving G α
-where
-  locally_moving := by
-    intros U _ H_nonempty
-    by_contra h_rs
-    have ⟨elem, ⟨_, some_in_orbit⟩⟩ := H_ld.nonEmpty H_nonempty
-    -- Note: This is automatic now :)
-    -- have H_nebot := has_no_isolated_points_neBot elem
-    rw [h_rs] at some_in_orbit
-    simp at some_in_orbit
-
-lemma disjoint_nbhd [T2Space α] {g : G} {x : α} (x_moved: g • x ≠ x) :
-  ∃ U: Set α, IsOpen U ∧ x ∈ U ∧ Disjoint U (g •'' U) :=
-by
-  have ⟨V, W, V_open, W_open, gx_in_V, x_in_W, disjoint_V_W⟩ := T2Space.t2 (g • x) x x_moved
-  let U := (g⁻¹ •'' V) ∩ W
-  use U
-  constructor
-  {
-    -- NOTE: if this is common, then we should make a tactic for solving IsOpen goals
-    exact IsOpen.inter (img_open_open g⁻¹ V V_open) W_open
-  }
-  constructor
-  {
-    simp
-    rw [mem_inv_smulImage]
-    trivial
-  }
-  {
-    apply Set.disjoint_of_subset
-    · apply Set.inter_subset_right
-    · intro y hy; show y ∈ V
-
-      rw [<-smul_inv_smul g y]
-      rw [<-mem_inv_smulImage]
-
-      rw [mem_smulImage] at hy
-      simp at hy
-
-      exact hy.left
-    · exact disjoint_V_W.symm
-  }
-
-lemma disjoint_nbhd_in [T2Space α] {g : G} {x : α} {V : Set α}
-  (V_open : IsOpen V) (x_in_V : x ∈ V) (x_moved : g • x ≠ x) :
-  ∃ U : Set α, IsOpen U ∧ x ∈ U ∧ U ⊆ V ∧ Disjoint U (g •'' U) :=
-by
-  have ⟨W, W_open, x_in_W, disjoint_W_img⟩ := disjoint_nbhd x_moved
-  use W ∩ V
-  simp
-  constructor
-  {
-    apply IsOpen.inter <;> assumption
-  }
-  constructor
-  {
-    constructor <;> assumption
-  }
-  show Disjoint (W ∩ V) (g •'' W ∩ V)
-  apply Set.disjoint_of_subset
-  · exact Set.inter_subset_left W V
-  · show g •'' W ∩ V ⊆ g •'' W
-    rewrite [smulImage_inter]
-    exact Set.inter_subset_left _ _
-  · exact disjoint_W_img
 
 -- Kind of a boring lemma but okay
 lemma rewrite_Union (f : Fin 2 × Fin 2 → Set α) :

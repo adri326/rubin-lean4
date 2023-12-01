@@ -1,8 +1,10 @@
 import Mathlib.Data.Finset.Basic
 import Mathlib.GroupTheory.Subgroup.Basic
 import Mathlib.GroupTheory.GroupAction.Basic
+import Mathlib.Topology.Basic
 
 import Rubin.MulActionExt
+import Rubin.Topology
 
 namespace Rubin
 
@@ -282,5 +284,18 @@ by
   simp only [pow_zero, one_smulImage] at h_notin_V
   exact h_notin_V
 #align distinct_images_from_disjoint Rubin.smulImage_distinct_of_disjoint_pow
+
+
+theorem continuousMulAction_elem_continuous {G : Type _} (α : Type _)
+  [Group G] [TopologicalSpace α] [MulAction G α] [hc : ContinuousMulAction G α] (g : G):
+  ∀ (S : Set α), IsOpen S → IsOpen (g •'' S) ∧ IsOpen ((g⁻¹) •'' S) :=
+by
+  intro S S_open
+  repeat rw [smulImage_eq_inv_preimage]
+  rw [inv_inv]
+  constructor
+  · exact (hc.continuous g⁻¹).isOpen_preimage _ S_open
+  · exact (hc.continuous g).isOpen_preimage _ S_open
+
 
 end Rubin

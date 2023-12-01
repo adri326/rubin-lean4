@@ -6,8 +6,9 @@ import Mathlib.Topology.Separation
 
 import Rubin.Tactic
 import Rubin.Support
-import Rubin.Topological
+import Rubin.Topology
 import Rubin.InteriorClosure
+import Rubin.RigidStabilizer
 
 namespace Rubin
 
@@ -46,6 +47,7 @@ section RegularSupport_continuous
 variable {G α : Type _}
 variable [Group G]
 variable [TopologicalSpace α]
+variable [MulAction G α]
 variable [ContinuousMulAction G α]
 
 theorem support_subset_regularSupport [T2Space α] {g : G} :
@@ -91,14 +93,13 @@ by
     exact rs_subset
 #align mem_regular_support Rubin.regularSupport_subset_of_rigidStabilizer
 
-end RegularSupport_continuous
-
-theorem regularSupport_smulImage {G α : Type _} [Group G] [TopologicalSpace α] [ContinuousMulAction G α]
-  {f g : G} :
+theorem regularSupport_smulImage {f g : G} :
   f •'' (RegularSupport α g) = RegularSupport α (f * g * f⁻¹) :=
 by
   unfold RegularSupport
   rw [support_conjugate]
   rw [interiorClosure_smulImage _ _ (continuousMulAction_elem_continuous α f)]
+
+end RegularSupport_continuous
 
 end Rubin

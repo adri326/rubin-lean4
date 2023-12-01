@@ -2,6 +2,7 @@ import Mathlib.Data.Finset.Basic
 import Mathlib.GroupTheory.Commutator
 import Mathlib.GroupTheory.Subgroup.Basic
 import Mathlib.GroupTheory.GroupAction.Basic
+import Mathlib.Topology.Basic
 
 import Rubin.MulActionExt
 import Rubin.SmulImage
@@ -257,5 +258,39 @@ theorem support_eq: Support α f = Support α g ↔ ∀ (x : α), (f • x = x �
       cases h x with
       | inl h₁ => exfalso; exact gx_ne_x h₁.right
       | inr h₁ => exact h₁.left
+
+section Continuous
+
+variable {G α : Type _}
+variable [Group G]
+variable [TopologicalSpace α]
+variable [MulAction G α]
+variable [ContinuousMulAction G α]
+
+theorem img_open_open (g : G) (U : Set α) (h : IsOpen U): IsOpen (g •'' U) :=
+  by
+  rw [Rubin.smulImage_eq_inv_preimage]
+  exact Continuous.isOpen_preimage (Rubin.ContinuousMulAction.continuous g⁻¹) U h
+
+#align img_open_open Rubin.img_open_open
+
+theorem support_open (g : G) [TopologicalSpace α] [T2Space α]
+    [ContinuousMulAction G α] : IsOpen (Support α g) :=
+  by
+  apply isOpen_iff_forall_mem_open.mpr
+  intro x xmoved
+  rcases T2Space.t2 (g • x) x xmoved with ⟨U, V, open_U, open_V, gx_in_U, x_in_V, disjoint_U_V⟩
+  exact
+    ⟨V ∩ (g⁻¹ •'' U), fun y yW =>
+      Disjoint.ne_of_mem
+        disjoint_U_V
+        (mem_inv_smulImage.mp (Set.mem_of_mem_inter_right yW))
+        (Set.mem_of_mem_inter_left yW),
+        IsOpen.inter open_V (Rubin.img_open_open g⁻¹ U open_U),
+        ⟨x_in_V, mem_inv_smulImage.mpr gx_in_U⟩
+    ⟩
+#align support_open Rubin.support_open
+
+end Continuous
 
 end Rubin
