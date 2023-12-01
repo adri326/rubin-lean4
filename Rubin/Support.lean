@@ -46,6 +46,12 @@ theorem not_mem_support :
   rw [Rubin.mem_support, Classical.not_not]
 #align mem_not_support Rubin.not_mem_support
 
+theorem support_one : Support α (1 : G) = ∅ := by
+  rw [Set.eq_empty_iff_forall_not_mem]
+  intro x
+  rw [not_mem_support]
+  simp
+
 theorem smul_mem_support :
     x ∈ Support α g → g • x ∈ Support α g := fun h =>
   h ∘ smul_left_cancel g
@@ -259,6 +265,35 @@ theorem support_eq: Support α f = Support α g ↔ ∀ (x : α), (f • x = x �
       | inl h₁ => exfalso; exact gx_ne_x h₁.right
       | inr h₁ => exact h₁.left
 
+theorem support_empty_iff (g : G) [h_f : FaithfulSMul G α] :
+  Support α g = ∅ ↔ g = 1 :=
+by
+  constructor
+  · intro supp_empty
+    rw [Set.eq_empty_iff_forall_not_mem] at supp_empty
+    apply h_f.eq_of_smul_eq_smul
+    intro x
+    specialize supp_empty x
+    rw [not_mem_support] at supp_empty
+    simp
+    exact supp_empty
+  · intro g_eq_1
+    rw [g_eq_1]
+    exact support_one
+
+theorem support_nonempty_iff (g : G) [h_f : FaithfulSMul G α] :
+  Set.Nonempty (Support α g) ↔ g ≠ 1 :=
+by
+  constructor
+  · intro ⟨x, x_in_supp⟩
+    by_contra g_eq_1
+    rw [g_eq_1, support_one] at x_in_supp
+    exact x_in_supp
+  · intro g_ne_one
+    by_contra supp_empty
+    rw [Set.not_nonempty_iff_eq_empty] at supp_empty
+    exact g_ne_one ((support_empty_iff _).mp supp_empty)
+
 section Continuous
 
 variable {G α : Type _}
@@ -274,8 +309,7 @@ theorem img_open_open (g : G) (U : Set α) (h : IsOpen U): IsOpen (g •'' U) :=
 
 #align img_open_open Rubin.img_open_open
 
-theorem support_open (g : G) [TopologicalSpace α] [T2Space α]
-    [ContinuousMulAction G α] : IsOpen (Support α g) :=
+theorem support_open (g : G) [T2Space α]: IsOpen (Support α g) :=
   by
   apply isOpen_iff_forall_mem_open.mpr
   intro x xmoved

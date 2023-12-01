@@ -49,6 +49,17 @@ by
 
 theorem monotone_rigidStabilizer : Monotone (RigidStabilizer (α := α) G) := fun _ _ => rigidStabilizer_mono
 
+theorem rigidStabilizer_compl [FaithfulSMul G α] {U : Set α} {f : G} (f_ne_one : f ≠ 1) :
+  f ∈ RigidStabilizer G (Uᶜ) → f ∉ RigidStabilizer G U :=
+by
+  intro f_in_rist_compl
+  intro f_in_rist
+  rw [rigidStabilizer_support] at f_in_rist_compl
+  rw [rigidStabilizer_support] at f_in_rist
+  rw [Set.subset_compl_iff_disjoint_left] at f_in_rist_compl
+  have supp_empty : Support α f = ∅ := empty_of_subset_disjoint f_in_rist_compl.symm f_in_rist
+  exact f_ne_one ((support_empty_iff f).mp supp_empty)
+
 theorem rigidStabilizer_to_subgroup_closure {g : G} {U : Set α} :
   g ∈ RigidStabilizer G U → g ∈ Subgroup.closure { g : G | Support α g ⊆ U } :=
 by
@@ -137,5 +148,28 @@ by
   intro x
   rw [f_in_rist x (Set.not_mem_empty x)]
   simp
+
+theorem rigidStabilizer_sInter (S : Set (Set α)) :
+  RigidStabilizer G (⋂₀ S) = ⨅ T ∈ S, RigidStabilizer G T :=
+by
+  ext x
+  rw [rigidStabilizer_support]
+  constructor
+  · intro supp_ss_sInter
+    rw [Subgroup.mem_iInf]
+    intro T
+    rw [Subgroup.mem_iInf]
+    intro T_in_S
+    rw [rigidStabilizer_support]
+    rw [Set.subset_sInter_iff] at supp_ss_sInter
+    exact supp_ss_sInter T T_in_S
+  · intro x_in_rist
+    rw [Set.subset_sInter_iff]
+    intro T T_in_S
+    rw [<-rigidStabilizer_support]
+    rw [Subgroup.mem_iInf] at x_in_rist
+    specialize x_in_rist T
+    rw [Subgroup.mem_iInf] at x_in_rist
+    exact x_in_rist T_in_S
 
 end Rubin

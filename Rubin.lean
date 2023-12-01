@@ -25,6 +25,7 @@ import Rubin.RigidStabilizer
 import Rubin.Period
 import Rubin.AlgebraicDisjointness
 import Rubin.RegularSupport
+import Rubin.HomeoGroup
 
 #align_import rubin
 
@@ -701,6 +702,10 @@ by
 
 end RegularSupport
 
+section HomeoGroup
+
+
+end HomeoGroup
 
 -- variables [topological_space α] [topological_space β] [continuous_mul_action G α] [continuous_mul_action G β]
 -- noncomputable theorem rubin (hα : rubin_action G α) (hβ : rubin_action G β) : equivariant_homeomorph G α β := sorry
