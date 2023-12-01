@@ -134,7 +134,7 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
       _ ⊆ W ∪ (k •'' Support α f₁) := Set.union_subset_union_left _ supp_f₁_subset_W
       _ ⊆ W ∪ (k •'' W) := by
         apply Set.union_subset_union_right
-        exact (smulImage_subset k supp_f₁_subset_W)
+        exact (smulImage_mono k supp_f₁_subset_W)
       _ = W ∪ (f₂ •'' W) := by rw [<-smulImage_eq_of_smul_eq h₂]
       _ ⊆ V ∪ (f₂ •'' W) := Set.union_subset_union_left _ W_in_V
       _ ⊆ V ∪ V := by
@@ -217,7 +217,7 @@ by
   have V_disjoint_smulImage: Disjoint V (f •'' V) := by
     apply Set.disjoint_of_subset
     · exact Set.inter_subset_left _ _
-    · apply smulImage_subset
+    · apply smulImage_mono
       exact Set.inter_subset_left _ _
     · exact disjoint_img_V₀
 
@@ -253,7 +253,7 @@ by
         exact rigidStabilizer_support.mp h_in_ristV
       _ ⊆ V ∪ (f₂ •'' V) := by
         apply Set.union_subset_union_right
-        apply smulImage_subset
+        apply smulImage_mono
         exact rigidStabilizer_support.mp h_in_ristV
   have support_h' : Support α h' ⊆ ⋃(i : Fin 2 × Fin 2), (f₁^(i.1.val) * f₂^(i.2.val)) •'' V := by
     rw [rewrite_Union]
@@ -266,7 +266,7 @@ by
         exact support_f₂_h
       _ ⊆ V ∪ (f₂ •'' V) ∪ (f₁ •'' V ∪ (f₂ •'' V)) := by
         apply Set.union_subset_union_right
-        apply smulImage_subset f₁
+        apply smulImage_mono f₁
         exact support_f₂_h
 
   -- Since h' is nontrivial, it has at least one point p in its support
@@ -367,9 +367,9 @@ by
   have disj : ∀ (i j : Fin n), i ≠ j → Disjoint (g ^ (i : ℕ) •'' V) (g ^ (j : ℕ) •'' V) := by
     intro i j i_ne_j
     apply Set.disjoint_of_subset
-    · apply smulImage_subset
+    · apply smulImage_mono
       apply Set.inter_subset_right
-    · apply smulImage_subset
+    · apply smulImage_mono
       apply Set.inter_subset_right
     exact disj' i j i_ne_j
 

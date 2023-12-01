@@ -116,15 +116,11 @@ theorem smulImage_inv (g: G) (U V : Set α) : g •'' U = V ↔ U = g⁻¹ •''
     apply SmulImage.inv_congr at h
     exact h
 
--- TODO: rename to smulImage_mono
-theorem smulImage_subset (g : G) {U V : Set α} : U ⊆ V → g •'' U ⊆ g •'' V :=
-  by
+theorem smulImage_mono (g : G) {U V : Set α} : U ⊆ V → g •'' U ⊆ g •'' V := by
   intro h1 x
   rw [Rubin.mem_smulImage, Rubin.mem_smulImage]
   exact fun h2 => h1 h2
-#align smul''_subset Rubin.smulImage_subset
-
-def smulImage_mono (g : G) {U V : Set α} : U ⊆ V → g •'' U ⊆ g •'' V := smulImage_subset g
+#align smul''_subset Rubin.smulImage_mono
 
 theorem smulImage_union (g : G) {U V : Set α} : g •'' U ∪ V = (g •'' U) ∪ (g •'' V) :=
   by
@@ -218,12 +214,12 @@ theorem smulImage_subset_inv {G α : Type _} [Group G] [MulAction G α]
 by
   constructor
   · intro h
-    apply smulImage_subset f⁻¹ at h
+    apply smulImage_mono f⁻¹ at h
     rw [smulImage_mul] at h
     rw [mul_left_inv, one_smulImage] at h
     exact h
   · intro h
-    apply smulImage_subset f at h
+    apply smulImage_mono f at h
     rw [smulImage_mul] at h
     rw [mul_right_inv, one_smulImage] at h
     exact h
@@ -265,11 +261,10 @@ by
 theorem smulImage_disjoint_subset {G α : Type _} [Group G] [MulAction G α]
   {f g : G} {U V : Set α} (h_sub: U ⊆ V):
   Disjoint (f •'' V) (g •'' V) → Disjoint (f •'' U) (g •'' U) :=
-by
-  apply Set.disjoint_of_subset (smulImage_subset _ h_sub) (smulImage_subset _ h_sub)
+Set.disjoint_of_subset (smulImage_mono _ h_sub) (smulImage_mono _ h_sub)
 
 -- States that if `g^i •'' V` and `g^j •'' V` are disjoint for any `i ≠ j` and `x ∈ V`
--- then `g^i • x` will always lie outside of `V`.
+-- then `g^i • x` will always lie outside of `V` if `x ∈ V`.
 lemma smulImage_distinct_of_disjoint_pow {G α : Type _} [Group G] [MulAction G α] {g : G} {V : Set α} {n : ℕ}
   (n_pos : 0 < n)
   (h_disj : ∀ (i j : Fin n), i ≠ j → Disjoint (g ^ (i : ℕ) •'' V) (g ^ (j : ℕ) •'' V)) :

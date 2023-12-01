@@ -76,7 +76,7 @@ theorem fixed_smulImage_in_support (g : G) {U : Set α} :
 theorem smulImage_subset_in_support (g : G) (U V : Set α) :
     U ⊆ V → Support α g ⊆ V → g •'' U ⊆ V := fun U_in_V support_in_V =>
   Rubin.fixed_smulImage_in_support g support_in_V ▸
-    Rubin.smulImage_subset g U_in_V
+    smulImage_mono g U_in_V
 #align moves_subset_within_support Rubin.smulImage_subset_in_support
 
 theorem support_mul (g h : G) (α : Type _) [MulAction G α] :
@@ -155,10 +155,11 @@ theorem disjoint_support_comm (f g : G) {U : Set α} :
     Support α f ⊆ U → Disjoint U (g •'' U) → ∀ x ∈ U, ⁅f, g⁆ • x = f • x :=
   by
   intro support_in_U disjoint_U x x_in_U
-  have support_conj : Support α (g * f⁻¹ * g⁻¹) ⊆ g •'' U :=
-    ((Rubin.support_conjugate α f⁻¹ g).trans
-          (Rubin.SmulImage.congr g (Rubin.support_inv α f))).symm ▸
-      Rubin.smulImage_subset g support_in_U
+  have support_conj : Support α (g * f⁻¹ * g⁻¹) ⊆ g •'' U := by
+    rw [support_conjugate]
+    apply smulImage_mono
+    rw [support_inv]
+    exact support_in_U
   have goal :=
     (congr_arg (f • ·)
         (Rubin.fixed_of_disjoint x_in_U

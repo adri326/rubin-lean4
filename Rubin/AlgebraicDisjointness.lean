@@ -291,11 +291,7 @@ by
   let U := ⋂(p : ι₂), smul_inj_nbhd p.prop f_smul_inj
   use U
 
-  -- The notations provided afterwards tend to be quite ugly because we used `Exists.choose`,
-  -- but the idea is that this all boils down to applying `Exists.choose_spec`, except in the disjointness case,
-  -- where we transform `Disjoint (f i •'' U) (f j •'' U)` into `Disjoint U ((f i)⁻¹ * f j •'' U)`
-  -- and transform both instances of `U` into `N`, the neighborhood of the chosen `(i, j) ∈ ι₂`
-  repeat' constructor
+  repeat' apply And.intro
   · apply isOpen_iInter_of_finite
     intro ⟨⟨i, j⟩, i_ne_j⟩
     apply smul_inj_nbhd_open
@@ -303,6 +299,8 @@ by
     intro ⟨⟨i, j⟩, i_ne_j⟩
     apply smul_inj_nbhd_mem
   · intro i j i_ne_j
+
+    -- We transform `Disjoint (f i •'' U) (f j •'' U)` into `Disjoint N ((f i)⁻¹ * f j •'' N)`
     let N := smul_inj_nbhd i_ne_j f_smul_inj
     have U_subset_N : U ⊆ N := Set.iInter_subset
       (fun (⟨⟨i, j⟩, i_ne_j⟩ : ι₂) => (smul_inj_nbhd i_ne_j f_smul_inj))
@@ -311,7 +309,7 @@ by
     rw [disjoint_comm, smulImage_disjoint_mul]
 
     apply Set.disjoint_of_subset U_subset_N
-    · apply smulImage_subset
+    · apply smulImage_mono
       exact U_subset_N
     · exact smul_inj_nbhd_disjoint i_ne_j f_smul_inj
 

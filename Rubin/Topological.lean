@@ -13,7 +13,6 @@ namespace Rubin
 
 section Continuity
 
--- TODO: don't have this extend MulAction and move this somewhere else
 class ContinuousMulAction (G α : Type _) [Group G] [TopologicalSpace α] extends
     MulAction G α where
   continuous : ∀ g : G, Continuous (fun x: α => g • x)
