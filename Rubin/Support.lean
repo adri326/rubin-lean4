@@ -194,7 +194,7 @@ by
   have h₀ : ∀ x ∈ U, x ∉ Support α f := by
     intro x x_in_U
     unfold Commute SemiconjBy at h_comm
-    have gx_in_img := (mem_smulImage' g).mp x_in_U
+    have gx_in_img := (mem_smulImage' g).mpr x_in_U
     have h₁ : g • f • x = g • x := by
       have res := disjoint_not_mem₂ disj gx_in_img
       rw [not_mem_support] at res

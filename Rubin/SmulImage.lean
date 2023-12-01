@@ -63,7 +63,8 @@ theorem mem_inv_smulImage {x : α} {g : G} {U : Set α} : x ∈ g⁻¹ •'' U �
   exact msi
 #align mem_inv_smul'' Rubin.mem_inv_smulImage
 
-theorem mem_smulImage' {x : α} (g : G) {U : Set α} : x ∈ U ↔ g • x ∈ g •'' U :=
+@[simp]
+theorem mem_smulImage' {x : α} (g : G) {U : Set α} : g • x ∈ g •'' U ↔ x ∈ U :=
 by
   rw [mem_smulImage]
   rw [<-mul_smul, mul_left_inv, one_smul]
@@ -138,6 +139,7 @@ theorem smulImage_inter (g : G) {U V : Set α} : g •'' U ∩ V = (g •'' U) �
     Rubin.mem_smulImage, Set.mem_inter_iff]
 #align smul''_inter Rubin.smulImage_inter
 
+@[simp]
 theorem smulImage_sUnion (g : G) {S : Set (Set α)} : g •'' (⋃₀ S) = ⋃₀ {g •'' T | T ∈ S} :=
 by
   ext x
@@ -161,8 +163,8 @@ by
     rw [<-mem_smulImage]
     exact x_in_gT
 
-theorem smulImage_sInter (g : G) {S : Set (Set α)} : g •'' (⋂₀ S) = ⋂₀ {g •'' T | T ∈ S} :=
-by
+@[simp]
+theorem smulImage_sInter (g : G) {S : Set (Set α)} : g •'' (⋂₀ S) = ⋂₀ {g •'' T | T ∈ S} := by
   ext x
   constructor
   · intro h
@@ -181,12 +183,60 @@ by
     exact h T T_in_S
 
 @[simp]
+theorem smulImage_iInter {β : Type _} (g : G) (S : Set β) (f : β → Set α) :
+  g •'' (⋂ x ∈ S, f x) = ⋂ x ∈ S, g •'' (f x) :=
+by
+  ext x
+  constructor
+  · intro h
+    rw [mem_smulImage] at h
+    simp
+    simp at h
+    intro i i_in_S
+    rw [mem_smulImage]
+    exact h i i_in_S
+  · intro h
+    simp at h
+    rw [mem_smulImage]
+    simp
+    intro i i_in_S
+    rw [<-mem_smulImage]
+    exact h i i_in_S
+
+@[simp]
+theorem smulImage_iInter_fin {β : Type _} (g : G) (S : Finset β) (f : β → Set α) :
+  g •'' (⋂ x ∈ S, f x) = ⋂ x ∈ S, g •'' (f x) :=
+by
+  -- For some strange reason I can't use the above theorem
+  ext x
+  rw [mem_smulImage, Set.mem_iInter, Set.mem_iInter]
+  simp
+  conv => {
+    rhs
+    ext; ext
+    rw [mem_smulImage]
+  }
+
+@[simp]
 theorem smulImage_compl (g : G) (U : Set α) : (g •'' U)ᶜ = g •'' Uᶜ :=
 by
   ext x
   rw [Set.mem_compl_iff]
   repeat rw [mem_smulImage]
   rw [Set.mem_compl_iff]
+
+@[simp]
+theorem smulImage_nonempty (g: G) {U : Set α} : Set.Nonempty (g •'' U) ↔ Set.Nonempty U :=
+by
+  constructor
+  · intro ⟨x, x_in_gU⟩
+    use g⁻¹•x
+    rw [<-mem_smulImage]
+    assumption
+  · intro ⟨x, x_in_U⟩
+    use g•x
+    simp
+    assumption
 
 theorem smulImage_eq_inv_preimage {g : G} {U : Set α} : g •'' U = (g⁻¹ • ·) ⁻¹' U :=
   by

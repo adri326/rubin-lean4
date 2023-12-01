@@ -86,6 +86,7 @@ by
 
       rw [mem_smulImage] at hy
       simp at hy
+      simp
 
       exact hy.left
     · exact disjoint_V_W.symm

@@ -143,30 +143,108 @@ namespace Rubin
 
 variable {α : Type _}
 variable [TopologicalSpace α]
+variable [DecidableEq α]
 
--- Note that the condition that the resulting set is non-empty is introduced later in `RegularInter`
--- TODO: rename!!!
-def RegularInterElem (S : Finset (HomeoGroup α)): Set α :=
+/--
+Maps a "seed" of homeorphisms in α to the intersection of their regular support in α.
+
+Note that the condition that the resulting set is non-empty is introduced later in `AssociatedPosetSeed`
+--/
+def AssociatedPosetElem (S : Finset (HomeoGroup α)): Set α :=
   ⋂₀ ((fun (g : HomeoGroup α) => RegularSupport α g) '' S)
 
-def RegularInter (α : Type _) [TopologicalSpace α]: Type* :=
-  { S : Set α //
-    Set.Nonempty S
-    ∧ ∃ (seed : Finset (HomeoGroup α)), S = RegularInterElem seed
-  }
+/--
+This is a predecessor type to `AssociatedPoset`, where equality is defined on the `seed` used, rather than the `val`.
+--/
+structure AssociatedPosetSeed (α : Type _) [TopologicalSpace α] where
+  seed : Finset (HomeoGroup α)
+  val_nonempty : Set.Nonempty (AssociatedPosetElem seed)
+
+theorem AssociatedPosetSeed.eq_iff_seed_eq (S T : AssociatedPosetSeed α) : S = T ↔ S.seed = T.seed := by
+  -- Spooky :3c
+  rw [mk.injEq]
+
+def AssociatedPosetSeed.val (S : AssociatedPosetSeed α) : Set α := AssociatedPosetElem S.seed
+
+theorem AssociatedPosetSeed.val_def (S : AssociatedPosetSeed α) : S.val = AssociatedPosetElem S.seed := rfl
+
+/--
+A partially-ordered set, associated to Rubin's proof.
+Any element in that set is made up of a `seed`,
+such that `val = AssociatedPosetElem seed` and `Set.Nonempty val`.
+
+Actions on this set are first defined in terms of `AssociatedPosetSeed`,
+as the proofs otherwise get hairy with `Exists.choose`.
+--/
+structure AssociatedPoset (α : Type _) [TopologicalSpace α] where
+  val : Set α
+  val_has_seed : ∃ po_seed : AssociatedPosetSeed α, po_seed.val = val
+
+theorem AssociatedPoset.eq_iff_val_eq (S T : AssociatedPoset α) : S = T ↔ S.val = T.val := by
+  rw [mk.injEq]
+
+def AssociatedPoset.fromSeed (seed : AssociatedPosetSeed α) : AssociatedPoset α := ⟨
+  seed.val,
+  ⟨seed, seed.val_def⟩
+⟩
+
+noncomputable def AssociatedPoset.full_seed (S : AssociatedPoset α) : AssociatedPosetSeed α :=
+  (Exists.choose S.val_has_seed)
+
+noncomputable def AssociatedPoset.seed (S : AssociatedPoset α) : Finset (HomeoGroup α) :=
+  S.full_seed.seed
 
 @[simp]
-theorem regularInter_open (S : RegularInter α) : Set.Nonempty S.val := S.prop.left
+theorem AssociatedPoset.full_seed_seed (S : AssociatedPoset α) : S.full_seed.seed = S.seed := rfl
 
 @[simp]
-theorem regularInter_regular (S : RegularInter α) : Regular S.val := by
-  have ⟨seed, S_from_seed⟩ := S.prop.right
-  rw [S_from_seed]
-  unfold RegularInterElem
+theorem AssociatedPoset.fromSeed_val (seed : AssociatedPosetSeed α) :
+  (AssociatedPoset.fromSeed seed).val = seed.val :=
+by
+  unfold fromSeed
+  simp
+
+@[simp]
+theorem AssociatedPoset.val_from_seed (S : AssociatedPoset α) : AssociatedPosetElem S.seed = S.val := by
+  unfold seed full_seed
+  rw [<-AssociatedPosetSeed.val_def]
+  rw [Exists.choose_spec S.val_has_seed]
+
+@[simp]
+theorem AssociatedPoset.val_from_seed₂ (S : AssociatedPoset α) : S.full_seed.val = S.val := by
+  unfold full_seed
+  rw [AssociatedPosetSeed.val_def]
+  nth_rw 2 [<-AssociatedPoset.val_from_seed]
+  unfold seed full_seed
+  rfl
+
+-- Allows one to prove properties of AssociatedPoset without jumping through `Exists.choose`-shaped hoops
+theorem AssociatedPoset.prop_from_val {p : Set α → Prop}
+  (any_seed : ∀ po_seed : AssociatedPosetSeed α, p po_seed.val) :
+  ∀ (S : AssociatedPoset α), p S.val :=
+by
+  intro S
+  rw [<-AssociatedPoset.val_from_seed]
+  have res := any_seed S.full_seed
+  rw [AssociatedPoset.val_from_seed₂] at res
+  rw [AssociatedPoset.val_from_seed]
+  exact res
+
+@[simp]
+theorem AssociatedPosetSeed.nonempty (S : AssociatedPosetSeed α) : Set.Nonempty S.val := S.val_nonempty
+
+@[simp]
+theorem AssociatedPoset.nonempty : ∀ (S : AssociatedPoset α), Set.Nonempty S.val :=
+  AssociatedPoset.prop_from_val AssociatedPosetSeed.nonempty
+
+@[simp]
+theorem AssociatedPosetSeed.regular (S : AssociatedPosetSeed α) : Regular S.val := by
+  rw [S.val_def]
+  unfold AssociatedPosetElem
 
   apply regular_sInter
   · have set_decidable : DecidableEq (Set α) := Classical.typeDecidableEq (Set α)
-    let fin : Finset (Set α) := seed.image ((fun g => RegularSupport α g))
+    let fin : Finset (Set α) := S.seed.image ((fun g => RegularSupport α g))
 
     apply Set.Finite.ofFinset fin
     simp
@@ -176,10 +254,116 @@ theorem regularInter_regular (S : RegularInter α) : Regular S.val := by
     rw [<-Heq]
     exact regularSupport_regular α g
 
--- TODO:
--- def RegularInter.smul : HomeoGroup α → RegularInter α -> RegularInter α
+@[simp]
+theorem AssociatedPoset.regular : ∀ (S : AssociatedPoset α), Regular S.val :=
+  AssociatedPoset.prop_from_val AssociatedPosetSeed.regular
 
--- instance homeoGroup_smul₂ : SMul (HomeoGroup α) (RegularInter α) where
---   smul := fun g x =>
+lemma AssociatedPosetElem.mul_seed (seed : Finset (HomeoGroup α)) [DecidableEq (HomeoGroup α)] (f : HomeoGroup α):
+  AssociatedPosetElem (Finset.image (fun g => f * g * f⁻¹) seed) = f •'' AssociatedPosetElem seed :=
+by
+  unfold AssociatedPosetElem
+  simp
+  conv => {
+    rhs
+    ext; lhs; ext x; ext; lhs
+    ext
+    rw [regularSupport_smulImage]
+  }
+
+variable [DecidableEq (HomeoGroup α)]
+
+/--
+A `HomeoGroup α` group element `f` acts on an `AssociatedPosetSeed α` set `S`,
+by mapping each element `g` of `S.seed` to `f * g * f⁻¹`
+--/
+instance homeoGroup_smul₂ : SMul (HomeoGroup α) (AssociatedPosetSeed α) where
+  smul := fun f S => ⟨
+    (Finset.image (fun g => f * g * f⁻¹) S.seed),
+    by
+      rw [AssociatedPosetElem.mul_seed]
+      simp
+      exact S.val_nonempty
+  ⟩
+
+theorem AssociatedPosetSeed.smul_seed (f : HomeoGroup α) (S : AssociatedPosetSeed α) :
+  (f • S).seed = (Finset.image (fun g => f * g * f⁻¹) S.seed) := rfl
+
+theorem AssociatedPosetSeed.smul_val (f : HomeoGroup α) (S : AssociatedPosetSeed α) :
+  (f • S).val = AssociatedPosetElem (Finset.image (fun g => f * g * f⁻¹) S.seed) := rfl
+
+theorem AssociatedPosetSeed.smul_val' (f : HomeoGroup α) (S : AssociatedPosetSeed α) :
+  (f • S).val = f •'' S.val :=
+by
+  unfold val
+  rw [<-AssociatedPosetElem.mul_seed]
+  rw [AssociatedPosetSeed.smul_seed]
+
+instance homeoGroup_mulAction₂ : MulAction (HomeoGroup α) (AssociatedPosetSeed α) where
+  one_smul := by
+    intro S
+    rw [AssociatedPosetSeed.eq_iff_seed_eq]
+    rw [AssociatedPosetSeed.smul_seed]
+    simp
+  mul_smul := by
+    intro f g S
+    rw [AssociatedPosetSeed.eq_iff_seed_eq]
+    repeat rw [AssociatedPosetSeed.smul_seed]
+    rw [Finset.image_image]
+    ext x
+    simp
+    group
+
+def AssociatedPoset.smul_from_seed (f : HomeoGroup α) (S : AssociatedPoset α) : AssociatedPoset α :=
+  AssociatedPoset.fromSeed (f • S.full_seed)
+
+-- TODO: use smulImage instead?
+instance homeoGroup_smul₃ : SMul (HomeoGroup α) (AssociatedPoset α) where
+  smul := AssociatedPoset.smul_from_seed
+
+theorem AssociatedPoset.smul_fromSeed (f : HomeoGroup α) (S : AssociatedPoset α) :
+  f • S = AssociatedPoset.fromSeed (f • S.full_seed) := rfl
+
+theorem AssociatedPoset.smul_seed' (f : HomeoGroup α) (S : AssociatedPoset α) (seed : Finset (HomeoGroup α)) :
+  S.val = AssociatedPosetElem seed →
+  (f • S).val = AssociatedPosetElem (Finset.image (fun g => f * g * f⁻¹) seed) :=
+by
+  intro S_val_eq
+
+  rw [AssociatedPoset.smul_fromSeed]
+  rw [AssociatedPoset.fromSeed_val]
+  rw [AssociatedPosetSeed.smul_val]
+  repeat rw [AssociatedPosetElem.mul_seed]
+  rw [<-S_val_eq]
+  rw [AssociatedPoset.full_seed_seed]
+  rw [<-AssociatedPoset.val_from_seed]
+
+theorem AssociatedPoset.smul_seed (f : HomeoGroup α) (S : AssociatedPoset α) :
+  (f • S).val = AssociatedPosetElem (Finset.image (fun g => f * g * f⁻¹) S.seed) :=
+by
+  apply AssociatedPoset.smul_seed'
+  symm
+  exact AssociatedPoset.val_from_seed S
+
+theorem AssociatedPoset.smul_val (f : HomeoGroup α) (S : AssociatedPoset α) :
+  (f • S).val = f •'' S.val :=
+by
+  rw [AssociatedPoset.smul_fromSeed]
+  rw [AssociatedPoset.fromSeed_val]
+  rw [<-AssociatedPoset.val_from_seed₂]
+  exact AssociatedPosetSeed.smul_val' _ _
+
+instance homeoGroup_mulAction₃ : MulAction (HomeoGroup α) (AssociatedPoset α) where
+  one_smul := by
+    intro S
+    rw [AssociatedPoset.eq_iff_val_eq]
+    repeat rw [AssociatedPoset.smul_val]
+    rw [one_smulImage]
+  mul_smul := by
+    intro S f g
+    rw [AssociatedPoset.eq_iff_val_eq]
+    repeat rw [AssociatedPoset.smul_val]
+    rw [smulImage_mul]
+
+
 
 end Rubin
