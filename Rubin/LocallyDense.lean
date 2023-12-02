@@ -8,9 +8,22 @@ namespace Rubin
 
 open Topology
 
+/--
+A group action is said to be "locally dense" if for any open set `U` and `p ∈ U`,
+the closure of the orbit of `p` under the `RigidStabilizer G U` contains a neighborhood of `p`.
+
+The definition provided here is an equivalent one, that does not require using filters.
+See [`LocallyDense.from_rigidStabilizer_in_nhds`] and [`LocallyDense.rigidStabilizer_in_nhds`]
+to translate from/to the original definition.
+
+A weaker relationship, [`LocallyMoving`], is used whenever possible.
+The main difference between the two is that `LocallyMoving` does not allow us to find a group member
+`g ∈ G` such that `g • p ≠ p` — it only allows us to know that `∃ g ∈ RigidStabilizer G U, g ≠ 1`.
+--/
 class LocallyDense (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G α] :=
   isLocallyDense:
     ∀ U : Set α,
+    IsOpen U →
     ∀ p ∈ U,
     p ∈ interior (closure (MulAction.orbit (RigidStabilizer G U) p))
 #align is_locally_dense Rubin.LocallyDense
@@ -21,10 +34,7 @@ theorem LocallyDense.from_rigidStabilizer_in_nhds (G α : Type _) [Group G] [Top
 by
   intro hyp
   constructor
-  intro U p p_in_U
-
-  -- TODO: potentially add that requirement to LocallyDense?
-  have U_open : IsOpen U := sorry
+  intro U U_open p p_in_U
 
   have closure_in_nhds := hyp U U_open p p_in_U
   rw [mem_nhds_iff] at closure_in_nhds
@@ -32,14 +42,24 @@ by
   rw [mem_interior]
   exact closure_in_nhds
 
--- TODO: rename
-lemma LocallyDense.nonEmpty {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] [LocallyDense G α]:
+theorem LocallyDense.rigidStabilizer_in_nhds (G α : Type _) [Group G] [TopologicalSpace α]
+  [MulAction G α] [LocallyDense G α]
+  {U : Set α} (U_open : IsOpen U) {p : α} (p_in_U : p ∈ U)
+:
+  closure (MulAction.orbit (RigidStabilizer G U) p) ∈ 𝓝 p :=
+by
+  rw [mem_nhds_iff]
+  rw [<-mem_interior]
+  apply LocallyDense.isLocallyDense <;> assumption
+
+lemma LocallyDense.elem_from_nonEmpty {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] [LocallyDense G α]:
   ∀ {U : Set α},
+  IsOpen U →
   Set.Nonempty U →
   ∃ p ∈ U, p ∈ interior (closure (MulAction.orbit (RigidStabilizer G U) p)) :=
 by
-  intros U H_ne
-  exact ⟨H_ne.some, H_ne.some_mem, LocallyDense.isLocallyDense U H_ne.some H_ne.some_mem⟩
+  intros U U_open H_ne
+  exact ⟨H_ne.some, H_ne.some_mem, LocallyDense.isLocallyDense U U_open H_ne.some H_ne.some_mem⟩
 
 /--
 This is a stronger statement than `LocallyMoving.get_nontrivial_rist_elem`,
@@ -50,7 +70,7 @@ The condition that `Filer.NeBot (𝓝[≠] p)` is automatically satisfied by the
 theorem get_moving_elem_in_rigidStabilizer (G : Type _) {α : Type _}
   [Group G] [TopologicalSpace α] [MulAction G α] [LocallyDense G α]
   [T1Space α] {p : α} [Filter.NeBot (𝓝[≠] p)]
-  {U : Set α} (p_in_U : p ∈ U) :
+  {U : Set α} (U_open : IsOpen U) (p_in_U : p ∈ U) :
   ∃ g : G, g ∈ RigidStabilizer G U ∧ g • p ≠ p :=
 by
   by_contra g_not_exist
@@ -76,7 +96,7 @@ by
     rw [closure_singleton]
     rw [interior_singleton]
 
-  have p_in_regular_orbit := LocallyDense.isLocallyDense (G := G) U p p_in_U
+  have p_in_regular_orbit := LocallyDense.isLocallyDense (G := G) U U_open p p_in_U
   rw [regular_orbit_empty] at p_in_regular_orbit
   exact p_in_regular_orbit
 
@@ -110,9 +130,9 @@ instance dense_locally_moving [T2Space α]
   LocallyMoving G α
 where
   locally_moving := by
-    intros U _ H_nonempty
+    intros U U_open H_nonempty
     by_contra h_rs
-    have ⟨elem, ⟨_, some_in_orbit⟩⟩ := H_ld.nonEmpty H_nonempty
+    have ⟨elem, ⟨_, some_in_orbit⟩⟩ := H_ld.elem_from_nonEmpty U_open H_nonempty
     rw [h_rs] at some_in_orbit
     simp at some_in_orbit
 

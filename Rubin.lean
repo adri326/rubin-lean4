@@ -12,6 +12,7 @@ import Mathlib.GroupTheory.GroupAction.Basic
 import Mathlib.GroupTheory.Exponent
 import Mathlib.GroupTheory.Perm.Basic
 import Mathlib.Topology.Basic
+import Mathlib.Topology.Bases
 import Mathlib.Topology.Compactness.Compact
 import Mathlib.Topology.Separation
 import Mathlib.Topology.Homeomorph
@@ -706,11 +707,13 @@ section HomeoGroup
 
 open Topology
 
-theorem proposition_3_2 {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+-- TODO: clean this lemma to not mention W anymore?
+lemma proposition_3_2_subset (G : Type _) {α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
   [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
   [ContinuousMulAction G α]
   {U : Set α} (U_open : IsOpen U) {p : α} (p_in_U : p ∈ U) :
-  ∃ (W : Set α), W ∈ 𝓝 p ∧ closure W ⊆ U ∧ ∃ (g : G), g ∈ RigidStabilizer G W ∧ p ∈ RegularSupport α g :=
+  ∃ (W : Set α), W ∈ 𝓝 p ∧ closure W ⊆ U ∧
+  ∃ (g : G), g ∈ RigidStabilizer G W ∧ p ∈ RegularSupport α g ∧ RegularSupport α g ⊆ closure W :=
 by
   have U_in_nhds : U ∈ 𝓝 p := by
     rw [mem_nhds_iff]
@@ -741,17 +744,55 @@ by
 
   have p_in_int_W : p ∈ interior W := W'_ss_int_W (mem_of_mem_nhds W'_in_nhds)
 
-  let ⟨g, g_in_rist, g_moves_p⟩ := get_moving_elem_in_rigidStabilizer G p_in_int_W
+  let ⟨g, g_in_rist, g_moves_p⟩ := get_moving_elem_in_rigidStabilizer G isOpen_interior p_in_int_W
 
   use g
-  constructor
+  repeat' apply And.intro
   · apply rigidStabilizer_mono interior_subset
     simp
     exact g_in_rist
   · rw [<-mem_support] at g_moves_p
     apply support_subset_regularSupport
     exact g_moves_p
+  · rw [rigidStabilizer_support] at g_in_rist
+    apply subset_trans
+    exact regularSupport_subset_closure_support
+    apply closure_mono
+    apply subset_trans
+    exact g_in_rist
+    exact interior_subset
 
+theorem proposition_3_2 {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
+  [hc : ContinuousMulAction G α] :
+  TopologicalSpace.IsTopologicalBasis (AssociatedPoset.asSet α) :=
+by
+  -- Note: the name later changes to isTopologicalBasis_of_isOpen_of_nhds
+  apply TopologicalSpace.isTopologicalBasis_of_open_of_nhds
+  {
+    intro U U_in_poset
+    rw [AssociatedPoset.mem_asSet] at U_in_poset
+    let ⟨T, T_val⟩ := U_in_poset
+    rw [<-T_val]
+    exact T.regular.isOpen
+  }
+  intro p U p_in_U U_open
+
+  let ⟨W, _, clW_ss_U, ⟨g, _, p_in_rsupp, rsupp_ss_clW⟩⟩ := proposition_3_2_subset G U_open p_in_U
+  use RegularSupport α g
+  repeat' apply And.intro
+  · rw [AssociatedPoset.mem_asSet']
+    constructor
+    exact ⟨p, p_in_rsupp⟩
+    use {(ContinuousMulAction.toHomeomorph α g : HomeoGroup α)}
+    unfold AssociatedPosetElem
+    simp
+    unfold RegularSupport
+    rw [<-homeoGroup_support_eq_support_toHomeomorph g]
+  · exact p_in_rsupp
+  · apply subset_trans
+    exact rsupp_ss_clW
+    exact clW_ss_U
 
 end HomeoGroup
 

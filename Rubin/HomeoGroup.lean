@@ -4,6 +4,7 @@ import Mathlib.Topology.Homeomorph
 
 import Rubin.LocallyDense
 import Rubin.Topology
+import Rubin.Support
 import Rubin.RegularSupport
 
 structure HomeoGroup (α : Type _) [TopologicalSpace α] extends
@@ -139,6 +140,16 @@ instance homeoGroup_mulAction₁_faithful : FaithfulSMul (HomeoGroup α) α wher
     ext x
     simp
     exact hyp x
+
+theorem homeoGroup_support_eq_support_toHomeomorph {G : Type _}
+  [Group G] [MulAction G α] [Rubin.ContinuousMulAction G α] (g : G) :
+  Rubin.Support α g = Rubin.Support α (HomeoGroup.from (Rubin.ContinuousMulAction.toHomeomorph α g)) :=
+by
+  ext x
+  repeat rw [Rubin.mem_support]
+  rw [<-HomeoGroup.smul₁_def]
+  rw [HomeoGroup.from_toHomeomorph]
+  rw [Rubin.ContinuousMulAction.toHomeomorph_toFun]
 
 namespace Rubin
 
@@ -396,6 +407,44 @@ by
   repeat rw [smul_val]
   apply smulImage_mono
   assumption
+
+instance associatedPoset_coeSet : Coe (AssociatedPoset α) (Set α) where
+  coe := AssociatedPoset.val
+
+def asSet (α : Type _) [TopologicalSpace α]: Set (Set α) :=
+  { S : Set α | ∃ T : AssociatedPoset α, T.val = S }
+
+theorem asSet_def :
+  AssociatedPoset.asSet α = { S : Set α | ∃ T : AssociatedPoset α, T.val = S } := rfl
+
+theorem mem_asSet (S : Set α) :
+  S ∈ AssociatedPoset.asSet α ↔ ∃ T : AssociatedPoset α, T.val = S :=
+by
+  rw [asSet_def]
+  simp
+
+theorem mem_asSet' (S : Set α) :
+  S ∈ AssociatedPoset.asSet α ↔ Set.Nonempty S ∧ ∃ seed : Finset (HomeoGroup α), S = AssociatedPosetElem seed :=
+by
+  rw [asSet_def]
+  simp
+  constructor
+  · intro ⟨T, T_eq⟩
+    rw [<-T_eq]
+    constructor
+    simp
+
+    let ⟨⟨seed, _⟩, eq⟩ := T.val_has_seed
+    rw [AssociatedPosetSeed.val_def] at eq
+    simp at eq
+    use seed
+    exact eq.symm
+  · intro ⟨S_nonempty, ⟨seed, val_from_seed⟩⟩
+    rw [val_from_seed] at S_nonempty
+    use fromSeed ⟨seed, S_nonempty⟩
+    rw [val_from_seed]
+    simp
+    rw [AssociatedPosetSeed.val_def]
 
 end AssociatedPoset
 

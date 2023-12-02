@@ -12,6 +12,34 @@ class ContinuousMulAction (G α : Type _) [Group G] [TopologicalSpace α] [MulAc
   continuous : ∀ g : G, Continuous (fun x: α => g • x)
 #align continuous_mul_action Rubin.ContinuousMulAction
 
+def ContinuousMulAction.toHomeomorph {G : Type _} (α : Type _)
+  [Group G] [TopologicalSpace α] [MulAction G α] [hc : ContinuousMulAction G α]
+  (g : G) : Homeomorph α α
+where
+  toFun := fun x => g • x
+  invFun := fun x => g⁻¹ • x
+  left_inv := by
+    intro y
+    simp
+  right_inv := by
+    intro y
+    simp
+  continuous_toFun := by
+    simp
+    exact hc.continuous _
+  continuous_invFun := by
+    simp
+    exact hc.continuous _
+
+theorem ContinuousMulAction.toHomeomorph_toFun {G : Type _} (α : Type _)
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α]
+  (g : G) : (ContinuousMulAction.toHomeomorph α g).toFun = fun x => g • x := rfl
+
+
+theorem ContinuousMulAction.toHomeomorph_invFun {G : Type _} (α : Type _)
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α]
+  (g : G) : (ContinuousMulAction.toHomeomorph α g).invFun = fun x => g⁻¹ • x := rfl
+
 -- TODO: give this a notation?
 structure EquivariantHomeomorph (G α β : Type _) [Group G] [TopologicalSpace α]
     [TopologicalSpace β] [MulAction G α] [MulAction G β] extends Homeomorph α β where
