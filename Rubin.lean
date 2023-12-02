@@ -767,8 +767,7 @@ theorem proposition_3_2 {G α : Type _} [Group G] [TopologicalSpace α] [MulActi
   [hc : ContinuousMulAction G α] :
   TopologicalSpace.IsTopologicalBasis (AssociatedPoset.asSet α) :=
 by
-  -- Note: the name later changes to isTopologicalBasis_of_isOpen_of_nhds
-  apply TopologicalSpace.isTopologicalBasis_of_open_of_nhds
+  apply TopologicalSpace.isTopologicalBasis_of_isOpen_of_nhds
   {
     intro U U_in_poset
     rw [AssociatedPoset.mem_asSet] at U_in_poset
