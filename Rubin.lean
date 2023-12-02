@@ -704,6 +704,54 @@ end RegularSupport
 
 section HomeoGroup
 
+open Topology
+
+theorem proposition_3_2 {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
+  [ContinuousMulAction G α]
+  {U : Set α} (U_open : IsOpen U) {p : α} (p_in_U : p ∈ U) :
+  ∃ (W : Set α), W ∈ 𝓝 p ∧ closure W ⊆ U ∧ ∃ (g : G), g ∈ RigidStabilizer G W ∧ p ∈ RegularSupport α g :=
+by
+  have U_in_nhds : U ∈ 𝓝 p := by
+    rw [mem_nhds_iff]
+    use U
+
+  let ⟨W', W'_in_nhds, W'_ss_U, W'_compact⟩ := local_compact_nhds U_in_nhds
+
+  -- This feels like black magic, but okay
+  let ⟨W, _W_compact, W_closed, W'_ss_int_W, W_ss_U⟩ := exists_compact_closed_between W'_compact U_open W'_ss_U
+  have W_cl_eq_W : closure W = W := IsClosed.closure_eq W_closed
+
+  have W_in_nhds : W ∈ 𝓝 p := by
+    rw [mem_nhds_iff]
+    use interior W
+    repeat' apply And.intro
+    · exact interior_subset
+    · simp
+    · exact W'_ss_int_W (mem_of_mem_nhds W'_in_nhds)
+
+  use W
+
+  repeat' apply And.intro
+  exact W_in_nhds
+  {
+    rw [W_cl_eq_W]
+    exact W_ss_U
+  }
+
+  have p_in_int_W : p ∈ interior W := W'_ss_int_W (mem_of_mem_nhds W'_in_nhds)
+
+  let ⟨g, g_in_rist, g_moves_p⟩ := get_moving_elem_in_rigidStabilizer G p_in_int_W
+
+  use g
+  constructor
+  · apply rigidStabilizer_mono interior_subset
+    simp
+    exact g_in_rist
+  · rw [<-mem_support] at g_moves_p
+    apply support_subset_regularSupport
+    exact g_moves_p
+
 
 end HomeoGroup
 

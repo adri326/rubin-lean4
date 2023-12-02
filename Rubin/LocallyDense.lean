@@ -15,6 +15,24 @@ class LocallyDense (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G 
     p ∈ interior (closure (MulAction.orbit (RigidStabilizer G U) p))
 #align is_locally_dense Rubin.LocallyDense
 
+theorem LocallyDense.from_rigidStabilizer_in_nhds (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G α] :
+  (∀ U : Set α, IsOpen U → ∀ p ∈ U, closure (MulAction.orbit (RigidStabilizer G U) p) ∈ 𝓝 p) →
+  LocallyDense G α :=
+by
+  intro hyp
+  constructor
+  intro U p p_in_U
+
+  -- TODO: potentially add that requirement to LocallyDense?
+  have U_open : IsOpen U := sorry
+
+  have closure_in_nhds := hyp U U_open p p_in_U
+  rw [mem_nhds_iff] at closure_in_nhds
+
+  rw [mem_interior]
+  exact closure_in_nhds
+
+-- TODO: rename
 lemma LocallyDense.nonEmpty {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] [LocallyDense G α]:
   ∀ {U : Set α},
   Set.Nonempty U →
@@ -22,6 +40,45 @@ lemma LocallyDense.nonEmpty {G α : Type _} [Group G] [TopologicalSpace α] [Mul
 by
   intros U H_ne
   exact ⟨H_ne.some, H_ne.some_mem, LocallyDense.isLocallyDense U H_ne.some H_ne.some_mem⟩
+
+/--
+This is a stronger statement than `LocallyMoving.get_nontrivial_rist_elem`,
+as here we are able to prove that the nontrivial element does move `p`.
+
+The condition that `Filer.NeBot (𝓝[≠] p)` is automatically satisfied by the `HasNoIsolatedPoints` class.
+--/
+theorem get_moving_elem_in_rigidStabilizer (G : Type _) {α : Type _}
+  [Group G] [TopologicalSpace α] [MulAction G α] [LocallyDense G α]
+  [T1Space α] {p : α} [Filter.NeBot (𝓝[≠] p)]
+  {U : Set α} (p_in_U : p ∈ U) :
+  ∃ g : G, g ∈ RigidStabilizer G U ∧ g • p ≠ p :=
+by
+  by_contra g_not_exist
+  rw [<-Classical.not_forall_not] at g_not_exist
+  simp at g_not_exist
+
+  have orbit_singleton : MulAction.orbit (RigidStabilizer G U) p = {p} := by
+    ext x
+    rw [MulAction.mem_orbit_iff]
+    rw [Set.mem_singleton_iff]
+    simp
+    constructor
+    · intro ⟨g, g_in_rist, g_eq_p⟩
+      rw [g_not_exist g g_in_rist] at g_eq_p
+      exact g_eq_p.symm
+    · intro x_eq_p
+      use 1
+      rw [x_eq_p, one_smul]
+      exact ⟨Subgroup.one_mem _, rfl⟩
+
+  have regular_orbit_empty : interior (closure (MulAction.orbit (RigidStabilizer G U) p)) = ∅ := by
+    rw [orbit_singleton]
+    rw [closure_singleton]
+    rw [interior_singleton]
+
+  have p_in_regular_orbit := LocallyDense.isLocallyDense (G := G) U p p_in_U
+  rw [regular_orbit_empty] at p_in_regular_orbit
+  exact p_in_regular_orbit
 
 class LocallyMoving (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G α] :=
   locally_moving: ∀ U : Set α, IsOpen U → Set.Nonempty U → RigidStabilizer G U ≠ ⊥
