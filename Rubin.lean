@@ -793,6 +793,33 @@ by
     exact rsupp_ss_clW
     exact clW_ss_U
 
+-- TODO: implement Membership on AssociatedPoset
+-- TODO: wrap these things in some neat structures
+theorem proposition_3_5 {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
+  [hc : ContinuousMulAction G α]
+  (U : AssociatedPoset α) (F: Filter α):
+  (∃ p ∈ U.val, F.HasBasis (fun S: Set α => S ∈ AssociatedPoset.asSet α ∧ p ∈ S) id)
+  ↔ ∃ V : AssociatedPoset α, V ≤ U ∧ {W : AssociatedPoset α | W ≤ V} ⊆ { g •'' W | (g ∈ RigidStabilizer G U.val) (W ∈ F) }
+  :=
+by
+  constructor
+  {
+    simp
+    intro p p_in_U filter_basis
+    have assoc_poset_basis : TopologicalSpace.IsTopologicalBasis (AssociatedPoset.asSet α) := by
+      exact proposition_3_2 (G := G)
+    have F_eq_nhds : F = 𝓝 p := by
+      have nhds_basis := assoc_poset_basis.nhds_hasBasis (a := p)
+      rw [<-filter_basis.filter_eq]
+      rw [<-nhds_basis.filter_eq]
+    have p_in_int_cl := h_ld.isLocallyDense U U.regular.isOpen p p_in_U
+    -- TODO: show that ∃ V ⊆ closure (orbit (rist G U) p)
+
+    sorry
+  }
+  sorry
+
 end HomeoGroup
 
 -- variables [topological_space α] [topological_space β] [continuous_mul_action G α] [continuous_mul_action G β]

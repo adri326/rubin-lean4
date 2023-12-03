@@ -151,6 +151,9 @@ by
   rw [HomeoGroup.from_toHomeomorph]
   rw [Rubin.ContinuousMulAction.toHomeomorph_toFun]
 
+theorem HomeoGroup.smulImage_eq_image (g : HomeoGroup α) (S : Set α) :
+  g •'' S = ⇑g.toHomeomorph '' S := rfl
+
 namespace Rubin
 
 section AssociatedPoset.Prelude
