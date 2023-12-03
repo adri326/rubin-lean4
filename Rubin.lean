@@ -822,8 +822,12 @@ by
 
 end HomeoGroup
 
--- variables [topological_space α] [topological_space β] [continuous_mul_action G α] [continuous_mul_action G β]
--- noncomputable theorem rubin (hα : rubin_action G α) (hβ : rubin_action G β) : equivariant_homeomorph G α β := sorry
+variable [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α]
+         [TopologicalSpace β] [MulAction G β] [ContinuousMulAction G β]
+
+theorem rubin (hα : RubinAction G α) (hβ : RubinAction G β) : EquivariantHomeomorph G α β := by
+  sorry
+
 end Rubin
 
 end Rubin
