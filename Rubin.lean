@@ -707,108 +707,21 @@ section HomeoGroup
 
 open Topology
 
--- TODO: clean this lemma to not mention W anymore?
-lemma proposition_3_2_subset (G : Type _) {α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
-  [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
-  [ContinuousMulAction G α]
-  {U : Set α} (U_open : IsOpen U) {p : α} (p_in_U : p ∈ U) :
-  ∃ (W : Set α), W ∈ 𝓝 p ∧ closure W ⊆ U ∧
-  ∃ (g : G), g ∈ RigidStabilizer G W ∧ p ∈ RegularSupport α g ∧ RegularSupport α g ⊆ closure W :=
-by
-  have U_in_nhds : U ∈ 𝓝 p := by
-    rw [mem_nhds_iff]
-    use U
-
-  let ⟨W', W'_in_nhds, W'_ss_U, W'_compact⟩ := local_compact_nhds U_in_nhds
-
-  -- This feels like black magic, but okay
-  let ⟨W, _W_compact, W_closed, W'_ss_int_W, W_ss_U⟩ := exists_compact_closed_between W'_compact U_open W'_ss_U
-  have W_cl_eq_W : closure W = W := IsClosed.closure_eq W_closed
-
-  have W_in_nhds : W ∈ 𝓝 p := by
-    rw [mem_nhds_iff]
-    use interior W
-    repeat' apply And.intro
-    · exact interior_subset
-    · simp
-    · exact W'_ss_int_W (mem_of_mem_nhds W'_in_nhds)
-
-  use W
-
-  repeat' apply And.intro
-  exact W_in_nhds
-  {
-    rw [W_cl_eq_W]
-    exact W_ss_U
-  }
-
-  have p_in_int_W : p ∈ interior W := W'_ss_int_W (mem_of_mem_nhds W'_in_nhds)
-
-  let ⟨g, g_in_rist, g_moves_p⟩ := get_moving_elem_in_rigidStabilizer G isOpen_interior p_in_int_W
-
-  use g
-  repeat' apply And.intro
-  · apply rigidStabilizer_mono interior_subset
-    simp
-    exact g_in_rist
-  · rw [<-mem_support] at g_moves_p
-    apply support_subset_regularSupport
-    exact g_moves_p
-  · rw [rigidStabilizer_support] at g_in_rist
-    apply subset_trans
-    exact regularSupport_subset_closure_support
-    apply closure_mono
-    apply subset_trans
-    exact g_in_rist
-    exact interior_subset
-
-theorem proposition_3_2 {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
-  [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
-  [hc : ContinuousMulAction G α] :
-  TopologicalSpace.IsTopologicalBasis (AssociatedPoset.asSet α) :=
-by
-  apply TopologicalSpace.isTopologicalBasis_of_isOpen_of_nhds
-  {
-    intro U U_in_poset
-    rw [AssociatedPoset.mem_asSet] at U_in_poset
-    let ⟨T, T_val⟩ := U_in_poset
-    rw [<-T_val]
-    exact T.regular.isOpen
-  }
-  intro p U p_in_U U_open
-
-  let ⟨W, _, clW_ss_U, ⟨g, _, p_in_rsupp, rsupp_ss_clW⟩⟩ := proposition_3_2_subset G U_open p_in_U
-  use RegularSupport α g
-  repeat' apply And.intro
-  · rw [AssociatedPoset.mem_asSet']
-    constructor
-    exact ⟨p, p_in_rsupp⟩
-    use {(ContinuousMulAction.toHomeomorph α g : HomeoGroup α)}
-    unfold AssociatedPosetElem
-    simp
-    unfold RegularSupport
-    rw [<-homeoGroup_support_eq_support_toHomeomorph g]
-  · exact p_in_rsupp
-  · apply subset_trans
-    exact rsupp_ss_clW
-    exact clW_ss_U
-
--- TODO: implement Membership on AssociatedPoset
+-- TODO: implement Membership on RegularSupportBasis
 -- TODO: wrap these things in some neat structures
 theorem proposition_3_5 {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
   [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
   [hc : ContinuousMulAction G α]
-  (U : AssociatedPoset α) (F: Filter α):
-  (∃ p ∈ U.val, F.HasBasis (fun S: Set α => S ∈ AssociatedPoset.asSet α ∧ p ∈ S) id)
-  ↔ ∃ V : AssociatedPoset α, V ≤ U ∧ {W : AssociatedPoset α | W ≤ V} ⊆ { g •'' W | (g ∈ RigidStabilizer G U.val) (W ∈ F) }
+  (U : RegularSupportBasis α) (F: Filter α):
+  (∃ p ∈ U.val, F.HasBasis (fun S: Set α => S ∈ RegularSupportBasis.asSet α ∧ p ∈ S) id)
+  ↔ ∃ V : RegularSupportBasis α, V ≤ U ∧ {W : RegularSupportBasis α | W ≤ V} ⊆ { g •'' W | (g ∈ RigidStabilizer G U.val) (W ∈ F) (_: W ∈ RegularSupportBasis.asSet α) }
   :=
 by
   constructor
   {
     simp
     intro p p_in_U filter_basis
-    have assoc_poset_basis : TopologicalSpace.IsTopologicalBasis (AssociatedPoset.asSet α) := by
-      exact proposition_3_2 (G := G)
+    have assoc_poset_basis := RegularSupportBasis.isBasis G α
     have F_eq_nhds : F = 𝓝 p := by
       have nhds_basis := assoc_poset_basis.nhds_hasBasis (a := p)
       rw [<-filter_basis.filter_eq]
