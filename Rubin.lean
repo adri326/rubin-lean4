@@ -23,6 +23,7 @@ import Rubin.SmulImage
 import Rubin.Support
 import Rubin.Topology
 import Rubin.RigidStabilizer
+import Rubin.RigidStabilizerBasis
 import Rubin.Period
 import Rubin.AlgebraicDisjointness
 import Rubin.RegularSupport
@@ -487,13 +488,6 @@ by
       rw [<-period_hg_eq_n]
       apply Period.pow_period_fix
 
--- This is referred to as `ξ_G^12(f)`
--- TODO: put in a different file and introduce some QoL theorems
-def AlgebraicSubgroup {G : Type _} [Group G] (f : G) : Set G :=
-  (fun g : G => g^12) '' { g : G | IsAlgebraicallyDisjoint f g }
-
-def AlgebraicCentralizer {G: Type _} [Group G] (f : G) : Subgroup G :=
-  Subgroup.centralizer (AlgebraicSubgroup f)
 
 -- Given the statement `¬Support α h ⊆ RegularSupport α f`,
 -- we construct an open subset within `Support α h \ RegularSupport α f`,
@@ -679,6 +673,10 @@ by
     exact h_in_rist
   }
 
+variable {G α : Type _}
+variable [Group G]
+variable [TopologicalSpace α] [T2Space α]
+variable [MulAction G α] [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α]
 
 /--
 This demonstrates that the disjointness of the supports of two elements `f` and `g`
@@ -689,8 +687,7 @@ We could prove that the intersection of the algebraic centralizers of `f` and `g
 purely within group theory, and then apply this theorem to know that their support
 in `α` will be disjoint.
 --/
-lemma remark_2_3 {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α] [MulAction G α]
-  [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α] {f g : G} :
+lemma remark_2_3 {f g : G} :
   (AlgebraicCentralizer f) ⊓ (AlgebraicCentralizer g) = ⊥ → Disjoint (Support α f) (Support α g) :=
 by
   intro alg_disj
@@ -702,37 +699,86 @@ by
   repeat rw [<-proposition_2_1]
   exact alg_disj
 
+lemma rigidStabilizerInter_eq_algebraicCentralizerInter {S : Finset G} :
+  RigidStabilizerInter₀ α S = AlgebraicCentralizerInter₀ S :=
+by
+  unfold RigidStabilizerInter₀
+  unfold AlgebraicCentralizerInter₀
+  conv => {
+    lhs
+    congr; intro; congr; intro
+    rw [<-proposition_2_1]
+  }
+
+theorem rigidStabilizerBasis_eq_algebraicCentralizerBasis :
+  AlgebraicCentralizerBasis G = RigidStabilizerBasis G α :=
+by
+  apply le_antisymm <;> intro B B_mem
+  any_goals rw [RigidStabilizerBasis.mem_iff]
+  any_goals rw [AlgebraicCentralizerBasis.mem_iff]
+  any_goals rw [RigidStabilizerBasis.mem_iff] at B_mem
+  any_goals rw [AlgebraicCentralizerBasis.mem_iff] at B_mem
+
+  all_goals let ⟨⟨seed, B_ne_bot⟩, B_eq⟩ := B_mem
+
+  any_goals rw [RigidStabilizerBasis₀.val_def] at B_eq
+  any_goals rw [AlgebraicCentralizerBasis₀.val_def] at B_eq
+  all_goals simp at B_eq
+  all_goals rw [<-B_eq]
+
+  rw [<-rigidStabilizerInter_eq_algebraicCentralizerInter (α := α)] at B_ne_bot
+  swap
+  rw [rigidStabilizerInter_eq_algebraicCentralizerInter (α := α)] at B_ne_bot
+
+  all_goals use ⟨seed, B_ne_bot⟩
+
+  symm
+  all_goals apply rigidStabilizerInter_eq_algebraicCentralizerInter
+
 end RegularSupport
 
 section HomeoGroup
 
 open Topology
 
+variable {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α]
+variable [MulAction G α] [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α]
+
+#check RegularSupportBasis.asSet
+#check RigidStabilizerBasis
+
+-- TODO: implement Smul of G on RigidStabilizerBasis?
+
+-- theorem regularSupportBasis_eq_ridigStabilizerBasis :
+--   RegularSupportBasis.asSet α = RigidStabilizerBasis (HomeoGroup α) α :=
+-- by
+--   sorry
+
 -- TODO: implement Membership on RegularSupportBasis
 -- TODO: wrap these things in some neat structures
-theorem proposition_3_5 {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
-  [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
-  [hc : ContinuousMulAction G α]
-  (U : RegularSupportBasis α) (F: Filter α):
-  (∃ p ∈ U.val, F.HasBasis (fun S: Set α => S ∈ RegularSupportBasis.asSet α ∧ p ∈ S) id)
-  ↔ ∃ V : RegularSupportBasis α, V ≤ U ∧ {W : RegularSupportBasis α | W ≤ V} ⊆ { g •'' W | (g ∈ RigidStabilizer G U.val) (W ∈ F) (_: W ∈ RegularSupportBasis.asSet α) }
-  :=
-by
-  constructor
-  {
-    simp
-    intro p p_in_U filter_basis
-    have assoc_poset_basis := RegularSupportBasis.isBasis G α
-    have F_eq_nhds : F = 𝓝 p := by
-      have nhds_basis := assoc_poset_basis.nhds_hasBasis (a := p)
-      rw [<-filter_basis.filter_eq]
-      rw [<-nhds_basis.filter_eq]
-    have p_in_int_cl := h_ld.isLocallyDense U U.regular.isOpen p p_in_U
-    -- TODO: show that ∃ V ⊆ closure (orbit (rist G U) p)
+-- theorem proposition_3_5 {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+--   [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
+--   [hc : ContinuousMulAction G α]
+--   (U : RegularSupportBasis α) (F: Filter α):
+--   (∃ p ∈ U.val, F.HasBasis (fun S: Set α => S ∈ RegularSupportBasis.asSet α ∧ p ∈ S) id)
+--   ↔ ∃ V : RegularSupportBasis α, V ≤ U ∧ {W : RegularSupportBasis α | W ≤ V} ⊆ { g •'' W | (g ∈ RigidStabilizer G U.val) (W ∈ F) (_: W ∈ RegularSupportBasis.asSet α) }
+--   :=
+-- by
+--   constructor
+--   {
+--     simp
+--     intro p p_in_U filter_basis
+--     have assoc_poset_basis := RegularSupportBasis.isBasis G α
+--     have F_eq_nhds : F = 𝓝 p := by
+--       have nhds_basis := assoc_poset_basis.nhds_hasBasis (a := p)
+--       rw [<-filter_basis.filter_eq]
+--       rw [<-nhds_basis.filter_eq]
+--     have p_in_int_cl := h_ld.isLocallyDense U U.regular.isOpen p p_in_U
+--     -- TODO: show that ∃ V ⊆ closure (orbit (rist G U) p)
 
-    sorry
-  }
-  sorry
+--     sorry
+--   }
+--   sorry
 
 end HomeoGroup
 

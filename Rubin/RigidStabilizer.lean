@@ -172,4 +172,13 @@ by
     rw [Subgroup.mem_iInf] at x_in_rist
     exact x_in_rist T_in_S
 
+theorem rigidStabilizer_smulImage (f g : G) (S : Set α) :
+  g ∈ RigidStabilizer G (f •'' S) ↔ f⁻¹ * g * f ∈ RigidStabilizer G S :=
+by
+  repeat rw [rigidStabilizer_support]
+  nth_rw 3 [<-inv_inv f]
+  rw [support_conjugate]
+  rw [smulImage_subset_inv]
+  simp
+
 end Rubin

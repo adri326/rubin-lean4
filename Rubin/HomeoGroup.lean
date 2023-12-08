@@ -207,6 +207,30 @@ by
 
   exact f_notin_ristV (rist_ss f_in_ristU)
 
+theorem homeoGroup_rigidStabilizer_eq_iff {α : Type _} [TopologicalSpace α]
+  [LocallyMoving (HomeoGroup α) α]
+  {U V : Set α} (U_reg : Regular U) (V_reg : Regular V):
+  RigidStabilizer (HomeoGroup α) U = RigidStabilizer (HomeoGroup α) V ↔ U = V :=
+by
+  constructor
+  · intro rist_eq
+    apply le_antisymm <;> simp only [Set.le_eq_subset]
+    all_goals {
+      rw [homeoGroup_rigidStabilizer_subset_iff] <;> try assumption
+      rewrite [rist_eq]
+      rfl
+    }
+  · intro H_eq
+    rw [H_eq]
+
+theorem homeoGroup_rigidStabilizer_injective {α : Type _} [TopologicalSpace α] [LocallyMoving (HomeoGroup α) α]
+  : Function.Injective (fun U : { S : Set α // Regular S } => RigidStabilizer (HomeoGroup α) U.val) :=
+by
+  intro ⟨U, U_reg⟩
+  intro ⟨V, V_reg⟩
+  simp
+  exact (homeoGroup_rigidStabilizer_eq_iff U_reg V_reg).mp
+
 end Other
 
 end Rubin

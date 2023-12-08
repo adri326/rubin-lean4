@@ -328,4 +328,67 @@ by
   exact k_lt_n
 #align moves_inj_period Rubin.smul_injective_within_period
 
+
+/-
+The algebraic centralizer (and its associated basis) allow for a purely group-theoretic construction of the
+`RegularSupport` sets.
+They are defined as the centralizers of the subgroups `{g^12 | g ∈ G ∧ AlgebraicallyDisjoint f g}`
+-/
+section AlgebraicCentralizer
+
+variable {G : Type _}
+variable [Group G]
+
+-- TODO: prove this is a subgroup?
+-- This is referred to as `ξ_G^12(f)`
+def AlgebraicSubgroup (f : G) : Set G :=
+  (fun g : G => g^12) '' { g : G | IsAlgebraicallyDisjoint f g }
+
+def AlgebraicCentralizer (f : G) : Subgroup G :=
+  Subgroup.centralizer (AlgebraicSubgroup f)
+
+/--
+Finite intersections of [`AlgebraicCentralizer`].
+--/
+def AlgebraicCentralizerInter₀ (S : Finset G) : Subgroup G :=
+  ⨅ (g ∈ S), AlgebraicCentralizer g
+
+structure AlgebraicCentralizerBasis₀ (G: Type _) [Group G] where
+  seed : Finset G
+  val_ne_bot : AlgebraicCentralizerInter₀ seed ≠ ⊥
+
+def AlgebraicCentralizerBasis₀.val (B : AlgebraicCentralizerBasis₀ G) : Subgroup G :=
+  AlgebraicCentralizerInter₀ B.seed
+
+theorem AlgebraicCentralizerBasis₀.val_def (B : AlgebraicCentralizerBasis₀ G) :
+  B.val = AlgebraicCentralizerInter₀ B.seed := rfl
+
+def AlgebraicCentralizerBasis (G : Type _) [Group G] : Set (Subgroup G) :=
+  { H.val | H : AlgebraicCentralizerBasis₀ G }
+
+theorem AlgebraicCentralizerBasis.mem_iff (H : Subgroup G) :
+  H ∈ AlgebraicCentralizerBasis G ↔ ∃ B : AlgebraicCentralizerBasis₀ G, B.val = H := by rfl
+
+theorem AlgebraicCentralizerBasis.mem_iff' (H : Subgroup G)
+  (H_ne_bot : H ≠ ⊥) :
+  H ∈ AlgebraicCentralizerBasis G ↔ ∃ seed : Finset G, AlgebraicCentralizerInter₀ seed = H :=
+by
+  rw [mem_iff]
+  constructor
+  · intro ⟨B, B_eq⟩
+    use B.seed
+    rw [AlgebraicCentralizerBasis₀.val_def] at B_eq
+    exact B_eq
+  · intro ⟨seed, seed_eq⟩
+    let B := AlgebraicCentralizerInter₀ seed
+    have val_ne_bot : B ≠ ⊥ := by
+      unfold_let
+      rw [seed_eq]
+      exact H_ne_bot
+    use ⟨seed, val_ne_bot⟩
+    rw [<-seed_eq]
+    rfl
+
+end AlgebraicCentralizer
+
 end Rubin
