@@ -26,6 +26,7 @@ import Rubin.RigidStabilizer
 import Rubin.Period
 import Rubin.AlgebraicDisjointness
 import Rubin.RegularSupport
+import Rubin.RegularSupportBasis
 import Rubin.HomeoGroup
 
 #align_import rubin
