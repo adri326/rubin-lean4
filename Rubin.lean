@@ -159,8 +159,6 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
     exact z_moved h₆
 #align proposition_1_1_1 Rubin.proposition_1_1_1
 
-
--- TODO: move to Rubin.lean
 lemma moves_1234_of_moves_12 {g : G} {x : α} (g12_moves : g^12 • x ≠ x) :
   Function.Injective (fun i : Fin 5 => g^(i : ℤ) • x) :=
 by
@@ -775,6 +773,16 @@ by
     let ⟨x, _, F_clusterPt⟩ := clS_compact F_le_principal_S
     use x
 
+end HomeoGroup
+
+
+section Ultrafilter
+
+variable {G α : Type _}
+variable [Group G]
+variable [TopologicalSpace α] [T2Space α]
+variable [MulAction G α] [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α]
+
 def RSuppSubsets {α : Type _} [TopologicalSpace α] (V : Set α) : Set (Set α) :=
   {W ∈ RegularSupportBasis.asSet α | W ⊆ V}
 
@@ -800,18 +808,48 @@ by
   rw [hq_eq_p]
   assumption
 
-lemma compact_subset_of_rsupp_basis [LocallyCompactSpace α]
+lemma compact_subset_of_rsupp_basis (G : Type _) {α : Type _}
+  [Group G] [TopologicalSpace α] [T2Space α]
+  [MulAction G α] [ContinuousMulAction G α]
+  [LocallyCompactSpace α] [HasNoIsolatedPoints α] [LocallyDense G α]
   (U : RegularSupportBasis α):
   ∃ V : RegularSupportBasis α, (closure V.val) ⊆ U.val ∧ IsCompact (closure V.val) :=
 by
-  -- Idea: use (RegularSupportBasis.isBasis G α).nhds_hasBasis and compact_basis_nhds together?
-  -- Note: exists_compact_subset is *very* close to this theorem
-  sorry
+  let ⟨x, x_in_U⟩ := U.nonempty
+  let ⟨W, W_compact, x_in_intW, W_ss_U⟩ := exists_compact_subset U.regular.isOpen x_in_U
+  have ⟨V, V_in_basis, x_in_V, V_ss_intW⟩ := (RegularSupportBasis.isBasis G α).exists_subset_of_mem_open x_in_intW isOpen_interior
 
+  have clV_ss_W : closure V ⊆ W := by
+    calc
+      closure V ⊆ closure (interior W) := by
+        apply closure_mono
+        exact V_ss_intW
+      _ ⊆ closure W := by
+        apply closure_mono
+        exact interior_subset
+      _ = W := by
+        apply IsClosed.closure_eq
+        exact W_compact.isClosed
+
+  rw [RegularSupportBasis.mem_asSet] at V_in_basis
+  let ⟨V', V'_val⟩ := V_in_basis
+  use V'
+  rw [V'_val]
+
+  constructor
+  · exact subset_trans clV_ss_W W_ss_U
+  · exact IsCompact.of_isClosed_subset W_compact isClosed_closure clV_ss_W
+
+/--
+# Proposition 3.5
+
+This proposition gives an alternative definition for an ultrafilter to converge within a set `U`.
+This alternative definition should be reconstructible entirely from the algebraic structure of `G`.
+--/
 theorem proposition_3_5 [LocallyDense G α] [LocallyCompactSpace α] [HasNoIsolatedPoints α]
   (U : RegularSupportBasis α) (F: Ultrafilter α):
   (∃ p ∈ U.val, ClusterPt p F)
-  ↔ ∃ V : RegularSupportBasis α, V ≤ U ∧ RSuppSubsets V.val ⊆ RSuppOrbit F (RigidStabilizer G U.val) :=
+  ↔ ∃ V : RegularSupportBasis α, V ≤ U ∧ RSuppSubsets V.val ⊆ RSuppOrbit F G•[U.val] :=
 by
   constructor
   {
@@ -940,7 +978,7 @@ by
     rw [RegularSupportBasis.le_def] at V_ss_U
 
     -- Obtain a compact subset of V' in the basis
-    let ⟨V', clV'_ss_V, clV'_compact⟩ := compact_subset_of_rsupp_basis V
+    let ⟨V', clV'_ss_V, clV'_compact⟩ := compact_subset_of_rsupp_basis G V
 
     have V'_in_subsets : V'.val ∈ RSuppSubsets V.val := by
       unfold RSuppSubsets
@@ -984,7 +1022,7 @@ by
     exact p_lim
   }
 
-end HomeoGroup
+end Ultrafilter
 
 variable {G α β : Type _}
 variable [Group G]
