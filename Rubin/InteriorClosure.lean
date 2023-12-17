@@ -97,6 +97,13 @@ theorem monotone_interiorClosure : Monotone (InteriorClosure (α := α))
 := fun a b =>
   interiorClosure_mono a b
 
+theorem interiorClosure_subset_of_regular {U V : Set α} (U_ss_V : U ⊆ V) (V_regular : Regular V) :
+  InteriorClosure U ⊆ V :=
+by
+  rw [<-V_regular]
+  apply interiorClosure_mono
+  assumption
+
 theorem compl_closure_regular_of_open {S : Set α} (S_open : IsOpen S) : Regular (closure S)ᶜ := by
   apply Set.eq_of_subset_of_subset
   · simp

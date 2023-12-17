@@ -126,7 +126,7 @@ instance homeoGroup_mulAction₂ : MulAction (HomeoGroup α) (RegularSupportBasi
 
 end RegularSupportBasis.Prelude
 
-
+-- TODO: define RegularSupportBasis as a Set directly?
 /--
 A partially-ordered set, associated to Rubin's proof.
 Any element in that set is made up of a `seed`,
@@ -153,18 +153,44 @@ def fromSeed (seed : RegularSupportBasis₀ α) : RegularSupportBasis α := ⟨
   ⟨seed, seed.val_def⟩
 ⟩
 
+def fromSingleton [T2Space α] (g : HomeoGroup α) (g_ne_one : g ≠ 1) : RegularSupportBasis α :=
+  let seed : RegularSupportBasis₀ α := ⟨
+    {g},
+    by
+      unfold RegularSupportInter₀
+      simp
+      rw [Set.nonempty_iff_ne_empty]
+      intro rsupp_empty
+      apply g_ne_one
+      apply FaithfulSMul.eq_of_smul_eq_smul (α := α)
+      intro x
+      simp
+      rw [<-not_mem_support]
+      apply Set.not_mem_subset
+      · apply support_subset_regularSupport
+      · rw [rsupp_empty]
+        exact Set.not_mem_empty x
+  ⟩
+  fromSeed seed
+
+theorem fromSingleton_val [T2Space α] (g : HomeoGroup α) (g_ne_one : g ≠ 1) :
+  (fromSingleton g g_ne_one).val = RegularSupportInter₀ {g} := rfl
+
 noncomputable def full_seed (S : RegularSupportBasis α) : RegularSupportBasis₀ α :=
   (Exists.choose S.val_has_seed)
 
 noncomputable def seed (S : RegularSupportBasis α) : Finset (HomeoGroup α) :=
   S.full_seed.seed
 
+instance : Coe (RegularSupportBasis₀ α) (RegularSupportBasis α) where
+  coe := fromSeed
+
 @[simp]
 theorem full_seed_seed (S : RegularSupportBasis α) : S.full_seed.seed = S.seed := rfl
 
 @[simp]
 theorem fromSeed_val (seed : RegularSupportBasis₀ α) :
-  (fromSeed seed).val = seed.val :=
+  (seed : RegularSupportBasis α).val = seed.val :=
 by
   unfold fromSeed
   simp
@@ -320,10 +346,13 @@ theorem mem_iff (x : α) (S : RegularSupportBasis α) : x ∈ S ↔ x ∈ (S : S
 section Basis
 open Topology
 
+variable (G α : Type _)
+variable [Group G]
+variable [TopologicalSpace α] [T2Space α] [LocallyCompactSpace α] [HasNoIsolatedPoints α]
+variable [MulAction G α] [LocallyDense G α] [ContinuousMulAction G α]
+
 -- TODO: clean this lemma to not mention W anymore?
-lemma proposition_3_2_subset (G : Type _) {α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
-  [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
-  [ContinuousMulAction G α]
+lemma proposition_3_2_subset
   {U : Set α} (U_open : IsOpen U) {p : α} (p_in_U : p ∈ U) :
   ∃ (W : Set α), W ∈ 𝓝 p ∧ closure W ⊆ U ∧
   ∃ (g : G), g ∈ RigidStabilizer G W ∧ p ∈ RegularSupport α g ∧ RegularSupport α g ⊆ closure W :=
@@ -378,9 +407,7 @@ by
 /--
 ## Proposition 3.2 : RegularSupportBasis is a topological basis of `α`
 -/
-theorem isBasis (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G α]
-  [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
-  [hc : ContinuousMulAction G α] :
+theorem isBasis :
   TopologicalSpace.IsTopologicalBasis (RegularSupportBasis.asSet α) :=
 by
   apply TopologicalSpace.isTopologicalBasis_of_isOpen_of_nhds
@@ -393,21 +420,42 @@ by
   }
   intro p U p_in_U U_open
 
-  let ⟨W, _, clW_ss_U, ⟨g, _, p_in_rsupp, rsupp_ss_clW⟩⟩ := proposition_3_2_subset G U_open p_in_U
+  let ⟨W, _, clW_ss_U, ⟨g, _, p_in_rsupp, rsupp_ss_clW⟩⟩ := proposition_3_2_subset G α U_open p_in_U
   use RegularSupport α g
   repeat' apply And.intro
   · rw [RegularSupportBasis.mem_asSet']
     constructor
     exact ⟨p, p_in_rsupp⟩
-    use {(ContinuousMulAction.toHomeomorph α g : HomeoGroup α)}
+    use {HomeoGroup.fromContinuous α g}
     unfold RegularSupportInter₀
     simp
-    unfold RegularSupport
-    rw [<-homeoGroup_support_eq_support_toHomeomorph g]
   · exact p_in_rsupp
   · apply subset_trans
     exact rsupp_ss_clW
     exact clW_ss_U
+
+-- example (p : α): ∃ (S : Set α), S ∈ (RegularSupportBasis.asSet α) ∧ IsCompact (closure S) ∧ p ∈ S :=
+-- by
+--   have h₁ := TopologicalSpace.IsTopologicalBasis.nhds_hasBasis (isBasis G α) (a := p)
+--   have h₂ := compact_basis_nhds p
+
+--   rw [Filter.hasBasis_iff] at h₁
+--   rw [Filter.hasBasis_iff] at h₂
+
+--   have T : Set α := sorry
+--   have T_in_nhds : T ∈ 𝓝 p := sorry
+
+--   let ⟨U, ⟨⟨U_in_nhds, U_compact⟩, U_ss_T⟩⟩ := (h₂ T).mp T_in_nhds
+--   let ⟨V, ⟨⟨V_in_basis, p_in_V⟩, V_ss_T⟩⟩ := (h₁ U).mp U_in_nhds
+
+--   use V
+--   (repeat' apply And.intro) <;> try assumption
+--   -- apply IsCompact.of_isClosed_subset
+
+--   -- · assumption
+--   -- · sorry
+--   -- · assumption
+--   sorry
 
 end Basis
 end RegularSupportBasis

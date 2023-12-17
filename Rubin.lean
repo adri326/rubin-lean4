@@ -47,12 +47,8 @@ theorem equiv_congr_ne {ι ι' : Type _} (e : ι ≃ ι') {x y : ι} : x ≠ y �
 ----------------------------------------------------------------
 section Rubin
 
-variable {G α β : Type _} [Group G]
-
 ----------------------------------------------------------------
 section RubinActions
-
-variable [TopologicalSpace α] [TopologicalSpace β]
 
 structure RubinAction (G α : Type _) extends
   Group G,
@@ -699,16 +695,18 @@ by
   repeat rw [<-proposition_2_1]
   exact alg_disj
 
+#check proposition_2_1
 lemma rigidStabilizerInter_eq_algebraicCentralizerInter {S : Finset G} :
   RigidStabilizerInter₀ α S = AlgebraicCentralizerInter₀ S :=
 by
   unfold RigidStabilizerInter₀
   unfold AlgebraicCentralizerInter₀
-  conv => {
-    lhs
-    congr; intro; congr; intro
-    rw [<-proposition_2_1]
-  }
+  simp only [<-proposition_2_1]
+  -- conv => {
+  --   rhs
+  --   congr; intro; congr; intro
+  --   rw [proposition_2_1 (α := α)]
+  -- }
 
 theorem rigidStabilizerBasis_eq_algebraicCentralizerBasis :
   AlgebraicCentralizerBasis G = RigidStabilizerBasis G α :=
@@ -744,43 +742,230 @@ open Topology
 variable {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α]
 variable [MulAction G α] [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α]
 
-#check RegularSupportBasis.asSet
-#check RigidStabilizerBasis
+example : TopologicalSpace G := TopologicalSpace.generateFrom (RigidStabilizerBasis.asSets G α)
 
--- TODO: implement Smul of G on RigidStabilizerBasis?
+-- TODO: remove
+-- proposition_3_4_1
+example {α : Type _} [TopologicalSpace α] [T2Space α] [LocallyCompactSpace α] (F : Ultrafilter α) (p : α):
+  F ≤ 𝓝 p ↔ p ∈ ⋂ (S ∈ F), closure S :=
+by
+  rw [<-Ultrafilter.clusterPt_iff]
+  simp
+  exact clusterPt_iff_forall_mem_closure
 
--- theorem regularSupportBasis_eq_ridigStabilizerBasis :
---   RegularSupportBasis.asSet α = RigidStabilizerBasis (HomeoGroup α) α :=
--- by
---   sorry
+theorem proposition_3_4_2 {α : Type _} [TopologicalSpace α] [T2Space α] [LocallyCompactSpace α] (F : Ultrafilter α):
+  (∃ p : α, ClusterPt p F) ↔ ∃ S ∈ F, IsCompact (closure S) :=
+by
+  constructor
+  · intro ⟨p, p_clusterPt⟩
+    rw [Ultrafilter.clusterPt_iff] at p_clusterPt
+    have ⟨S, S_in_nhds, S_compact⟩ := (compact_basis_nhds p).ex_mem
+    use S
+    constructor
+    exact p_clusterPt S_in_nhds
+    rw [IsClosed.closure_eq S_compact.isClosed]
+    exact S_compact
+  · intro ⟨S, S_in_F, clS_compact⟩
+    have F_le_principal_S : F ≤ Filter.principal (closure S) := by
+      rw [Filter.le_principal_iff]
+      simp
+      apply Filter.sets_of_superset
+      exact S_in_F
+      exact subset_closure
+    let ⟨x, _, F_clusterPt⟩ := clS_compact F_le_principal_S
+    use x
 
--- TODO: implement Membership on RegularSupportBasis
--- TODO: wrap these things in some neat structures
--- theorem proposition_3_5 {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
---   [T2Space α] [LocallyCompactSpace α] [h_ld : LocallyDense G α] [HasNoIsolatedPoints α]
---   [hc : ContinuousMulAction G α]
---   (U : RegularSupportBasis α) (F: Filter α):
---   (∃ p ∈ U.val, F.HasBasis (fun S: Set α => S ∈ RegularSupportBasis.asSet α ∧ p ∈ S) id)
---   ↔ ∃ V : RegularSupportBasis α, V ≤ U ∧ {W : RegularSupportBasis α | W ≤ V} ⊆ { g •'' W | (g ∈ RigidStabilizer G U.val) (W ∈ F) (_: W ∈ RegularSupportBasis.asSet α) }
---   :=
--- by
---   constructor
---   {
---     simp
---     intro p p_in_U filter_basis
---     have assoc_poset_basis := RegularSupportBasis.isBasis G α
---     have F_eq_nhds : F = 𝓝 p := by
---       have nhds_basis := assoc_poset_basis.nhds_hasBasis (a := p)
---       rw [<-filter_basis.filter_eq]
---       rw [<-nhds_basis.filter_eq]
---     have p_in_int_cl := h_ld.isLocallyDense U U.regular.isOpen p p_in_U
---     -- TODO: show that ∃ V ⊆ closure (orbit (rist G U) p)
+def RSuppSubsets {α : Type _} [TopologicalSpace α] (V : Set α) : Set (Set α) :=
+  {W ∈ RegularSupportBasis.asSet α | W ⊆ V}
 
---     sorry
---   }
---   sorry
+def RSuppOrbit {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] (F : Filter α) (H : Subgroup G) : Set (Set α) :=
+  { g •'' W | (g ∈ H) (W ∈ F) }
+
+lemma moving_elem_of_open_subset_closure_orbit {U V : Set α} (U_open : IsOpen U) {p : α}
+  (U_ss_clOrbit : U ⊆ closure (MulAction.orbit (RigidStabilizer G V) p)) :
+  ∃ h : G, h ∈ RigidStabilizer G V ∧ h • p ∈ U :=
+by
+  -- Idea: can `Support α g ⊆ MulAction.orbit (RigidStabilizer G (RegularSupport α g)) p` be proven?
+  sorry
+
+lemma compact_subset_of_rsupp_basis [LocallyCompactSpace α]
+  (U : RegularSupportBasis α):
+  ∃ V : RegularSupportBasis α, (closure V.val) ⊆ U.val ∧ IsCompact (closure V.val) :=
+by
+  -- Idea: use (RegularSupportBasis.isBasis G α).nhds_hasBasis and compact_basis_nhds together?
+  -- Note: exists_compact_subset is *very* close to this theorem
+  sorry
+
+theorem proposition_3_5 [LocallyDense G α] [LocallyCompactSpace α] [HasNoIsolatedPoints α]
+  (U : RegularSupportBasis α) (F: Ultrafilter α):
+  (∃ p ∈ U.val, ClusterPt p F)
+  ↔ ∃ V : RegularSupportBasis α, V ≤ U ∧ RSuppSubsets V.val ⊆ RSuppOrbit F (RigidStabilizer G U.val) :=
+by
+  constructor
+  {
+    simp
+    intro p p_in_U p_clusterPt
+    have U_open : IsOpen U.val := U.regular.isOpen
+
+    -- First, get a neighborhood of p that is a subset of the closure of the orbit of G_U
+    have clOrbit_in_nhds := LocallyDense.rigidStabilizer_in_nhds G α U_open p_in_U
+    rw [mem_nhds_iff] at clOrbit_in_nhds
+    let ⟨V, V_ss_clOrbit, V_open, p_in_V⟩ := clOrbit_in_nhds
+    clear clOrbit_in_nhds
+
+    -- Then, get a nontrivial element from that set
+    let ⟨g, g_in_rist, g_ne_one⟩ := LocallyMoving.get_nontrivial_rist_elem (G := G) V_open ⟨p, p_in_V⟩
+
+    -- Somehow, the regular support of g is within U
+    have rsupp_ss_U : RegularSupport α g ⊆ U.val := by
+      rw [RegularSupport, InteriorClosure]
+
+      apply interiorClosure_subset_of_regular _ U.regular
+      rw [<-rigidStabilizer_support]
+      apply rigidStabilizer_mono _ g_in_rist
+
+      show V ⊆ U.val
+      -- Would probably require showing that the orbit of the rigidstabilizer is a subset of U
+      sorry
+
+    -- Use as the chosen set RegularSupport g
+    let g' : HomeoGroup α := HomeoGroup.fromContinuous α g
+    have g'_ne_one : g' ≠ 1 := by
+      simp
+      rw [<-HomeoGroup.fromContinuous_one (G := G)]
+      rw [HomeoGroup.fromContinuous_eq_iff]
+      exact g_ne_one
+    use RegularSupportBasis.fromSingleton g' g'_ne_one
+
+    constructor
+    · -- This statement is equivalent to rsupp(g) ⊆ U
+      rw [RegularSupportBasis.le_def]
+      rw [RegularSupportBasis.fromSingleton_val]
+      unfold RegularSupportInter₀
+      simp
+      exact rsupp_ss_U
+    · intro W W_in_subsets
+      rw [RegularSupportBasis.fromSingleton_val] at W_in_subsets
+      unfold RSuppSubsets RegularSupportInter₀ at W_in_subsets
+      simp at W_in_subsets
+      let ⟨W_in_basis, W_subset_rsupp⟩ := W_in_subsets
+      clear W_in_subsets g' g'_ne_one
+
+      -- We have that W is a subset of the closure of the orbit of G_U
+      have W_ss_clOrbit : W ⊆ closure (MulAction.orbit (↥(RigidStabilizer G U.val)) p) := by
+        rw [rigidStabilizer_support] at g_in_rist
+        calc
+          W ⊆ RegularSupport α g := by assumption
+          _ ⊆ closure (Support α g) := regularSupport_subset_closure_support
+          _ ⊆ closure V := by
+            apply closure_mono
+            assumption
+          _ ⊆ _ := by
+            rw [<-closure_closure (s := MulAction.orbit _ _)]
+            apply closure_mono
+            assumption
+      unfold RSuppOrbit
+      simp
+
+      have W_open : IsOpen W := by
+        let ⟨W', W'_eq⟩ := (RegularSupportBasis.mem_asSet _).mp W_in_basis
+        rw [<-W'_eq]
+        exact W'.regular.isOpen
+      have W_nonempty : Set.Nonempty W := by
+        let ⟨W', W'_eq⟩ := (RegularSupportBasis.mem_asSet _).mp W_in_basis
+        rw [<-W'_eq]
+        exact W'.nonempty
+
+      -- We get an element `h` such that `h • p ∈ W` and `h ∈ G_U`
+      let ⟨h, h_in_rist, hp_in_W⟩ := moving_elem_of_open_subset_closure_orbit W_open W_ss_clOrbit
+
+      use h
+      constructor
+      exact h_in_rist
+
+      use h⁻¹ •'' W
+      constructor
+      swap
+      {
+        rw [smulImage_mul]
+        simp
+      }
+
+      -- We just need to show that h⁻¹ •'' W ∈ F, that is, h⁻¹ •'' W ∈ 𝓝 p
+      rw [Ultrafilter.clusterPt_iff] at p_clusterPt
+      apply p_clusterPt
+
+      have basis := (RegularSupportBasis.isBasis G α).nhds_hasBasis (a := p)
+      rw [basis.mem_iff]
+      use h⁻¹ •'' W
+      repeat' apply And.intro
+      · rw [RegularSupportBasis.mem_asSet]
+        rw [RegularSupportBasis.mem_asSet] at W_in_basis
+        let ⟨W', W'_eq⟩ := W_in_basis
+        have dec_eq : DecidableEq (HomeoGroup α) := Classical.decEq _
+        use (HomeoGroup.fromContinuous α h⁻¹) • W'
+        rw [RegularSupportBasis.smul_val, W'_eq]
+        simp
+      · rw [mem_smulImage, inv_inv]
+        exact hp_in_W
+      · exact Eq.subset rfl
+  }
+  {
+    intro ⟨V, ⟨V_ss_U, subsets_ss_orbit⟩⟩
+    rw [RegularSupportBasis.le_def] at V_ss_U
+
+    -- Obtain a compact subset of V' in the basis
+    let ⟨V', clV'_ss_V, clV'_compact⟩ := compact_subset_of_rsupp_basis V
+
+    have V'_in_subsets : V'.val ∈ RSuppSubsets V.val := by
+      unfold RSuppSubsets
+      simp
+      constructor
+      unfold RegularSupportBasis.asSet
+      simp
+      exact subset_trans subset_closure clV'_ss_V
+
+    -- V' is in the orbit, so there exists a value `g ∈ G_U` such that `gV ∈ F`
+    -- Note that with the way we set up the equations, we obtain `g⁻¹`
+    have V'_in_orbit := subsets_ss_orbit V'_in_subsets
+    simp [RSuppOrbit] at V'_in_orbit
+    let ⟨g, g_in_rist, ⟨W, W_in_F, gW_eq_V⟩⟩ := V'_in_orbit
+
+    have gV'_in_F : g⁻¹ •'' V' ∈ F := by
+      rw [smulImage_inv] at gW_eq_V
+      rw [<-gW_eq_V]
+      assumption
+    have gV'_compact : IsCompact (closure (g⁻¹ •'' V'.val)) := by
+      rw [smulImage_closure _ _ (continuousMulAction_elem_continuous α g⁻¹)]
+      -- TODO: smulImage_compact
+      sorry
+
+    have ⟨p, p_lim⟩ := (proposition_3_4_2 F).mpr ⟨g⁻¹ •'' V'.val, ⟨gV'_in_F, gV'_compact⟩⟩
+    use p
+    constructor
+    swap
+    assumption
+
+    rw [clusterPt_iff_forall_mem_closure] at p_lim
+    specialize p_lim (g⁻¹ •'' V') gV'_in_F
+    rw [smulImage_closure _ _ (continuousMulAction_elem_continuous α g⁻¹)] at p_lim
+    rw [mem_smulImage, inv_inv] at p_lim
+
+    rw [rigidStabilizer_support] at g_in_rist
+    rw [<-support_inv] at g_in_rist
+    have q := fixed_smulImage_in_support g⁻¹ g_in_rist
+    rw [<-fixed_smulImage_in_support g⁻¹ g_in_rist]
+
+    rw [mem_smulImage, inv_inv]
+    apply V_ss_U
+    apply clV'_ss_V
+    exact p_lim
+  }
 
 end HomeoGroup
+
+variable {G α β : Type _}
+variable [Group G]
 
 variable [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α]
          [TopologicalSpace β] [MulAction G β] [ContinuousMulAction G β]

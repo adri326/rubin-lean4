@@ -140,18 +140,99 @@ instance homeoGroup_mulAction₁_faithful : FaithfulSMul (HomeoGroup α) α wher
     simp
     exact hyp x
 
-theorem homeoGroup_support_eq_support_toHomeomorph {G : Type _}
-  [Group G] [MulAction G α] [Rubin.ContinuousMulAction G α] (g : G) :
-  Rubin.Support α g = Rubin.Support α (HomeoGroup.from (Rubin.ContinuousMulAction.toHomeomorph α g)) :=
+theorem HomeoGroup.smulImage_eq_image (g : HomeoGroup α) (S : Set α) :
+  g •'' S = ⇑g.toHomeomorph '' S := rfl
+
+section ContinuousMulActionCoe
+
+variable {G : Type _} [Group G]
+variable [MulAction G α] [Rubin.ContinuousMulAction G α]
+
+/--
+`fromContinuous` is a structure-preserving transformation from a continuous `MulAction` to a `HomeoGroup`
+--/
+def HomeoGroup.fromContinuous (α : Type _) [TopologicalSpace α] [MulAction G α] [Rubin.ContinuousMulAction G α]
+  (g : G) : HomeoGroup α :=
+  HomeoGroup.from (Rubin.ContinuousMulAction.toHomeomorph α g)
+
+@[simp]
+theorem HomeoGroup.fromContinuous_def (g : G) :
+  HomeoGroup.from (Rubin.ContinuousMulAction.toHomeomorph α g) = HomeoGroup.fromContinuous α g := rfl
+
+-- instance homeoGroup_coe_fromContinuous : Coe G (HomeoGroup α) where
+--   coe := fun g => HomeoGroup.fromContinuous α g
+
+@[simp]
+theorem HomeoGroup.fromContinuous_smul (g : G) :
+  ∀ x : α, (HomeoGroup.fromContinuous α g) • x = g • x :=
+by
+  intro x
+  unfold fromContinuous
+  rw [<-HomeoGroup.smul₁_def', HomeoGroup.from_toHomeomorph]
+  unfold Rubin.ContinuousMulAction.toHomeomorph
+  simp
+
+theorem HomeoGroup.fromContinuous_one :
+  HomeoGroup.fromContinuous α (1 : G) = (1 : HomeoGroup α) :=
+by
+  apply FaithfulSMul.eq_of_smul_eq_smul (α := α)
+  simp
+
+theorem HomeoGroup.fromContinuous_mul (g h : G):
+  (HomeoGroup.fromContinuous α g) * (HomeoGroup.fromContinuous α h) = (HomeoGroup.fromContinuous α (g * h)) :=
+by
+  apply FaithfulSMul.eq_of_smul_eq_smul (α := α)
+  intro x
+  rw [mul_smul]
+  simp
+  rw [mul_smul]
+
+theorem HomeoGroup.fromContinuous_inv (g : G):
+  HomeoGroup.fromContinuous α g⁻¹ = (HomeoGroup.fromContinuous α g)⁻¹ :=
+by
+  apply FaithfulSMul.eq_of_smul_eq_smul (α := α)
+  intro x
+  group_action
+  rw [mul_smul]
+  simp
+
+theorem HomeoGroup.fromContinuous_eq_iff [FaithfulSMul G α] (g h : G):
+  (HomeoGroup.fromContinuous α g) = (HomeoGroup.fromContinuous α h) ↔ g = h :=
+by
+  constructor
+  · intro cont_eq
+    apply FaithfulSMul.eq_of_smul_eq_smul (α := α)
+    intro x
+    rw [<-HomeoGroup.fromContinuous_smul g]
+    rw [cont_eq]
+    simp
+  · tauto
+
+@[simp]
+theorem HomeoGroup.fromContinuous_support (g : G) :
+  Rubin.Support α (HomeoGroup.fromContinuous α g) = Rubin.Support α g :=
 by
   ext x
   repeat rw [Rubin.mem_support]
-  rw [<-HomeoGroup.smul₁_def]
+  rw [<-HomeoGroup.smul₁_def, <-HomeoGroup.fromContinuous_def]
   rw [HomeoGroup.from_toHomeomorph]
   rw [Rubin.ContinuousMulAction.toHomeomorph_toFun]
 
-theorem HomeoGroup.smulImage_eq_image (g : HomeoGroup α) (S : Set α) :
-  g •'' S = ⇑g.toHomeomorph '' S := rfl
+@[simp]
+theorem HomeoGroup.fromContinuous_regularSupport (g : G) :
+  Rubin.RegularSupport α (HomeoGroup.fromContinuous α g) = Rubin.RegularSupport α g :=
+by
+  unfold Rubin.RegularSupport
+  rw [HomeoGroup.fromContinuous_support]
+
+@[simp]
+theorem HomeoGroup.fromContinuous_smulImage (g : G) (V : Set α) :
+  (HomeoGroup.fromContinuous α g) •'' V = g •'' V :=
+by
+  repeat rw [Rubin.smulImage_def]
+  simp
+
+end ContinuousMulActionCoe
 
 namespace Rubin
 
