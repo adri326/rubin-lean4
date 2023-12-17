@@ -11,7 +11,14 @@ def rigidStabilizer' (G : Type _) [Group G] [MulAction G α] (U : Set α) : Set 
   {g : G | ∀ x : α, g • x = x ∨ x ∈ U}
 #align rigid_stabilizer' Rubin.rigidStabilizer'
 
--- A subgroup of G for which `Support α g ⊆ U`, or in other words, all elements of `G` that don't move points outside of `U`.
+/--
+A "rigid stabilizer" is a subgroup of `G` associated with a set `U` for which `Support α g ⊆ U` is true for all of its elements.
+
+In other words, a rigid stabilizer for a set `U` contains all elements of `G` that don't move points outside of `U`.
+
+The notation for this subgroup is `G•[U]`.
+You might sometimes find an expression written as `↑G•[U]` when `G•[U]` is used as a set.
+--/
 def RigidStabilizer (G : Type _) [Group G] [MulAction G α] (U : Set α) : Subgroup G
     where
   carrier := {g : G | ∀ (x) (_ : x ∉ U), g • x = x}
@@ -19,6 +26,8 @@ def RigidStabilizer (G : Type _) [Group G] [MulAction G α] (U : Set α) : Subgr
   inv_mem' hg x x_notin_U := smul_eq_iff_inv_smul_eq.mp (hg x x_notin_U)
   one_mem' x _ := one_smul G x
 #align rigid_stabilizer Rubin.RigidStabilizer
+
+notation:max G "•[" U "]" => RigidStabilizer G U
 
 variable {G α: Type _}
 variable [Group G]
@@ -50,7 +59,7 @@ by
 theorem monotone_rigidStabilizer : Monotone (RigidStabilizer (α := α) G) := fun _ _ => rigidStabilizer_mono
 
 theorem rigidStabilizer_compl [FaithfulSMul G α] {U : Set α} {f : G} (f_ne_one : f ≠ 1) :
-  f ∈ RigidStabilizer G (Uᶜ) → f ∉ RigidStabilizer G U :=
+  f ∈ G•[Uᶜ] → f ∉ G•[U] :=
 by
   intro f_in_rist_compl
   intro f_in_rist
@@ -59,16 +68,6 @@ by
   rw [Set.subset_compl_iff_disjoint_left] at f_in_rist_compl
   have supp_empty : Support α f = ∅ := empty_of_subset_disjoint f_in_rist_compl.symm f_in_rist
   exact f_ne_one ((support_empty_iff f).mp supp_empty)
-
--- TODO: remove?
-theorem rigidStabilizer_to_subgroup_closure {U : Set α} :
-  RigidStabilizer G U = Subgroup.closure { h : G | Support α h ⊆ U } :=
-by
-  ext g
-  simp only [<-rigidStabilizer_support]
-  have set_eq : {h | h ∈ RigidStabilizer G U} = (RigidStabilizer G U : Set G) := rfl
-  rw [set_eq]
-  rw [Subgroup.closure_eq]
 
 theorem commute_if_rigidStabilizer_and_disjoint {g h : G} {U : Set α} [FaithfulSMul G α] :
   g ∈ RigidStabilizer G U → Disjoint U (Support α h) → Commute g h :=
@@ -129,7 +128,7 @@ by
   }
 
 theorem rigidStabilizer_inter (U V : Set α) :
-  RigidStabilizer G (U ∩ V) = RigidStabilizer G U ⊓ RigidStabilizer G V :=
+  G•[U ∩ V] = G•[U] ⊓ G•[V] :=
 by
   ext x
   simp
@@ -137,7 +136,7 @@ by
   rw [Set.subset_inter_iff]
 
 theorem rigidStabilizer_empty (G α: Type _) [Group G] [MulAction G α] [FaithfulSMul G α]:
-  RigidStabilizer G (α := α) ∅ = ⊥ :=
+  G•[(∅ : Set α)] = ⊥ :=
 by
   rw [Subgroup.eq_bot_iff_forall]
   intro f f_in_rist
@@ -149,7 +148,7 @@ by
   simp
 
 theorem rigidStabilizer_sInter (S : Set (Set α)) :
-  RigidStabilizer G (⋂₀ S) = ⨅ T ∈ S, RigidStabilizer G T :=
+  G•[⋂₀ S] = ⨅ T ∈ S, G•[T] :=
 by
   ext x
   rw [rigidStabilizer_support]
@@ -172,7 +171,7 @@ by
     exact x_in_rist T_in_S
 
 theorem rigidStabilizer_smulImage (f g : G) (S : Set α) :
-  g ∈ RigidStabilizer G (f •'' S) ↔ f⁻¹ * g * f ∈ RigidStabilizer G S :=
+  g ∈ G•[f •'' S] ↔ f⁻¹ * g * f ∈ G•[S] :=
 by
   repeat rw [rigidStabilizer_support]
   nth_rw 3 [<-inv_inv f]
@@ -181,7 +180,7 @@ by
   simp
 
 theorem orbit_rigidStabilizer_subset {p : α} {U : Set α} (p_in_U : p ∈ U):
-  MulAction.orbit (RigidStabilizer G U) p ⊆ U :=
+  MulAction.orbit G•[U] p ⊆ U :=
 by
   intro q q_in_orbit
   have ⟨⟨h, h_in_rist⟩, hp_eq_q⟩ := MulAction.mem_orbit_iff.mp q_in_orbit

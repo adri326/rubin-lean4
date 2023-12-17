@@ -69,6 +69,36 @@ theorem equivariant_inv [MulAction G α] [MulAction G β]
 
 open Topology
 
+-- Note: this sounds like a general enough theorem that it should already be in mathlib
+lemma inter_of_open_subset_of_closure {α : Type _} [TopologicalSpace α] {U V : Set α}
+  (U_open : IsOpen U) (U_nonempty : Set.Nonempty U) (V_nonempty : Set.Nonempty V)
+  (U_ss_clV : U ⊆ closure V) : Set.Nonempty (U ∩ V) :=
+by
+  by_contra empty
+  rw [Set.not_nonempty_iff_eq_empty] at empty
+  rw [Set.nonempty_iff_ne_empty] at U_nonempty
+  apply U_nonempty
+
+  have clV_diff_U_ss_V : V ⊆ closure V \ U := by
+    rw [Set.subset_diff]
+    constructor
+    exact subset_closure
+    symm
+    rw [Set.disjoint_iff_inter_eq_empty]
+    exact empty
+  have clV_diff_U_closed : IsClosed (closure V \ U) := by
+    apply IsClosed.sdiff
+    exact isClosed_closure
+    assumption
+  unfold closure at U_ss_clV
+  simp at U_ss_clV
+  specialize U_ss_clV (closure V \ U) clV_diff_U_closed clV_diff_U_ss_V
+
+  rw [Set.subset_diff] at U_ss_clV
+  rw [Set.disjoint_iff_inter_eq_empty] at U_ss_clV
+  simp at U_ss_clV
+  exact U_ss_clV.right
+
 /--
 Note: `𝓝[≠] x` is notation for `nhdsWithin x {[x]}ᶜ`, ie. the neighborhood of x not containing itself.
 --/

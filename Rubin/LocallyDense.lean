@@ -29,7 +29,7 @@ class LocallyDense (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G 
 #align is_locally_dense Rubin.LocallyDense
 
 theorem LocallyDense.from_rigidStabilizer_in_nhds (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G α] :
-  (∀ U : Set α, IsOpen U → ∀ p ∈ U, closure (MulAction.orbit (RigidStabilizer G U) p) ∈ 𝓝 p) →
+  (∀ U : Set α, IsOpen U → ∀ p ∈ U, closure (MulAction.orbit G•[U] p) ∈ 𝓝 p) →
   LocallyDense G α :=
 by
   intro hyp
@@ -46,7 +46,7 @@ theorem LocallyDense.rigidStabilizer_in_nhds (G α : Type _) [Group G] [Topologi
   [MulAction G α] [LocallyDense G α]
   {U : Set α} (U_open : IsOpen U) {p : α} (p_in_U : p ∈ U)
 :
-  closure (MulAction.orbit (RigidStabilizer G U) p) ∈ 𝓝 p :=
+  closure (MulAction.orbit G•[U] p) ∈ 𝓝 p :=
 by
   rw [mem_nhds_iff]
   rw [<-mem_interior]
@@ -56,7 +56,7 @@ lemma LocallyDense.elem_from_nonEmpty {G α : Type _} [Group G] [TopologicalSpac
   ∀ {U : Set α},
   IsOpen U →
   Set.Nonempty U →
-  ∃ p ∈ U, p ∈ interior (closure (MulAction.orbit (RigidStabilizer G U) p)) :=
+  ∃ p ∈ U, p ∈ interior (closure (MulAction.orbit G•[U] p)) :=
 by
   intros U U_open H_ne
   exact ⟨H_ne.some, H_ne.some_mem, LocallyDense.isLocallyDense U U_open H_ne.some H_ne.some_mem⟩
@@ -71,7 +71,7 @@ theorem get_moving_elem_in_rigidStabilizer (G : Type _) {α : Type _}
   [Group G] [TopologicalSpace α] [MulAction G α] [LocallyDense G α]
   [T1Space α] {p : α} [Filter.NeBot (𝓝[≠] p)]
   {U : Set α} (U_open : IsOpen U) (p_in_U : p ∈ U) :
-  ∃ g : G, g ∈ RigidStabilizer G U ∧ g • p ≠ p :=
+  ∃ g : G, g ∈ G•[U] ∧ g • p ≠ p :=
 by
   by_contra g_not_exist
   rw [<-Classical.not_forall_not] at g_not_exist
@@ -112,7 +112,7 @@ theorem LocallyMoving.get_nontrivial_rist_elem {G α : Type _}
   {U: Set α}
   (U_open : IsOpen U)
   (U_nonempty : U.Nonempty) :
-  ∃ x : G, x ∈ RigidStabilizer G U ∧ x ≠ 1 :=
+  ∃ x : G, x ∈ G•[U] ∧ x ≠ 1 :=
 by
   have rist_ne_bot := h_lm.locally_moving U U_open U_nonempty
   exact (or_iff_right rist_ne_bot).mp (Subgroup.bot_or_exists_ne_one _)

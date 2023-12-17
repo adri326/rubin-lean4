@@ -355,7 +355,7 @@ lemma lemma_2_2 (G: Type _) {α : Type _} [Group G] [TopologicalSpace α] [MulAc
   [ContinuousMulAction G α] [FaithfulSMul G α]
   [T2Space α] [h_lm : LocallyMoving G α]
   {U : Set α} (U_open : IsOpen U) (U_nonempty : Set.Nonempty U) :
-  Monoid.exponent (RigidStabilizer G U) = 0 :=
+  Monoid.exponent G•[U] = 0 :=
 by
   by_contra exp_ne_zero
 
@@ -548,7 +548,7 @@ lemma proposition_2_1 {G α : Type _}
   [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] [T2Space α]
   [LocallyMoving G α] [h_faithful : FaithfulSMul G α]
   (f : G) :
-  AlgebraicCentralizer f = RigidStabilizer G (RegularSupport α f) :=
+  AlgebraicCentralizer f = G•[RegularSupport α f] :=
 by
   ext h
 
@@ -634,7 +634,7 @@ by
 theorem rigidStabilizer_inter_bot_iff_regularSupport_disj {G α : Type _}
   [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] [LocallyMoving G α] [FaithfulSMul G α]
   {f g : G} :
-  RigidStabilizer G (RegularSupport α f) ⊓ RigidStabilizer G (RegularSupport α g) = ⊥
+  G•[RegularSupport α f] ⊓ G•[RegularSupport α g] = ⊥
   ↔ Disjoint (RegularSupport α f) (RegularSupport α g) :=
 by
   rw [<-rigidStabilizer_inter]
@@ -782,34 +782,23 @@ def RSuppOrbit {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] 
   { g •'' W | (g ∈ H) (W ∈ F) }
 
 lemma moving_elem_of_open_subset_closure_orbit {U V : Set α} (U_open : IsOpen U) (U_nonempty : Set.Nonempty U)
-  {p : α} (p_in_V : p ∈ V) (U_ss_clOrbit : U ⊆ closure (MulAction.orbit (RigidStabilizer G V) p)) :
-  ∃ h : G, h ∈ RigidStabilizer G V ∧ h • p ∈ U :=
+  {p : α} (U_ss_clOrbit : U ⊆ closure (MulAction.orbit G•[V] p)) :
+  ∃ h : G, h ∈ G•[V] ∧ h • p ∈ U :=
 by
-  have U_ss_clV : U ⊆ closure V := by
-    apply subset_trans
-    exact U_ss_clOrbit
-    apply closure_mono
-    exact orbit_rigidStabilizer_subset p_in_V
+  have p_in_orbit : p ∈ MulAction.orbit G•[V] p := by simp
 
-  by_cases (RigidStabilizer G V) = ⊥
-  case pos rist_bot =>
-    rw [rist_bot] at U_ss_clOrbit
-    simp at U_ss_clOrbit
-    use 1
-    constructor
-    exact Subgroup.one_mem _
-    rw [one_smul]
-    let ⟨q, q_in_U⟩ := U_nonempty
-    rw [<-U_ss_clOrbit _ q_in_U]
-    assumption
-  case neg rist_ne_bot =>
-    rw [<-ne_eq, Subgroup.ne_bot_iff_exists_ne_one] at rist_ne_bot
-    let ⟨⟨g, g_in_rist⟩, g_ne_one⟩ := rist_ne_bot
-    rw [ne_eq, Subgroup.mk_eq_one_iff, <-ne_eq] at g_ne_one
+  have ⟨q, ⟨q_in_U, q_in_orbit⟩⟩ := inter_of_open_subset_of_closure
+    U_open U_nonempty ⟨p, p_in_orbit⟩ U_ss_clOrbit
 
-    -- Idea: show that `U ∩ Orb(p, G_U)` is nonempty?
-    sorry
+  rw [MulAction.mem_orbit_iff] at q_in_orbit
+  let ⟨⟨h, h_in_orbit⟩, hq_eq_p⟩ := q_in_orbit
+  simp at hq_eq_p
 
+  use h
+  constructor
+  assumption
+  rw [hq_eq_p]
+  assumption
 
 lemma compact_subset_of_rsupp_basis [LocallyCompactSpace α]
   (U : RegularSupportBasis α):
@@ -885,6 +874,8 @@ by
       simp at W_in_subsets
       let ⟨W_in_basis, W_subset_rsupp⟩ := W_in_subsets
       clear W_in_subsets g' g'_ne_one
+      unfold RSuppOrbit
+      simp
 
       -- We have that W is a subset of the closure of the orbit of G_U
       have W_ss_clOrbit : W ⊆ closure (MulAction.orbit (↥(RigidStabilizer G U.val)) p) := by
@@ -899,9 +890,8 @@ by
             rw [<-closure_closure (s := MulAction.orbit _ _)]
             apply closure_mono
             assumption
-      unfold RSuppOrbit
-      simp
 
+      -- W is also open and nonempty...
       have W_open : IsOpen W := by
         let ⟨W', W'_eq⟩ := (RegularSupportBasis.mem_asSet _).mp W_in_basis
         rw [<-W'_eq]
@@ -911,8 +901,8 @@ by
         rw [<-W'_eq]
         exact W'.nonempty
 
-      -- We get an element `h` such that `h • p ∈ W` and `h ∈ G_U`
-      let ⟨h, h_in_rist, hp_in_W⟩ := moving_elem_of_open_subset_closure_orbit W_open W_nonempty p_in_U W_ss_clOrbit
+      -- So we can get an element `h` such that `h • p ∈ W` and `h ∈ G_U`
+      let ⟨h, h_in_rist, hp_in_W⟩ := moving_elem_of_open_subset_closure_orbit W_open W_nonempty W_ss_clOrbit
 
       use h
       constructor
