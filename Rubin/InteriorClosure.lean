@@ -226,72 +226,18 @@ Set.Finite.induction_on' S_finite (by simp) (by
   · exact IH
 )
 
-theorem smulImage_interior {G : Type _} [Group G] [MulAction G α]
-  (g : G) (U : Set α)
-  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)):
-  interior (g •'' U) = g •'' interior U :=
-by
-  unfold interior
-  rw [smulImage_sUnion]
-  simp
-  ext x
-  simp
-  constructor
-  · intro ⟨T, ⟨T_open, T_sub⟩, x_in_T⟩
-    use g⁻¹ •'' T
-    repeat' apply And.intro
-    · exact (g_continuous T T_open).right
-    · rw [smulImage_subset_inv]
-      rw [inv_inv]
-      exact T_sub
-    · rw [smulImage_mul, mul_right_inv, one_smulImage]
-      exact x_in_T
-  · intro ⟨T, ⟨T_open, T_sub⟩, x_in_T⟩
-    use g •'' T
-    repeat' apply And.intro
-    · exact (g_continuous T T_open).left
-    · apply smulImage_mono
-      exact T_sub
-    · exact x_in_T
-
-theorem smulImage_closure {G : Type _} [Group G] [MulAction G α]
-  (g : G) (U : Set α)
-  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)):
-  closure (g •'' U) = g •'' closure U :=
-by
-  have g_continuous' : ∀ S : Set α, IsClosed S → IsClosed (g •'' S) ∧ IsClosed (g⁻¹ •'' S) := by
-    intro S S_closed
-    rw [<-isOpen_compl_iff] at S_closed
-    repeat rw [<-isOpen_compl_iff]
-    repeat rw [smulImage_compl]
-    exact g_continuous _ S_closed
-  unfold closure
-  rw [smulImage_sInter]
-  simp
-  ext x
-  simp
-  constructor
-  · intro IH T' T T_closed U_ss_T T'_eq
-    rw [<-T'_eq]
-    clear T' T'_eq
-    apply IH
-    · exact (g_continuous' _ T_closed).left
-    · apply smulImage_mono
-      exact U_ss_T
-  · intro IH T T_closed gU_ss_T
-    apply IH
-    · exact (g_continuous' _ T_closed).right
-    · rw [<-smulImage_subset_inv]
-      exact gU_ss_T
-    · simp
-
-theorem interiorClosure_smulImage {G : Type _} [Group G] [MulAction G α]
+theorem interiorClosure_smulImage' {G : Type _} [Group G] [MulAction G α]
   (g : G) (U : Set α)
   (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)) :
   InteriorClosure (g •'' U) = g •'' InteriorClosure U :=
 by
   simp
-  rw [<-smulImage_interior _ _ g_continuous]
-  rw [<-smulImage_closure _ _ g_continuous]
+  rw [<-smulImage_interior' _ _ g_continuous]
+  rw [<-smulImage_closure' _ _ g_continuous]
+
+theorem interiorClosure_smulImage {G : Type _} [Group G] [MulAction G α] [ContinuousMulAction G α]
+  (g : G) (U : Set α) :
+  InteriorClosure (g •'' U) = g •'' InteriorClosure U :=
+  interiorClosure_smulImage' g U (continuousMulAction_elem_continuous α g)
 
 end Rubin

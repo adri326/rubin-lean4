@@ -98,7 +98,7 @@ theorem regularSupport_smulImage {f g : G} :
 by
   unfold RegularSupport
   rw [support_conjugate]
-  rw [interiorClosure_smulImage _ _ (continuousMulAction_elem_continuous α f)]
+  rw [interiorClosure_smulImage]
 
 end RegularSupport_continuous
 

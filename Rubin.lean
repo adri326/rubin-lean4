@@ -781,12 +781,35 @@ def RSuppSubsets {α : Type _} [TopologicalSpace α] (V : Set α) : Set (Set α)
 def RSuppOrbit {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] (F : Filter α) (H : Subgroup G) : Set (Set α) :=
   { g •'' W | (g ∈ H) (W ∈ F) }
 
-lemma moving_elem_of_open_subset_closure_orbit {U V : Set α} (U_open : IsOpen U) {p : α}
-  (U_ss_clOrbit : U ⊆ closure (MulAction.orbit (RigidStabilizer G V) p)) :
+lemma moving_elem_of_open_subset_closure_orbit {U V : Set α} (U_open : IsOpen U) (U_nonempty : Set.Nonempty U)
+  {p : α} (p_in_V : p ∈ V) (U_ss_clOrbit : U ⊆ closure (MulAction.orbit (RigidStabilizer G V) p)) :
   ∃ h : G, h ∈ RigidStabilizer G V ∧ h • p ∈ U :=
 by
-  -- Idea: can `Support α g ⊆ MulAction.orbit (RigidStabilizer G (RegularSupport α g)) p` be proven?
-  sorry
+  have U_ss_clV : U ⊆ closure V := by
+    apply subset_trans
+    exact U_ss_clOrbit
+    apply closure_mono
+    exact orbit_rigidStabilizer_subset p_in_V
+
+  by_cases (RigidStabilizer G V) = ⊥
+  case pos rist_bot =>
+    rw [rist_bot] at U_ss_clOrbit
+    simp at U_ss_clOrbit
+    use 1
+    constructor
+    exact Subgroup.one_mem _
+    rw [one_smul]
+    let ⟨q, q_in_U⟩ := U_nonempty
+    rw [<-U_ss_clOrbit _ q_in_U]
+    assumption
+  case neg rist_ne_bot =>
+    rw [<-ne_eq, Subgroup.ne_bot_iff_exists_ne_one] at rist_ne_bot
+    let ⟨⟨g, g_in_rist⟩, g_ne_one⟩ := rist_ne_bot
+    rw [ne_eq, Subgroup.mk_eq_one_iff, <-ne_eq] at g_ne_one
+
+    -- Idea: show that `U ∩ Orb(p, G_U)` is nonempty?
+    sorry
+
 
 lemma compact_subset_of_rsupp_basis [LocallyCompactSpace α]
   (U : RegularSupportBasis α):
@@ -816,17 +839,29 @@ by
     -- Then, get a nontrivial element from that set
     let ⟨g, g_in_rist, g_ne_one⟩ := LocallyMoving.get_nontrivial_rist_elem (G := G) V_open ⟨p, p_in_V⟩
 
-    -- Somehow, the regular support of g is within U
+    have V_ss_clU : V ⊆ closure U.val := by
+      apply subset_trans
+      exact V_ss_clOrbit
+      apply closure_mono
+      exact orbit_rigidStabilizer_subset p_in_U
+
+    -- The regular support of g is within U
     have rsupp_ss_U : RegularSupport α g ⊆ U.val := by
-      rw [RegularSupport, InteriorClosure]
-
-      apply interiorClosure_subset_of_regular _ U.regular
-      rw [<-rigidStabilizer_support]
-      apply rigidStabilizer_mono _ g_in_rist
-
-      show V ⊆ U.val
-      -- Would probably require showing that the orbit of the rigidstabilizer is a subset of U
-      sorry
+      rw [RegularSupport]
+      rw [rigidStabilizer_support] at g_in_rist
+      calc
+        InteriorClosure (Support α g) ⊆ InteriorClosure V := by
+          apply interiorClosure_mono
+          assumption
+        _ ⊆ InteriorClosure (closure U.val) := by
+          apply interiorClosure_mono
+          assumption
+        _ ⊆ InteriorClosure U.val := by
+          simp
+          rfl
+        _ ⊆ _ := by
+          apply subset_of_eq
+          exact U.regular
 
     -- Use as the chosen set RegularSupport g
     let g' : HomeoGroup α := HomeoGroup.fromContinuous α g
@@ -877,7 +912,7 @@ by
         exact W'.nonempty
 
       -- We get an element `h` such that `h • p ∈ W` and `h ∈ G_U`
-      let ⟨h, h_in_rist, hp_in_W⟩ := moving_elem_of_open_subset_closure_orbit W_open W_ss_clOrbit
+      let ⟨h, h_in_rist, hp_in_W⟩ := moving_elem_of_open_subset_closure_orbit W_open W_nonempty p_in_U W_ss_clOrbit
 
       use h
       constructor
@@ -936,9 +971,9 @@ by
       rw [<-gW_eq_V]
       assumption
     have gV'_compact : IsCompact (closure (g⁻¹ •'' V'.val)) := by
-      rw [smulImage_closure _ _ (continuousMulAction_elem_continuous α g⁻¹)]
-      -- TODO: smulImage_compact
-      sorry
+      rw [smulImage_closure]
+      apply smulImage_compact
+      assumption
 
     have ⟨p, p_lim⟩ := (proposition_3_4_2 F).mpr ⟨g⁻¹ •'' V'.val, ⟨gV'_in_F, gV'_compact⟩⟩
     use p
@@ -948,12 +983,9 @@ by
 
     rw [clusterPt_iff_forall_mem_closure] at p_lim
     specialize p_lim (g⁻¹ •'' V') gV'_in_F
-    rw [smulImage_closure _ _ (continuousMulAction_elem_continuous α g⁻¹)] at p_lim
-    rw [mem_smulImage, inv_inv] at p_lim
+    rw [smulImage_closure, mem_smulImage, inv_inv] at p_lim
 
-    rw [rigidStabilizer_support] at g_in_rist
-    rw [<-support_inv] at g_in_rist
-    have q := fixed_smulImage_in_support g⁻¹ g_in_rist
+    rw [rigidStabilizer_support, <-support_inv] at g_in_rist
     rw [<-fixed_smulImage_in_support g⁻¹ g_in_rist]
 
     rw [mem_smulImage, inv_inv]

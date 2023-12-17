@@ -56,6 +56,12 @@ theorem mem_smulImage {x : α} {g : G} {U : Set α} : x ∈ g •'' U ↔ g⁻¹
 -- this is simply [`mem_smulImage`] paired with set extensionality.
 theorem smulImage_set {g: G} {U: Set α} : g •'' U = {x | g⁻¹ • x ∈ U} := Set.ext (fun _x => mem_smulImage)
 
+@[simp]
+theorem smulImage_preImage (g: G) (U: Set α) : (fun p => g • p) ⁻¹' U = g⁻¹ •'' U := by
+  ext x
+  simp
+  rw [mem_smulImage, inv_inv]
+
 theorem mem_inv_smulImage {x : α} {g : G} {U : Set α} : x ∈ g⁻¹ •'' U ↔ g • x ∈ U :=
   by
   let msi := @Rubin.mem_smulImage _ _ _ _ x g⁻¹ U
@@ -335,7 +341,6 @@ by
   exact h_notin_V
 #align distinct_images_from_disjoint Rubin.smulImage_distinct_of_disjoint_pow
 
-
 theorem continuousMulAction_elem_continuous {G : Type _} (α : Type _)
   [Group G] [TopologicalSpace α] [MulAction G α] [hc : ContinuousMulAction G α] (g : G):
   ∀ (S : Set α), IsOpen S → IsOpen (g •'' S) ∧ IsOpen ((g⁻¹) •'' S) :=
@@ -347,5 +352,237 @@ by
   · exact (hc.continuous g⁻¹).isOpen_preimage _ S_open
   · exact (hc.continuous g).isOpen_preimage _ S_open
 
+theorem smulImage_isOpen {G α : Type _}
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] (g : G)
+  {S : Set α} (S_open : IsOpen S) : IsOpen (g •'' S) :=
+    (continuousMulAction_elem_continuous α g S S_open).left
 
+theorem smulImage_isClosed {G α : Type _}
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] (g : G)
+  {S : Set α} (S_open : IsClosed S) : IsClosed (g •'' S) :=
+by
+  rw [<-isOpen_compl_iff]
+  rw [<-isOpen_compl_iff] at S_open
+  rw [smulImage_compl]
+  apply smulImage_isOpen
+  assumption
+
+theorem smulImage_interior' {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  (g : G) (U : Set α)
+  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)):
+  interior (g •'' U) = g •'' interior U :=
+by
+  unfold interior
+  rw [smulImage_sUnion]
+  simp
+  ext x
+  simp
+  constructor
+  · intro ⟨T, ⟨T_open, T_sub⟩, x_in_T⟩
+    use g⁻¹ •'' T
+    repeat' apply And.intro
+    · exact (g_continuous T T_open).right
+    · rw [smulImage_subset_inv]
+      rw [inv_inv]
+      exact T_sub
+    · rw [smulImage_mul, mul_right_inv, one_smulImage]
+      exact x_in_T
+  · intro ⟨T, ⟨T_open, T_sub⟩, x_in_T⟩
+    use g •'' T
+    repeat' apply And.intro
+    · exact (g_continuous T T_open).left
+    · apply smulImage_mono
+      exact T_sub
+    · exact x_in_T
+
+theorem smulImage_interior {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  [ContinuousMulAction G α] (g : G) (U : Set α) :
+  interior (g •'' U) = g •'' interior U :=
+  smulImage_interior' g U (continuousMulAction_elem_continuous α g)
+
+theorem smulImage_closure' {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  (g : G) (U : Set α)
+  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)):
+  closure (g •'' U) = g •'' closure U :=
+by
+  have g_continuous' : ∀ S : Set α, IsClosed S → IsClosed (g •'' S) ∧ IsClosed (g⁻¹ •'' S) := by
+    intro S S_closed
+    rw [<-isOpen_compl_iff] at S_closed
+    repeat rw [<-isOpen_compl_iff]
+    repeat rw [smulImage_compl]
+    exact g_continuous _ S_closed
+  unfold closure
+  rw [smulImage_sInter]
+  simp
+  ext x
+  simp
+  constructor
+  · intro IH T' T T_closed U_ss_T T'_eq
+    rw [<-T'_eq]
+    clear T' T'_eq
+    apply IH
+    · exact (g_continuous' _ T_closed).left
+    · apply smulImage_mono
+      exact U_ss_T
+  · intro IH T T_closed gU_ss_T
+    apply IH
+    · exact (g_continuous' _ T_closed).right
+    · rw [<-smulImage_subset_inv]
+      exact gU_ss_T
+    · simp
+
+theorem smulImage_closure {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  [ContinuousMulAction G α] (g : G) (U : Set α) :
+  closure (g •'' U) = g •'' closure U :=
+  smulImage_closure' g U (continuousMulAction_elem_continuous α g)
+
+section Filters
+
+open Topology
+
+variable {G α : Type _}
+variable [Group G] [MulAction G α]
+
+/--
+An SMul can be extended to filters, while preserving the properties of `MulAction`.
+
+To avoid polluting the `SMul` instances for filters, those properties are made separate,
+instead of implementing `MulAction G (Filter α)`.
+--/
+def SmulFilter {G α : Type _} [SMul G α] (g : G) (F : Filter α) : Filter α :=
+  Filter.map (fun p => g • p) F
+
+infixl:60 " •ᶠ " => Rubin.SmulFilter
+
+theorem smulFilter_def {G α : Type _} [SMul G α] (g : G) (F : Filter α) :
+  Filter.map (fun p => g • p) F = g •ᶠ F := rfl
+
+theorem smulFilter_neBot {G α : Type _} [SMul G α] (g : G) {F : Filter α} (F_neBot : Filter.NeBot F) :
+  Filter.NeBot (g •ᶠ F) :=
+by
+  rw [<-smulFilter_def]
+  exact Filter.map_neBot
+
+instance smulFilter_neBot' {G α : Type _} [SMul G α] {g : G} {F : Filter α} [F_neBot : Filter.NeBot F] :
+  Filter.NeBot (g •ᶠ F) := smulFilter_neBot g F_neBot
+
+theorem smulFilter_principal (g : G) (S : Set α) :
+  g •ᶠ Filter.principal S = Filter.principal (g •'' S) :=
+by
+  rw [<-smulFilter_def]
+  rw [Filter.map_principal]
+  rfl
+
+theorem mul_smulFilter (g h: G) (F : Filter α) :
+  (g * h) •ᶠ F = g •ᶠ (h •ᶠ F) :=
+by
+  repeat rw [<-smulFilter_def]
+  simp only [mul_smul]
+  rw [Filter.map_map]
+  rfl
+
+theorem one_smulFilter (G : Type _) [Group G] [MulAction G α] (F : Filter α) :
+  (1 : G) •ᶠ F = F :=
+by
+  rw [<-smulFilter_def]
+  simp only [one_smul]
+  exact Filter.map_id
+
+theorem mem_smulFilter_iff (g : G) (F : Filter α) (U : Set α) :
+  U ∈ g •ᶠ F ↔ g⁻¹ •'' U ∈ F :=
+by
+  rw [<-smulFilter_def, Filter.mem_map, smulImage_eq_inv_preimage, inv_inv]
+
+theorem smulFilter_mono (g : G) (F F' : Filter α) :
+  F ≤ F' ↔ g •ᶠ F ≤ g •ᶠ F' :=
+by
+  suffices ∀ (g : G) (F F' : Filter α), F ≤ F' → g •ᶠ F ≤ g •ᶠ F' by
+    constructor
+    apply this
+    intro H
+    specialize this g⁻¹ _ _ H
+    repeat rw [<-mul_smulFilter] at this
+    rw [mul_left_inv] at this
+    repeat rw [one_smulFilter] at this
+    exact this
+  intro g F F' F_le_F'
+  intro U U_in_gF
+  rw [mem_smulFilter_iff] at U_in_gF
+  rw [mem_smulFilter_iff]
+  apply F_le_F'
+  assumption
+
+theorem smulFilter_le_iff_le_inv (g : G) (F F' : Filter α) :
+  F ≤ g •ᶠ F' ↔ g⁻¹ •ᶠ F ≤ F' :=
+by
+  nth_rw 2 [<-one_smulFilter G F']
+  rw [<-mul_left_inv g, mul_smulFilter]
+  exact smulFilter_mono g⁻¹ _ _
+
+variable [TopologicalSpace α]
+
+theorem smulFilter_nhds (g : G) (p : α) [ContinuousMulAction G α]:
+  g •ᶠ 𝓝 p = 𝓝 (g • p) :=
+by
+  ext S
+  rw [<-smulFilter_def, Filter.mem_map, mem_nhds_iff, mem_nhds_iff]
+  simp
+  constructor
+  · intro ⟨T, T_ss_smulImage, T_open, p_in_T⟩
+    use g •'' T
+    repeat' apply And.intro
+    · rw [smulImage_subset_inv]
+      assumption
+    · exact smulImage_isOpen g T_open
+    · simp
+      assumption
+  · intro ⟨T, T_ss_S, T_open, gp_in_T⟩
+    use g⁻¹ •'' T
+    repeat' apply And.intro
+    · apply smulImage_mono
+      assumption
+    · exact smulImage_isOpen g⁻¹ T_open
+    · rw [mem_smulImage, inv_inv]
+      assumption
+
+theorem smulFilter_clusterPt (g : G) (F : Filter α) (x : α) [ContinuousMulAction G α] :
+  ClusterPt x (g •ᶠ F) ↔ ClusterPt (g⁻¹ • x) F :=
+by
+  suffices ∀ (g : G) (F : Filter α) (x : α), ClusterPt x (g •ᶠ F) → ClusterPt (g⁻¹ • x) F by
+    constructor
+    apply this
+    intro gx_clusterPt_F
+
+    rw [<-one_smul G x, <-mul_right_inv g, mul_smul]
+    nth_rw 1 [<-inv_inv g]
+    apply this
+    rw [<-mul_smulFilter, mul_left_inv, one_smulFilter]
+    assumption
+  intro g F x x_cp_gF
+  rw [clusterPt_iff_forall_mem_closure]
+  rw [clusterPt_iff_forall_mem_closure] at x_cp_gF
+  simp only [mem_smulFilter_iff] at x_cp_gF
+  intro S S_in_F
+
+  rw [<-mem_inv_smulImage]
+  rw [<-smulImage_closure]
+
+  apply x_cp_gF
+  rw [inv_inv, smulImage_mul, mul_left_inv, one_smulImage]
+  assumption
+
+theorem smulImage_compact [ContinuousMulAction G α] (g : G) {U : Set α} (U_compact : IsCompact U) :
+  IsCompact (g •'' U) :=
+by
+  intro F F_neBot F_le_principal
+  rw [<-smulFilter_principal, smulFilter_le_iff_le_inv] at F_le_principal
+  let ⟨x, x_in_U, x_clusterPt⟩ := U_compact F_le_principal
+  use g • x
+  constructor
+  · rw [mem_smulImage']
+    assumption
+  · rw [smulFilter_clusterPt, inv_inv] at x_clusterPt
+    assumption
+
+end Filters
 end Rubin

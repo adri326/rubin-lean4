@@ -68,24 +68,6 @@ theorem fixed_of_disjoint {U : Set α} :
   not_mem_support.mp (Set.disjoint_left.mp disjoint_U_support x_in_U)
 #align fixed_of_disjoint Rubin.fixed_of_disjoint
 
-theorem fixed_smulImage_in_support (g : G) {U : Set α} :
-    Support α g ⊆ U → g •'' U = U :=
-  by
-  intro support_in_U
-  ext x
-  cases' @or_not (x ∈ Support α g) with xmoved xfixed
-  exact
-    ⟨fun _ => support_in_U xmoved, fun _ =>
-      mem_smulImage.mpr (support_in_U (Rubin.inv_smul_mem_support xmoved))⟩
-  rw [Rubin.mem_smulImage, smul_eq_iff_inv_smul_eq.mp (not_mem_support.mp xfixed)]
-#align fixes_subset_within_support Rubin.fixed_smulImage_in_support
-
-theorem smulImage_subset_in_support (g : G) (U V : Set α) :
-    U ⊆ V → Support α g ⊆ V → g •'' U ⊆ V := fun U_in_V support_in_V =>
-  Rubin.fixed_smulImage_in_support g support_in_V ▸
-    smulImage_mono g U_in_V
-#align moves_subset_within_support Rubin.smulImage_subset_in_support
-
 theorem support_mul (g h : G) (α : Type _) [MulAction G α] :
     Support α (g * h) ⊆
       Support α g ∪ Support α h :=
@@ -141,6 +123,19 @@ theorem support_pow (α : Type _) [MulAction G α] (g : G) (j : ℕ) :
     -- rw [Int.add_comm, Int.ofNat_add_one_out, zpow_ofNat] at j_ih
     -- exact j_ih
 #align support_pow Rubin.support_pow
+
+theorem support_zpow (α : Type _) [MulAction G α] (g : G) (j : ℤ) :
+    Support α (g ^ j) ⊆ Support α g :=
+by
+  cases j with
+  | ofNat n =>
+    rw [Int.ofNat_eq_coe, zpow_coe_nat]
+    exact support_pow α g n
+  | negSucc n =>
+    rw [Int.negSucc_eq, zpow_neg, support_inv, zpow_add, zpow_coe_nat, zpow_one]
+    nth_rw 2 [<-pow_one g]
+    rw [<-pow_add]
+    exact support_pow α g (n+1)
 
 theorem support_comm (α : Type _) [MulAction G α] (g h : G) :
     Support α ⁅g, h⁆ ⊆
@@ -293,6 +288,93 @@ by
     by_contra supp_empty
     rw [Set.not_nonempty_iff_eq_empty] at supp_empty
     exact g_ne_one ((support_empty_iff _).mp supp_empty)
+
+theorem elem_moved_in_support (g : G) (p : α) :
+  p ∈ Support α g ↔ g • p ∈ Support α g :=
+by
+  suffices ∀ (g : G) (p : α), p ∈ Support α g → g • p ∈ Support α g by
+    constructor
+    exact this g p
+    rw [<-support_inv]
+    intro H
+    rw [<-one_smul G p, <-mul_left_inv g, mul_smul]
+    exact this _ _ H
+  intro g p p_in_supp
+  by_contra gp_notin_supp
+  rw [<-support_inv, not_mem_support] at gp_notin_supp
+  rw [mem_support] at p_in_supp
+  apply p_in_supp
+  group_action at gp_notin_supp
+  exact gp_notin_supp.symm
+
+theorem elem_moved_in_support' {g : G} (p : α) {U : Set α} (support_in_U : Support α g ⊆ U):
+  p ∈ U ↔ g • p ∈ U :=
+by
+  by_cases p_in_supp? : p ∈ Support α g
+  · constructor
+    rw [elem_moved_in_support] at p_in_supp?
+    all_goals intro; exact support_in_U p_in_supp?
+  · rw [not_mem_support] at p_in_supp?
+    rw [p_in_supp?]
+
+theorem elem_moved_in_support_zpow {g : G} (p : α) (j : ℤ) {U : Set α} (support_in_U : Support α g ⊆ U):
+  p ∈ U ↔ g^j • p ∈ U :=
+by
+  by_cases p_in_supp? : p ∈ Support α g
+  · constructor
+    all_goals intro; apply support_in_U
+    swap; exact p_in_supp?
+    rw [<-elem_moved_in_support' p (support_zpow α g j)]
+    assumption
+  · rw [not_mem_support] at p_in_supp?
+    rw [smul_zpow_eq_of_smul_eq j p_in_supp?]
+
+theorem orbit_subset_support (g : G) (p : α) :
+  MulAction.orbit (Subgroup.closure {g}) p ⊆ Support α g ∪ {p} :=
+by
+  intro q q_in_orbit
+  rw [MulAction.mem_orbit_iff] at q_in_orbit
+  let ⟨⟨h, h_in_closure⟩, hp_eq_q⟩ := q_in_orbit
+  simp at hp_eq_q
+  rw [Subgroup.mem_closure_singleton] at h_in_closure
+  let ⟨n, g_pow_n_eq_h⟩ := h_in_closure
+  rw [<-hp_eq_q, <-g_pow_n_eq_h]
+  clear hp_eq_q g_pow_n_eq_h h_in_closure
+
+  have union_superset : Support α g ⊆ Support α g ∪ {p} := by
+    simp only [Set.union_singleton, Set.subset_insert]
+  rw [<-elem_moved_in_support_zpow _ _ union_superset]
+  simp only [Set.union_singleton, Set.mem_insert_iff, true_or]
+
+theorem orbit_subset_of_support_subset (g : G) {p : α} {U : Set α} (p_in_U : p ∈ U)
+  (supp_ss_U : Support α g ⊆ U) :
+  MulAction.orbit (Subgroup.closure {g}) p ⊆ U :=
+by
+  apply subset_trans
+  exact orbit_subset_support g p
+  apply Set.union_subset
+  assumption
+  rw [Set.singleton_subset_iff]
+  assumption
+
+theorem fixed_smulImage_in_support (g : G) {U : Set α} :
+  Support α g ⊆ U → g •'' U = U :=
+by
+  intro support_in_U
+  ext x
+  rw [mem_smulImage]
+  symm
+  apply elem_moved_in_support'
+  rw [support_inv]
+  assumption
+#align fixes_subset_within_support Rubin.fixed_smulImage_in_support
+
+theorem smulImage_subset_in_support (g : G) (U V : Set α) :
+    U ⊆ V → Support α g ⊆ V → g •'' U ⊆ V := fun U_in_V support_in_V =>
+  Rubin.fixed_smulImage_in_support g support_in_V ▸
+    smulImage_mono g U_in_V
+#align moves_subset_within_support Rubin.smulImage_subset_in_support
+
 
 section Continuous
 

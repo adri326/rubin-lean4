@@ -60,16 +60,15 @@ by
   have supp_empty : Support α f = ∅ := empty_of_subset_disjoint f_in_rist_compl.symm f_in_rist
   exact f_ne_one ((support_empty_iff f).mp supp_empty)
 
-theorem rigidStabilizer_to_subgroup_closure {g : G} {U : Set α} :
-  g ∈ RigidStabilizer G U → g ∈ Subgroup.closure { g : G | Support α g ⊆ U } :=
+-- TODO: remove?
+theorem rigidStabilizer_to_subgroup_closure {U : Set α} :
+  RigidStabilizer G U = Subgroup.closure { h : G | Support α h ⊆ U } :=
 by
-  rw [rigidStabilizer_support]
-  intro h
-  rw [Subgroup.mem_closure]
-  intro V orbit_subset_V
-  apply orbit_subset_V
-  simp
-  exact h
+  ext g
+  simp only [<-rigidStabilizer_support]
+  have set_eq : {h | h ∈ RigidStabilizer G U} = (RigidStabilizer G U : Set G) := rfl
+  rw [set_eq]
+  rw [Subgroup.closure_eq]
 
 theorem commute_if_rigidStabilizer_and_disjoint {g h : G} {U : Set α} [FaithfulSMul G α] :
   g ∈ RigidStabilizer G U → Disjoint U (Support α h) → Commute g h :=
@@ -180,5 +179,16 @@ by
   rw [support_conjugate]
   rw [smulImage_subset_inv]
   simp
+
+theorem orbit_rigidStabilizer_subset {p : α} {U : Set α} (p_in_U : p ∈ U):
+  MulAction.orbit (RigidStabilizer G U) p ⊆ U :=
+by
+  intro q q_in_orbit
+  have ⟨⟨h, h_in_rist⟩, hp_eq_q⟩ := MulAction.mem_orbit_iff.mp q_in_orbit
+  simp at hp_eq_q
+  rw [<-hp_eq_q]
+  rw [rigidStabilizer_support] at h_in_rist
+  rw [<-elem_moved_in_support' p h_in_rist]
+  assumption
 
 end Rubin
