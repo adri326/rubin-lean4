@@ -149,7 +149,7 @@ lemma smul_inj_moves {ι : Type*} [Fintype ι] [T2Space α]
     apply i_ne_j
     apply f_smul_inj
     group_action
-    group_action at h
+    group at h
     exact h
 
 def smul_inj_nbhd {ι : Type*} [Fintype ι] [T2Space α]
@@ -257,7 +257,7 @@ by
       unfold_let
       rw [h.1]
       rw [smul_eq_iff_eq_inv_smul]
-      group_action
+      group
       symm
       exact same_img
   }
@@ -346,6 +346,51 @@ def AlgebraicSubgroup (f : G) : Set G :=
 
 def AlgebraicCentralizer (f : G) : Subgroup G :=
   Subgroup.centralizer (AlgebraicSubgroup f)
+
+theorem AlgebraicSubgroup.conj (f g : G) :
+  (fun h => g * h * g⁻¹) '' AlgebraicSubgroup f = AlgebraicSubgroup (g * f * g⁻¹) :=
+by
+  unfold AlgebraicSubgroup
+  rw [Set.image_image]
+  have gxg12_eq : ∀ x : G, g * x^12 * g⁻¹ = (g * x * g⁻¹)^12 := by
+    simp
+  simp only [gxg12_eq]
+  ext x
+  sorry
+  -- unfold IsAlgebraicallyDisjoint
+
+
+@[simp]
+theorem AlgebraicCentralizer.conj (f g : G) :
+  (fun h => g * h * g⁻¹) '' AlgebraicCentralizer f = AlgebraicCentralizer (g * f * g⁻¹) :=
+by
+  unfold AlgebraicCentralizer
+
+  ext x
+  simp [Subgroup.mem_centralizer_iff]
+
+  constructor
+  · intro ⟨y, ⟨x_comm, x_eq⟩⟩
+    intro h h_in_alg
+    rw [<-AlgebraicSubgroup.conj] at h_in_alg
+    simp at h_in_alg
+    let ⟨i, i_in_alg, gig_eq_h⟩ := h_in_alg
+    specialize x_comm i i_in_alg
+    rw [<-gig_eq_h, <-x_eq]
+    group
+    rw [mul_assoc _ i, x_comm, <-mul_assoc]
+  · intro x_comm
+    use g⁻¹ * x * g
+    group
+    simp
+    intro h h_in_alg
+    simp [<-AlgebraicSubgroup.conj] at x_comm
+    specialize x_comm h h_in_alg
+    have h₁ : g⁻¹ * x * g * h = g⁻¹ * (g * h * g⁻¹ * x) * g := by
+      rw [x_comm]
+      group
+    rw [h₁]
+    group
 
 /--
 Finite intersections of [`AlgebraicCentralizer`].

@@ -240,4 +240,19 @@ theorem interiorClosure_smulImage {G : Type _} [Group G] [MulAction G α] [Conti
   InteriorClosure (g •'' U) = g •'' InteriorClosure U :=
   interiorClosure_smulImage' g U (continuousMulAction_elem_continuous α g)
 
+theorem smulImage_regular {G : Type _} [Group G] [MulAction G α] [ContinuousMulAction G α]
+  (g : G) (U : Set α) :
+  Regular U ↔ Regular (g •'' U) :=
+by
+  suffices ∀ V : Set α, ∀ h : G, Regular V → Regular (h •'' V) by
+    constructor
+    apply this
+    have U_eq : g⁻¹ •'' (g •'' U) = U := by simp
+    nth_rw 2 [<-U_eq]
+    apply this
+  intro U g U_reg
+  unfold Regular
+  rw [interiorClosure_smulImage]
+  rw [U_reg]
+
 end Rubin

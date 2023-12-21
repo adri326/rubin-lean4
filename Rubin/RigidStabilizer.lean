@@ -1,5 +1,6 @@
 import Mathlib.Data.Finset.Basic
 import Mathlib.GroupTheory.GroupAction.Basic
+import Mathlib.GroupTheory.GroupAction.FixingSubgroup
 
 import Rubin.Support
 import Rubin.MulActionExt
@@ -11,6 +12,7 @@ def rigidStabilizer' (G : Type _) [Group G] [MulAction G α] (U : Set α) : Set 
   {g : G | ∀ x : α, g • x = x ∨ x ∈ U}
 #align rigid_stabilizer' Rubin.rigidStabilizer'
 
+-- TODO: rename to something else? Also check the literature on what this is called
 /--
 A "rigid stabilizer" is a subgroup of `G` associated with a set `U` for which `Support α g ⊆ U` is true for all of its elements.
 
@@ -32,6 +34,14 @@ notation:max G "•[" U "]" => RigidStabilizer G U
 variable {G α: Type _}
 variable [Group G]
 variable [MulAction G α]
+
+theorem rigidStabilizer_eq_fixingSubgroup_compl (U : Set α) :
+  G•[U] = fixingSubgroup G Uᶜ :=
+by
+  ext g
+  rw [mem_fixingSubgroup_iff, <-Subgroup.mem_carrier]
+  unfold RigidStabilizer
+  simp
 
 theorem rigidStabilizer_support {g : G} {U : Set α} :
   g ∈ RigidStabilizer G U ↔ Support α g ⊆ U :=
@@ -104,6 +114,7 @@ by
       symm at gx_notin_support
       rw [fixes_inv] at gx_notin_support
       rw [<-gx_notin_support]
+      symm
       group_action
       rw [not_mem_support.mp x_notin_support]
     }
@@ -118,8 +129,9 @@ by
       have hx_notin_support := disjoint_not_mem U_disj hx_in_U?
       rw [<-support_inv] at hx_notin_support
       rw [not_mem_support] at hx_notin_support
+      symm at hx_notin_support
       group_action at hx_notin_support
-      rw [<-hx_notin_support]
+      rw [hx_notin_support]
       exact x_fixed
     }
     {
@@ -189,5 +201,16 @@ by
   rw [rigidStabilizer_support] at h_in_rist
   rw [<-elem_moved_in_support' p h_in_rist]
   assumption
+
+-- TODO: remov ethe need for FaithfulSMul?
+theorem rigidStabilizer_neBot [FaithfulSMul G α] {U : Set α}:
+  G•[U] ≠ ⊥ → Set.Nonempty U :=
+by
+  intro ne_bot
+  by_contra empty
+  apply ne_bot
+  rw [Set.not_nonempty_iff_eq_empty] at empty
+  rw [empty]
+  exact rigidStabilizer_empty G α
 
 end Rubin

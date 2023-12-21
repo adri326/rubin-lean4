@@ -15,14 +15,12 @@ The support of a group action of `g: G` on `α` (here generalized to `SMul G α`
 is the set of values `x` in `α` for which `g • x ≠ x`.
 
 This can also be thought of as the complement of the fixpoints of `(g •)`,
-which [`support_eq_not_fixed_by`] provides.
+which [`support_eq_compl_fixedBy`] provides.
 --/
+-- TODO: rename to MulAction.support
 def Support {G : Type _} (α : Type _) [SMul G α] (g : G) :=
   {x : α | g • x ≠ x}
 #align support Rubin.Support
-
-theorem SmulSupport_def {G : Type _} (α : Type _) [SMul G α] {g : G} :
-  Support α g = {x : α | g • x ≠ x} := by tauto
 
 variable {G α: Type _}
 variable [Group G]
@@ -30,12 +28,12 @@ variable [MulAction G α]
 variable {f g : G}
 variable {x : α}
 
-theorem support_eq_not_fixed_by : Support α g = (MulAction.fixedBy α g)ᶜ := by tauto
-#align support_eq_not_fixed_by Rubin.support_eq_not_fixed_by
+theorem support_eq_compl_fixedBy : Support α g = (MulAction.fixedBy α g)ᶜ := by tauto
+#align support_eq_not_fixed_by Rubin.support_eq_compl_fixedBy
 
-theorem support_compl_eq_fixed_by : (Support α g)ᶜ = MulAction.fixedBy α g := by
+theorem fixedBy_eq_compl_support : MulAction.fixedBy α g = (Support α g)ᶜ := by
   rw [<-compl_compl (MulAction.fixedBy _ _)]
-  exact congr_arg (·ᶜ) support_eq_not_fixed_by
+  exact congr_arg (·ᶜ) support_eq_compl_fixedBy
 
 theorem mem_support :
     x ∈ Support α g ↔ g • x ≠ x := by tauto
@@ -304,8 +302,9 @@ by
   rw [<-support_inv, not_mem_support] at gp_notin_supp
   rw [mem_support] at p_in_supp
   apply p_in_supp
+  symm at gp_notin_supp
   group_action at gp_notin_supp
-  exact gp_notin_supp.symm
+  exact gp_notin_supp
 
 theorem elem_moved_in_support' {g : G} (p : α) {U : Set α} (support_in_U : Support α g ⊆ U):
   p ∈ U ↔ g • p ∈ U :=

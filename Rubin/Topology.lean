@@ -8,6 +8,11 @@ import Rubin.MulActionExt
 
 namespace Rubin
 
+/--
+Specificies that a group action is continuous, that is, for every group element `g`, `x ↦ g • x` is continuous.
+
+Note that this is a weaker statement than `ContinuousSMul`, as the group `G` is not required to be a topology.
+--/
 class ContinuousMulAction (G α : Type _) [Group G] [TopologicalSpace α] [MulAction G α] where
   continuous : ∀ g : G, Continuous (fun x: α => g • x)
 #align continuous_mul_action Rubin.ContinuousMulAction
@@ -35,12 +40,12 @@ theorem ContinuousMulAction.toHomeomorph_toFun {G : Type _} (α : Type _)
   [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α]
   (g : G) : (ContinuousMulAction.toHomeomorph α g).toFun = fun x => g • x := rfl
 
-
 theorem ContinuousMulAction.toHomeomorph_invFun {G : Type _} (α : Type _)
   [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α]
   (g : G) : (ContinuousMulAction.toHomeomorph α g).invFun = fun x => g⁻¹ • x := rfl
 
 -- TODO: give this a notation?
+-- TODO: coe to / extend MulActionHom
 structure EquivariantHomeomorph (G α β : Type _) [Group G] [TopologicalSpace α]
     [TopologicalSpace β] [MulAction G α] [MulAction G β] extends Homeomorph α β where
   equivariant : is_equivariant G toFun

@@ -100,6 +100,31 @@ by
   rw [support_conjugate]
   rw [interiorClosure_smulImage]
 
+theorem rigidStabilizer_iInter_regularSupport (F : Set G) :
+  G•[⋂ (g ∈ F), RegularSupport α g] = (⨅ (g ∈ F), G•[RegularSupport α g]) :=
+by
+  let S := { RegularSupport α g | g ∈ F }
+  have h₁ : ⋂ (g ∈ F), RegularSupport α g = ⋂₀ S := by
+    ext x
+    simp
+  have h₂ : ⨅ (g ∈ F), G•[RegularSupport α g] = ⨅ (s ∈ S), G•[s] := by
+    ext x
+    rw [<-sInf_image]
+    simp
+    rw [Subgroup.mem_iInf]
+    simp only [Subgroup.mem_iInf, and_imp, forall_apply_eq_imp_iff₂]
+
+  rw [h₁, h₂]
+  rw [rigidStabilizer_sInter]
+
+theorem rigidStabilizer_iInter_regularSupport' (F : Finset G) :
+  G•[⋂ (g ∈ F), RegularSupport α g] = (⨅ (g ∈ F), G•[RegularSupport α g]) :=
+by
+  have h₁ : G•[⋂ (g ∈ F), RegularSupport α g] = G•[⋂ (g ∈ (F : Set G)), RegularSupport α g] := by simp
+  have h₂ : ⨅ (g ∈ F), G•[RegularSupport α g] = ⨅ (g ∈ (F : Set G)), G•[RegularSupport α g] := by simp
+
+  rw [h₁, h₂, rigidStabilizer_iInter_regularSupport]
+
 end RegularSupport_continuous
 
 end Rubin

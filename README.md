@@ -1,8 +1,9 @@
 # Lean4 port of the proof of Rubin's Theorem
 
 THis repository contains a (WIP) computer proof of Rubin's Theorem,
-which states that two groups (which satisfy a few conditions) that act on a topological space have a homeomorphism between them,
-such that the homeomorphism preserves the group structure.
+which states that if a group acts on two topological spaces while satisfying enough conditions,
+then there exists a homeomorphism between those two topological spaces,
+such that the homeomorphism preserves the group structure of the group action.
 
 It is based on ["A short proof of Rubin's Theorem"](https://arxiv.org/abs/2203.05930) (James Belk, Luke Elliott and Franceso Matucci),
 and a good part of the computer proof was written in Lean 3 by [Laurent Bartholdi](https://www.math.uni-sb.de/ag/bartholdi/).
