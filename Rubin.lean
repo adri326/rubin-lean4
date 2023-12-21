@@ -741,8 +741,6 @@ open Topology
 variable {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
-example : TopologicalSpace G := TopologicalSpace.generateFrom (RigidStabilizerBasis.asSets G α)
-
 theorem proposition_3_4_2 {α : Type _} [TopologicalSpace α] [T2Space α] [LocallyCompactSpace α] (F : Ultrafilter α):
   (∃ p : α, ClusterPt p F) ↔ ∃ S ∈ F, IsCompact (closure S) :=
 by
@@ -775,8 +773,8 @@ variable [Group G]
 variable [TopologicalSpace α] [T2Space α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
-def RSuppSubsets {α : Type _} [TopologicalSpace α] (V : Set α) : Set (Set α) :=
-  {W ∈ RegularSupportBasis.asSet α | W ⊆ V}
+def RSuppSubsets (G : Type _) {α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] (V : Set α) : Set (Set α) :=
+  {W ∈ RegularSupportBasis G α | W ⊆ V}
 
 def RSuppOrbit {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] (F : Filter α) (H : Subgroup G) : Set (Set α) :=
   { g •'' W | (g ∈ H) (W ∈ F) }
@@ -804,12 +802,14 @@ lemma compact_subset_of_rsupp_basis (G : Type _) {α : Type _}
   [Group G] [TopologicalSpace α] [T2Space α]
   [MulAction G α] [ContinuousConstSMul G α]
   [LocallyCompactSpace α] [HasNoIsolatedPoints α] [LocallyDense G α]
-  (U : RegularSupportBasis α):
-  ∃ V : RegularSupportBasis α, (closure V.val) ⊆ U.val ∧ IsCompact (closure V.val) :=
+  {U : Set α} (U_in_basis : U ∈ RegularSupportBasis G α):
+  ∃ V : RegularSupportBasis G α, (closure V.val) ⊆ U ∧ IsCompact (closure V.val) :=
 by
-  let ⟨x, x_in_U⟩ := U.nonempty
-  let ⟨W, W_compact, x_in_intW, W_ss_U⟩ := exists_compact_subset U.regular.isOpen x_in_U
-  have ⟨V, V_in_basis, x_in_V, V_ss_intW⟩ := (RegularSupportBasis.isBasis G α).exists_subset_of_mem_open x_in_intW isOpen_interior
+  let ⟨⟨x, x_in_U⟩, _⟩ := (RegularSupportBasis.mem_iff U).mp U_in_basis
+  have U_regular : Regular U := RegularSupportBasis.regular U_in_basis
+
+  let ⟨W, W_compact, x_in_intW, W_ss_U⟩ := exists_compact_subset U_regular.isOpen x_in_U
+  have ⟨V, V_in_basis, _, V_ss_intW⟩ := (RegularSupportBasis.isBasis G α).exists_subset_of_mem_open x_in_intW isOpen_interior
 
   have clV_ss_W : closure V ⊆ W := by
     calc
@@ -823,10 +823,8 @@ by
         apply IsClosed.closure_eq
         exact W_compact.isClosed
 
-  rw [RegularSupportBasis.mem_asSet] at V_in_basis
-  let ⟨V', V'_val⟩ := V_in_basis
-  use V'
-  rw [V'_val]
+  use ⟨V, V_in_basis⟩
+  simp
 
   constructor
   · exact subset_trans clV_ss_W W_ss_U
@@ -839,18 +837,18 @@ This proposition gives an alternative definition for an ultrafilter to converge 
 This alternative definition should be reconstructible entirely from the algebraic structure of `G`.
 --/
 theorem proposition_3_5 [LocallyDense G α] [LocallyCompactSpace α] [HasNoIsolatedPoints α]
-  (U : RegularSupportBasis α) (F: Ultrafilter α):
-  (∃ p ∈ U.val, ClusterPt p F)
-  ↔ ∃ V : RegularSupportBasis α, V ≤ U ∧ RSuppSubsets V.val ⊆ RSuppOrbit F G•[U.val] :=
+  {U : Set α} (U_in_basis : U ∈ RegularSupportBasis G α) (F: Ultrafilter α):
+  (∃ p ∈ U, ClusterPt p F)
+  ↔ ∃ V : RegularSupportBasis G α, V.val ⊆ U ∧ RSuppSubsets G V.val ⊆ RSuppOrbit F G•[U] :=
 by
   constructor
   {
     simp
     intro p p_in_U p_clusterPt
-    have U_open : IsOpen U.val := U.regular.isOpen
+    have U_regular : Regular U := RegularSupportBasis.regular U_in_basis
 
     -- First, get a neighborhood of p that is a subset of the closure of the orbit of G_U
-    have clOrbit_in_nhds := LocallyDense.rigidStabilizer_in_nhds G α U_open p_in_U
+    have clOrbit_in_nhds := LocallyDense.rigidStabilizer_in_nhds G α U_regular.isOpen p_in_U
     rw [mem_nhds_iff] at clOrbit_in_nhds
     let ⟨V, V_ss_clOrbit, V_open, p_in_V⟩ := clOrbit_in_nhds
     clear clOrbit_in_nhds
@@ -858,57 +856,50 @@ by
     -- Then, get a nontrivial element from that set
     let ⟨g, g_in_rist, g_ne_one⟩ := LocallyMoving.get_nontrivial_rist_elem (G := G) V_open ⟨p, p_in_V⟩
 
-    have V_ss_clU : V ⊆ closure U.val := by
+    have V_ss_clU : V ⊆ closure U := by
       apply subset_trans
       exact V_ss_clOrbit
       apply closure_mono
       exact orbit_rigidStabilizer_subset p_in_U
 
     -- The regular support of g is within U
-    have rsupp_ss_U : RegularSupport α g ⊆ U.val := by
+    have rsupp_ss_U : RegularSupport α g ⊆ U := by
       rw [RegularSupport]
       rw [rigidStabilizer_support] at g_in_rist
       calc
         InteriorClosure (Support α g) ⊆ InteriorClosure V := by
           apply interiorClosure_mono
           assumption
-        _ ⊆ InteriorClosure (closure U.val) := by
+        _ ⊆ InteriorClosure (closure U) := by
           apply interiorClosure_mono
           assumption
-        _ ⊆ InteriorClosure U.val := by
+        _ ⊆ InteriorClosure U := by
           simp
           rfl
         _ ⊆ _ := by
           apply subset_of_eq
-          exact U.regular
+          exact U_regular
 
-    -- Use as the chosen set RegularSupport g
-    let g' : HomeoGroup α := HomeoGroup.fromContinuous α g
-    have g'_ne_one : g' ≠ 1 := by
-      simp
-      rw [<-HomeoGroup.fromContinuous_one (G := G)]
-      rw [HomeoGroup.fromContinuous_eq_iff]
-      exact g_ne_one
-    use RegularSupportBasis.fromSingleton g' g'_ne_one
-
-    constructor
-    · -- This statement is equivalent to rsupp(g) ⊆ U
-      rw [RegularSupportBasis.le_def]
+    let T := RegularSupportBasis.fromSingleton (α := α) g g_ne_one
+    have T_eq : T.val = RegularSupport α g := by
+      unfold_let
       rw [RegularSupportBasis.fromSingleton_val]
-      unfold RegularSupportInter₀
-      simp
+    use T.val
+
+    repeat' apply And.intro
+    · -- This statement is equivalent to rsupp(g) ⊆ U
+      rw [T_eq]
       exact rsupp_ss_U
+    · exact T.prop.left
+    · exact T.prop.right
     · intro W W_in_subsets
-      rw [RegularSupportBasis.fromSingleton_val] at W_in_subsets
-      unfold RSuppSubsets RegularSupportInter₀ at W_in_subsets
-      simp at W_in_subsets
-      let ⟨W_in_basis, W_subset_rsupp⟩ := W_in_subsets
-      clear W_in_subsets g' g'_ne_one
+      simp [RSuppSubsets, T_eq] at W_in_subsets
+      let ⟨W_in_basis, W_ss_W⟩ := W_in_subsets
       unfold RSuppOrbit
       simp
 
       -- We have that W is a subset of the closure of the orbit of G_U
-      have W_ss_clOrbit : W ⊆ closure (MulAction.orbit (↥(RigidStabilizer G U.val)) p) := by
+      have W_ss_clOrbit : W ⊆ closure (MulAction.orbit G•[U] p) := by
         rw [rigidStabilizer_support] at g_in_rist
         calc
           W ⊆ RegularSupport α g := by assumption
@@ -921,18 +912,11 @@ by
             apply closure_mono
             assumption
 
-      -- W is also open and nonempty...
-      have W_open : IsOpen W := by
-        let ⟨W', W'_eq⟩ := (RegularSupportBasis.mem_asSet _).mp W_in_basis
-        rw [<-W'_eq]
-        exact W'.regular.isOpen
-      have W_nonempty : Set.Nonempty W := by
-        let ⟨W', W'_eq⟩ := (RegularSupportBasis.mem_asSet _).mp W_in_basis
-        rw [<-W'_eq]
-        exact W'.nonempty
+      let ⟨W_nonempty, ⟨W_seed, W_eq⟩⟩ := W_in_basis
+      have W_regular := RegularSupportBasis.regular W_in_basis
 
       -- So we can get an element `h` such that `h • p ∈ W` and `h ∈ G_U`
-      let ⟨h, h_in_rist, hp_in_W⟩ := moving_elem_of_open_subset_closure_orbit W_open W_nonempty W_ss_clOrbit
+      let ⟨h, h_in_rist, hp_in_W⟩ := moving_elem_of_open_subset_closure_orbit W_regular.isOpen W_nonempty W_ss_clOrbit
 
       use h
       constructor
@@ -954,29 +938,32 @@ by
       rw [basis.mem_iff]
       use h⁻¹ •'' W
       repeat' apply And.intro
-      · rw [RegularSupportBasis.mem_asSet]
-        rw [RegularSupportBasis.mem_asSet] at W_in_basis
-        let ⟨W', W'_eq⟩ := W_in_basis
-        have dec_eq : DecidableEq (HomeoGroup α) := Classical.decEq _
-        use (HomeoGroup.fromContinuous α h⁻¹) • W'
-        rw [RegularSupportBasis.smul_val, W'_eq]
-        simp
+      · rw [smulImage_nonempty]
+        assumption
+      · simp only [smulImage_inv, inv_inv]
+        have dec_eq : DecidableEq G := Classical.typeDecidableEq G
+        use Finset.image (fun g => h⁻¹ * g * h) W_seed
+        rw [<-RegularSupport.FiniteInter_conj, Finset.image_image]
+        have fn_eq_id : (fun g => h * g * h⁻¹) ∘ (fun g => h⁻¹ * g * h) = id := by
+          ext x
+          simp
+          group
+        rw [fn_eq_id, Finset.image_id]
+        exact W_eq
       · rw [mem_smulImage, inv_inv]
         exact hp_in_W
       · exact Eq.subset rfl
   }
   {
-    intro ⟨V, ⟨V_ss_U, subsets_ss_orbit⟩⟩
-    rw [RegularSupportBasis.le_def] at V_ss_U
+    intro ⟨⟨V, V_in_basis⟩, ⟨V_ss_U, subsets_ss_orbit⟩⟩
+    simp only at V_ss_U
+    simp only at subsets_ss_orbit
 
     -- Obtain a compact subset of V' in the basis
-    let ⟨V', clV'_ss_V, clV'_compact⟩ := compact_subset_of_rsupp_basis G V
+    let ⟨V', clV'_ss_V, clV'_compact⟩ := compact_subset_of_rsupp_basis G V_in_basis
 
-    have V'_in_subsets : V'.val ∈ RSuppSubsets V.val := by
+    have V'_in_subsets : V'.val ∈ RSuppSubsets G V := by
       unfold RSuppSubsets
-      simp
-      constructor
-      unfold RegularSupportBasis.asSet
       simp
       exact subset_trans subset_closure clV'_ss_V
 
@@ -1090,36 +1077,36 @@ variable [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α]
 variable [FaithfulSMul G α] [T2Space α] [LocallyMoving G α]
 
 theorem IsRigidSubgroup.has_regularSupportBasis {S : Set G} (S_rigid : IsRigidSubgroup S) :
-  ∃ (U : RegularSupportBasis α), G•[U.val] = S :=
+  ∃ (U : RegularSupportBasis G α), G•[U.val] = S :=
 by
   let ⟨S_ne_bot, ⟨T, S_eq⟩⟩ := S_rigid
   rw [S_eq]
   simp only [Subgroup.coe_eq]
   rw [S_eq, <-Subgroup.coe_bot, ne_eq, Subgroup.coe_eq, <-ne_eq] at S_ne_bot
 
-  let T' : Finset (HomeoGroup α) := Finset.map (HomeoGroup.fromContinuous_embedding α) T
 
-  have T'_rsupp_nonempty : Set.Nonempty (RegularSupportInter₀ T') := by
-    unfold RegularSupportInter₀
-    simp only [proposition_2_1 (G := G) (α := α)] at S_ne_bot
+
+  -- let T' : Finset (HomeoGroup α) := Finset.map (HomeoGroup.fromContinuous_embedding α) T
+
+  let T' := RegularSupport.FiniteInter α T
+
+  have T'_nonempty : Set.Nonempty T' := by
+    simp only [RegularSupport.FiniteInter, proposition_2_1 (G := G) (α := α)] at S_ne_bot
     rw [ne_eq, <-rigidStabilizer_iInter_regularSupport', <-ne_eq] at S_ne_bot
-    let ⟨x, x_in_iInter⟩ := rigidStabilizer_neBot S_ne_bot
-    use x
-    simp
-    simp at x_in_iInter
-    exact x_in_iInter
+    exact rigidStabilizer_neBot S_ne_bot
 
-  let T'' := RegularSupportBasis.fromSeed ⟨T', T'_rsupp_nonempty⟩
-  have T''_val : T''.val = RegularSupportInter₀ T' := rfl
-  use T''
-  rw [T''_val]
-  unfold RegularSupportInter₀
-  simp
+  have T'_in_basis : T' ∈ RegularSupportBasis G α := by
+    constructor
+    assumption
+    use T
+
+  use ⟨T', T'_in_basis⟩
+  simp [RegularSupport.FiniteInter]
   rw [rigidStabilizer_iInter_regularSupport']
   simp only [<-proposition_2_1]
 
 noncomputable def IsRigidSubgroup.toRegularSupportBasis {S : Set G} (S_rigid : IsRigidSubgroup S) :
-  RegularSupportBasis α
+  RegularSupportBasis G α
 := Exists.choose (IsRigidSubgroup.has_regularSupportBasis α S_rigid)
 
 theorem IsRigidSubgroup.toRegularSupportBasis_eq {S : Set G} (S_rigid : IsRigidSubgroup S):
@@ -1127,20 +1114,29 @@ theorem IsRigidSubgroup.toRegularSupportBasis_eq {S : Set G} (S_rigid : IsRigidS
 by
   exact Exists.choose_spec (IsRigidSubgroup.has_regularSupportBasis α S_rigid)
 
+theorem IsRigidSubgroup.toRegularSupportBasis_regular {S : Set G} (S_rigid : IsRigidSubgroup S):
+  Regular (S_rigid.toRegularSupportBasis α).val :=
+by
+  apply RegularSupportBasis.regular (G := G)
+  exact (toRegularSupportBasis α S_rigid).prop
+
+theorem IsRigidSubgroup.toRegularSupportBasis_nonempty {S : Set G} (S_rigid : IsRigidSubgroup S):
+  Set.Nonempty (S_rigid.toRegularSupportBasis α).val :=
+by
+  exact (Subtype.prop (S_rigid.toRegularSupportBasis α)).left
+
 theorem IsRigidSubgroup.toRegularSupportBasis_mono {S T : Set G} (S_rigid : IsRigidSubgroup S)
   (T_rigid : IsRigidSubgroup T) :
-  S ⊆ T ↔ S_rigid.toRegularSupportBasis α ≤ T_rigid.toRegularSupportBasis α :=
+  S ⊆ T ↔ (S_rigid.toRegularSupportBasis α : Set α) ⊆ T_rigid.toRegularSupportBasis α :=
 by
-  rw [RegularSupportBasis.le_def]
+  rw [rigidStabilizer_subset_iff G (toRegularSupportBasis_regular _ S_rigid) (toRegularSupportBasis_regular _ T_rigid)]
   constructor
   · intro S_ss_T
     rw [<-IsRigidSubgroup.toRegularSupportBasis_eq (α := α) S_rigid] at S_ss_T
     rw [<-IsRigidSubgroup.toRegularSupportBasis_eq (α := α) T_rigid] at S_ss_T
     simp at S_ss_T
-    rw [<-rigidStabilizer_subset_iff G (RegularSupportBasis.regular _) (RegularSupportBasis.regular _)] at S_ss_T
     exact S_ss_T
   · intro Sr_ss_Tr
-    rw [rigidStabilizer_subset_iff G (RegularSupportBasis.regular _) (RegularSupportBasis.regular _)] at Sr_ss_Tr
     -- TODO: clean that up
     have Sr_ss_Tr' : (G•[(toRegularSupportBasis α S_rigid).val] : Set G)
       ⊆ G•[(toRegularSupportBasis α T_rigid).val] :=
@@ -1155,7 +1151,6 @@ theorem IsRigidSubgroup.toRegularSupportBasis_mono' {S T : Set G} (S_rigid : IsR
   (T_rigid : IsRigidSubgroup T) :
   S ⊆ T ↔ (S_rigid.toRegularSupportBasis α : Set α) ⊆ (T_rigid.toRegularSupportBasis α : Set α) :=
 by
-  rw [<-RegularSupportBasis.le_def]
   rw [<-IsRigidSubgroup.toRegularSupportBasis_mono]
 
 end toRegularSupportBasis
@@ -1219,6 +1214,7 @@ instance RubinFilter.to_action_filter_neBot {F : RubinFilter G} [Nonempty α] : 
     rw [Filter.iInf_neBot_iff_of_directed]
     · intro ⟨S, S_in_F, S_rigid⟩
       simp
+      apply IsRigidSubgroup.toRegularSupportBasis_nonempty
     · intro ⟨S, S_in_F, S_rigid⟩ ⟨T, T_in_F, T_rigid⟩
       simp
       use S ∩ T
@@ -1270,6 +1266,10 @@ theorem RubinFilter.to_action_ultrafilter_converges (F : RubinFilter G) [Nonempt
   ∃ p ∈ (U_rigid.toRegularSupportBasis α).val, ClusterPt p (F.to_action_ultrafilter α) :=
 by
   rw [proposition_3_5 (G := G)]
+  swap
+  {
+    apply Subtype.prop (IsRigidSubgroup.toRegularSupportBasis α U_rigid)
+  }
 
   let ⟨V, V_rigid, V_ss_U, algsubs_ss_algorb⟩ := F.converges U U_in_F U_rigid
   let V' := V_rigid.toSubgroup
@@ -1284,22 +1284,17 @@ by
 
   unfold RSuppSubsets RSuppOrbit
   simp
-  intro S S_rsupp_basis S_ss_V
+  intro S S_in_basis S_ss_V
+  -- let ⟨S', S'_eq⟩ := S_in_basis.right
 
-  have S_regular : Regular S := by
-    let ⟨S', S'_eq⟩ := (RegularSupportBasis.mem_asSet S).mp S_rsupp_basis
-    rw [<-S'_eq]
-    exact S'.regular
+  have S_regular : Regular S := RegularSupportBasis.regular S_in_basis
 
-  have S_nonempty : Set.Nonempty S := by
-    let ⟨S', S'_eq⟩ := (RegularSupportBasis.mem_asSet S).mp S_rsupp_basis
-    rw [<-S'_eq]
-    exact S'.nonempty
+  have S_nonempty : Set.Nonempty S := S_in_basis.left
 
   have GS_ss_V : G•[S] ≤ V := by
     rw [<-V_rigid.toRegularSupportBasis_eq (α := α)]
     simp
-    rw [<-rigidStabilizer_subset_iff G (α := α) S_regular (RegularSupportBasis.regular _)]
+    rw [<-rigidStabilizer_subset_iff G (α := α) S_regular (IsRigidSubgroup.toRegularSupportBasis_regular _ _)]
     assumption
 
   -- TODO: show that G•[S] ∈ AlgebraicSubsets V
@@ -1308,11 +1303,10 @@ by
     simp
     constructor
     · rw [rigidStabilizerBasis_eq_algebraicCentralizerBasis (α := α)]
-      let ⟨S', S'_eq⟩ := (RegularSupportBasis.mem_asSet S).mp S_rsupp_basis
-      rw [<-S'_eq]
-      rw [RigidStabilizerBasis.mem_iff' _ (LocallyMoving.locally_moving _ S'.regular.isOpen S'.nonempty)]
-
-      sorry
+      let ⟨S', S'_eq⟩ := S_in_basis.right
+      rw [RigidStabilizerBasis.mem_iff' _ (LocallyMoving.locally_moving _ S_regular.isOpen S_nonempty)]
+      use S'
+      rw [RigidStabilizerInter₀, S'_eq, RegularSupport.FiniteInter, rigidStabilizer_iInter_regularSupport']
     · exact GS_ss_V
 
   let ⟨g, g_in_U, W, W_in_F, W_rigid, Wconj_eq_GS⟩ := algsubs_ss_algorb GS_in_algsubs_V
@@ -1334,14 +1328,11 @@ by
     swap
     {
       rw [<-smulImage_regular (G := G)]
-      apply RegularSupportBasis.regular
+      apply IsRigidSubgroup.toRegularSupportBasis_regular
     }
     swap
-    {
-      let ⟨S', S'_eq⟩ := (RegularSupportBasis.mem_asSet S).mp S_rsupp_basis
-      rw [<-S'_eq]
-      exact S'.regular
-    }
+    exact S_regular
+
     ext i
     rw [rigidStabilizer_smulImage, <-Wconj_eq_GS, <-IsRigidSubgroup.mem_subgroup, <-SetLike.mem_coe, IsRigidSubgroup.toRegularSupportBasis_eq]
     simp
