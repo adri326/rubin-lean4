@@ -341,24 +341,15 @@ by
   exact h_notin_V
 #align distinct_images_from_disjoint Rubin.smulImage_distinct_of_disjoint_pow
 
-theorem continuousMulAction_elem_continuous {G : Type _} (α : Type _)
-  [Group G] [TopologicalSpace α] [MulAction G α] [hc : ContinuousMulAction G α] (g : G):
-  ∀ (S : Set α), IsOpen S → IsOpen (g •'' S) ∧ IsOpen ((g⁻¹) •'' S) :=
-by
-  intro S S_open
-  repeat rw [smulImage_eq_inv_preimage]
-  rw [inv_inv]
-  constructor
-  · exact (hc.continuous g⁻¹).isOpen_preimage _ S_open
-  · exact (hc.continuous g).isOpen_preimage _ S_open
-
 theorem smulImage_isOpen {G α : Type _}
-  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] (g : G)
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α] (g : G)
   {S : Set α} (S_open : IsOpen S) : IsOpen (g •'' S) :=
-    (continuousMulAction_elem_continuous α g S S_open).left
+by
+  rw [smulImage_eq_inv_preimage]
+  exact (continuous_id.const_smul g⁻¹).isOpen_preimage S S_open
 
 theorem smulImage_isClosed {G α : Type _}
-  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] (g : G)
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α] (g : G)
   {S : Set α} (S_open : IsClosed S) : IsClosed (g •'' S) :=
 by
   rw [<-isOpen_compl_iff]
@@ -367,9 +358,8 @@ by
   apply smulImage_isOpen
   assumption
 
-theorem smulImage_interior' {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
-  (g : G) (U : Set α)
-  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)):
+theorem smulImage_interior {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  [hc : ContinuousConstSMul G α] (g : G) (U : Set α) :
   interior (g •'' U) = g •'' interior U :=
 by
   unfold interior
@@ -381,7 +371,7 @@ by
   · intro ⟨T, ⟨T_open, T_sub⟩, x_in_T⟩
     use g⁻¹ •'' T
     repeat' apply And.intro
-    · exact (g_continuous T T_open).right
+    · exact smulImage_isOpen g⁻¹ T_open
     · rw [smulImage_subset_inv]
       rw [inv_inv]
       exact T_sub
@@ -390,27 +380,15 @@ by
   · intro ⟨T, ⟨T_open, T_sub⟩, x_in_T⟩
     use g •'' T
     repeat' apply And.intro
-    · exact (g_continuous T T_open).left
+    ·  exact smulImage_isOpen g T_open
     · apply smulImage_mono
       exact T_sub
     · exact x_in_T
 
-theorem smulImage_interior {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
-  [ContinuousMulAction G α] (g : G) (U : Set α) :
-  interior (g •'' U) = g •'' interior U :=
-  smulImage_interior' g U (continuousMulAction_elem_continuous α g)
-
-theorem smulImage_closure' {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
-  (g : G) (U : Set α)
-  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)):
+theorem smulImage_closure {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
+  [ContinuousConstSMul G α] (g : G) (U : Set α) :
   closure (g •'' U) = g •'' closure U :=
 by
-  have g_continuous' : ∀ S : Set α, IsClosed S → IsClosed (g •'' S) ∧ IsClosed (g⁻¹ •'' S) := by
-    intro S S_closed
-    rw [<-isOpen_compl_iff] at S_closed
-    repeat rw [<-isOpen_compl_iff]
-    repeat rw [smulImage_compl]
-    exact g_continuous _ S_closed
   unfold closure
   rw [smulImage_sInter]
   simp
@@ -421,20 +399,15 @@ by
     rw [<-T'_eq]
     clear T' T'_eq
     apply IH
-    · exact (g_continuous' _ T_closed).left
+    · exact smulImage_isClosed g T_closed
     · apply smulImage_mono
       exact U_ss_T
   · intro IH T T_closed gU_ss_T
     apply IH
-    · exact (g_continuous' _ T_closed).right
+    · exact smulImage_isClosed g⁻¹ T_closed
     · rw [<-smulImage_subset_inv]
       exact gU_ss_T
     · simp
-
-theorem smulImage_closure {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
-  [ContinuousMulAction G α] (g : G) (U : Set α) :
-  closure (g •'' U) = g •'' closure U :=
-  smulImage_closure' g U (continuousMulAction_elem_continuous α g)
 
 section Filters
 
@@ -521,7 +494,7 @@ by
 
 variable [TopologicalSpace α]
 
-theorem smulFilter_nhds (g : G) (p : α) [ContinuousMulAction G α]:
+theorem smulFilter_nhds (g : G) (p : α) [ContinuousConstSMul G α]:
   g •ᶠ 𝓝 p = 𝓝 (g • p) :=
 by
   ext S
@@ -545,7 +518,7 @@ by
     · rw [mem_smulImage, inv_inv]
       assumption
 
-theorem smulFilter_clusterPt (g : G) (F : Filter α) (x : α) [ContinuousMulAction G α] :
+theorem smulFilter_clusterPt (g : G) (F : Filter α) (x : α) [ContinuousConstSMul G α] :
   ClusterPt x (g •ᶠ F) ↔ ClusterPt (g⁻¹ • x) F :=
 by
   suffices ∀ (g : G) (F : Filter α) (x : α), ClusterPt x (g •ᶠ F) → ClusterPt (g⁻¹ • x) F by
@@ -571,7 +544,7 @@ by
   rw [inv_inv, smulImage_mul, mul_left_inv, one_smulImage]
   assumption
 
-theorem smulImage_compact [ContinuousMulAction G α] (g : G) {U : Set α} (U_compact : IsCompact U) :
+theorem smulImage_compact [ContinuousConstSMul G α] (g : G) {U : Set α} (U_compact : IsCompact U) :
   IsCompact (g •'' U) :=
 by
   intro F F_neBot F_le_principal

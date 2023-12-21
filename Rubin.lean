@@ -16,6 +16,7 @@ import Mathlib.Topology.Bases
 import Mathlib.Topology.Compactness.Compact
 import Mathlib.Topology.Separation
 import Mathlib.Topology.Homeomorph
+import Mathlib.Topology.Algebra.ConstMulAction
 
 import Rubin.Tactic
 import Rubin.MulActionExt
@@ -70,7 +71,7 @@ variable {G α : Type _}
 variable [TopologicalSpace α]
 variable [Group G]
 variable [MulAction G α]
-variable [ContinuousMulAction G α]
+variable [ContinuousConstSMul G α]
 variable [FaithfulSMul G α]
 
 -- TODO: modify the proof to be less "let everything"-y, especially the first half
@@ -83,7 +84,7 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
   have hx_ne_x := mem_support.mp x_in_supp_h
 
   -- Since α is Hausdoff, there is a nonempty V ⊆ Support α f, with h •'' V disjoint from V
-  have ⟨V, V_open, x_in_V, V_in_support, disjoint_img_V⟩ := disjoint_nbhd_in (support_open f) x_in_supp_f hx_ne_x
+  have ⟨V, V_open, x_in_V, V_in_support, disjoint_img_V⟩ := disjoint_nbhd_in (support_isOpen f) x_in_supp_f hx_ne_x
 
   -- let f₂ be a nontrivial element of the RigidStabilizer G V
   let ⟨f₂, f₂_in_rist_V, f₂_ne_one⟩ := h_lm.get_nontrivial_rist_elem V_open (Set.nonempty_of_mem x_in_V)
@@ -204,7 +205,7 @@ by
   have five_points : Function.Injective (fun i : Fin 5 => g^(i : ℤ) • x) := by
     apply moves_1234_of_moves_12
     exact (Set.inter_subset_right _ _ x_in_U)
-  have U_open: IsOpen U := (IsOpen.inter (support_open f) (support_open (g^12)))
+  have U_open: IsOpen U := (IsOpen.inter (support_isOpen f) (support_isOpen (g^12)))
 
   let ⟨V₀, V₀_open, x_in_V₀, V₀_in_support, disjoint_img_V₀⟩ := disjoint_nbhd_in U_open x_in_U fx_moves
   let ⟨V₁, V₁_open, x_in_V₁, disjoint_img_V₁⟩ := disjoint_nbhd_fin five_points
@@ -350,7 +351,7 @@ end AlgebraicDisjointness
 section RegularSupport
 
 lemma lemma_2_2 (G: Type _) {α : Type _} [Group G] [TopologicalSpace α] [MulAction G α]
-  [ContinuousMulAction G α] [FaithfulSMul G α]
+  [ContinuousConstSMul G α] [FaithfulSMul G α]
   [T2Space α] [h_lm : LocallyMoving G α]
   {U : Set α} (U_open : IsOpen U) (U_nonempty : Set.Nonempty U) :
   Monoid.exponent G•[U] = 0 :=
@@ -487,7 +488,7 @@ by
 -- we construct an open subset within `Support α h \ RegularSupport α f`,
 -- and we show that it is non-empty, open and (by construction) disjoint from `Support α f`.
 lemma open_set_from_supp_not_subset_rsupp {G α : Type _}
-  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] [T2Space α]
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α] [T2Space α]
   {f h : G} (not_support_subset_rsupp : ¬Support α h ⊆ RegularSupport α f):
   ∃ V : Set α, V ⊆ Support α h ∧ Set.Nonempty V ∧ IsOpen V ∧ Disjoint V (Support α f) :=
 by
@@ -497,7 +498,7 @@ by
     rw [Set.diff_eq_compl_inter]
     apply IsOpen.inter
     · simp
-    · exact support_open _
+    · exact support_isOpen _
   have U_subset_supp_h : U ⊆ Support α h := by simp; apply Set.diff_subset
   have U_disj_supp_f : Disjoint U (Support α f) := by
     apply Set.disjoint_of_subset_right
@@ -526,7 +527,7 @@ by
 
   apply subset_from_diff_closure_eq_empty
   · apply regularSupport_regular
-  · exact support_open _
+  · exact support_isOpen _
   · rw [Set.not_nonempty_iff_eq_empty] at U_empty
     exact U_empty
 
@@ -543,7 +544,7 @@ by
 
 
 lemma proposition_2_1 {G α : Type _}
-  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] [T2Space α]
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α] [T2Space α]
   [LocallyMoving G α] [h_faithful : FaithfulSMul G α]
   (f : G) :
   AlgebraicCentralizer f = G•[RegularSupport α f] :=
@@ -575,7 +576,7 @@ by
         exact interior_subset
       · rfl
       · rw [<-g_eq_g']
-        exact Disjoint.closure_left supp_disj (support_open _)
+        exact Disjoint.closure_left supp_disj (support_isOpen _)
   }
 
   intro h_in_centralizer
@@ -630,7 +631,7 @@ by
 
 -- Small lemma for remark 2.3
 theorem rigidStabilizer_inter_bot_iff_regularSupport_disj {G α : Type _}
-  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α] [LocallyMoving G α] [FaithfulSMul G α]
+  [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α] [LocallyMoving G α] [FaithfulSMul G α]
   {f g : G} :
   G•[RegularSupport α f] ⊓ G•[RegularSupport α g] = ⊥
   ↔ Disjoint (RegularSupport α f) (RegularSupport α g) :=
@@ -670,7 +671,7 @@ by
 variable {G α : Type _}
 variable [Group G]
 variable [TopologicalSpace α] [T2Space α]
-variable [MulAction G α] [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
 /--
 This demonstrates that the disjointness of the supports of two elements `f` and `g`
@@ -685,7 +686,7 @@ lemma remark_2_3 {f g : G} :
   (AlgebraicCentralizer f) ⊓ (AlgebraicCentralizer g) = ⊥ → Disjoint (Support α f) (Support α g) :=
 by
   intro alg_disj
-  rw [disjoint_interiorClosure_iff (support_open _) (support_open _)]
+  rw [disjoint_interiorClosure_iff (support_isOpen _) (support_isOpen _)]
   simp
   repeat rw [<-RegularSupport.def]
   rw [<-rigidStabilizer_inter_bot_iff_regularSupport_disj]
@@ -738,7 +739,7 @@ section HomeoGroup
 open Topology
 
 variable {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α]
-variable [MulAction G α] [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
 example : TopologicalSpace G := TopologicalSpace.generateFrom (RigidStabilizerBasis.asSets G α)
 
@@ -772,7 +773,7 @@ section Ultrafilter
 variable {G α : Type _}
 variable [Group G]
 variable [TopologicalSpace α] [T2Space α]
-variable [MulAction G α] [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
 def RSuppSubsets {α : Type _} [TopologicalSpace α] (V : Set α) : Set (Set α) :=
   {W ∈ RegularSupportBasis.asSet α | W ⊆ V}
@@ -801,7 +802,7 @@ by
 
 lemma compact_subset_of_rsupp_basis (G : Type _) {α : Type _}
   [Group G] [TopologicalSpace α] [T2Space α]
-  [MulAction G α] [ContinuousMulAction G α]
+  [MulAction G α] [ContinuousConstSMul G α]
   [LocallyCompactSpace α] [HasNoIsolatedPoints α] [LocallyDense G α]
   (U : RegularSupportBasis α):
   ∃ V : RegularSupportBasis α, (closure V.val) ⊆ U.val ∧ IsCompact (closure V.val) :=
@@ -1018,7 +1019,7 @@ end Ultrafilter
 variable {G α : Type _}
 variable [Group G]
 
-variable [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α]
+variable [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α]
 
 def IsRigidSubgroup (S : Set G) :=
   S ≠ {1} ∧ ∃ T : Finset G, S = ⨅ (f ∈ T), AlgebraicCentralizer f
@@ -1085,7 +1086,7 @@ theorem IsRigidSubgroup.algebraicCentralizerBasis_val {S : Set G} (S_rigid : IsR
 section toRegularSupportBasis
 
 variable (α : Type _)
-variable [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α]
+variable [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α]
 variable [FaithfulSMul G α] [T2Space α] [LocallyMoving G α]
 
 theorem IsRigidSubgroup.has_regularSupportBasis {S : Set G} (S_rigid : IsRigidSubgroup S) :
@@ -1204,7 +1205,7 @@ section Equivalence
 open Topology
 
 variable (α : Type _)
-variable [TopologicalSpace α] [MulAction G α] [ContinuousMulAction G α]
+variable [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α]
 variable [FaithfulSMul G α] [T2Space α] [LocallyMoving G α]
 
 -- TODO: either see whether we actually need this step, or change these names to something memorable
@@ -1383,7 +1384,7 @@ def RubinSpace (G : Type _) [Group G] := Quotient (RubinFilterSetoid G)
 
 variable {β : Type _}
 
-variable [TopologicalSpace β] [MulAction G β] [ContinuousMulAction G β]
+variable [TopologicalSpace β] [MulAction G β] [ContinuousConstSMul G β]
 
 
 instance : TopologicalSpace (RubinSpace G) := sorry

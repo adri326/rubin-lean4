@@ -1,8 +1,10 @@
 import Mathlib.GroupTheory.Subgroup.Basic
 import Mathlib.GroupTheory.GroupAction.Basic
 import Mathlib.Topology.Basic
+import Mathlib.Topology.Algebra.ConstMulAction
 
 import Rubin.RigidStabilizer
+import Rubin.InteriorClosure
 
 namespace Rubin
 
@@ -121,7 +123,7 @@ variable {G α : Type _}
 variable [Group G]
 variable [TopologicalSpace α]
 variable [MulAction G α]
-variable [ContinuousMulAction G α]
+variable [ContinuousConstSMul G α]
 variable [FaithfulSMul G α]
 
 instance dense_locally_moving [T2Space α]
@@ -143,10 +145,8 @@ by
   let U := (g⁻¹ •'' V) ∩ W
   use U
   constructor
-  {
-    -- NOTE: if this is common, then we should make a tactic for solving IsOpen goals
-    exact IsOpen.inter (img_open_open g⁻¹ V V_open) W_open
-  }
+  exact IsOpen.inter (smulImage_isOpen g⁻¹ V_open) W_open
+
   constructor
   {
     simp
@@ -191,6 +191,80 @@ by
     rewrite [smulImage_inter]
     exact Set.inter_subset_left _ _
   · exact disjoint_W_img
+
+/--
+## Proposition 3.1:
+
+If a group action is faithful, continuous and "locally moving",
+then `U ⊆ V` if and only if `G•[U] ≤ G•[V]` when `U` and `V` are regular.
+--/
+theorem rigidStabilizer_subset_iff (G : Type _) {α : Type _} [Group G] [TopologicalSpace α]
+  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]
+  [h_lm : LocallyMoving G α]
+  {U V : Set α} (U_reg : Regular U) (V_reg : Regular V):
+  U ⊆ V ↔ G•[U] ≤ G•[V] :=
+by
+  constructor
+  exact rigidStabilizer_mono
+  intro rist_ss
+
+  by_contra U_not_ss_V
+
+  let W := U \ closure V
+  have W_nonempty : Set.Nonempty W := by
+    by_contra W_empty
+    apply U_not_ss_V
+    apply subset_from_diff_closure_eq_empty
+    · assumption
+    · exact U_reg.isOpen
+    · rw [Set.not_nonempty_iff_eq_empty] at W_empty
+      exact W_empty
+  have W_ss_U : W ⊆ U := by
+    simp
+    exact Set.diff_subset _ _
+  have W_open : IsOpen W := by
+    unfold_let
+    rw [Set.diff_eq_compl_inter]
+    apply IsOpen.inter
+    simp
+    exact U_reg.isOpen
+
+  have ⟨f, f_in_ristW, f_ne_one⟩ := h_lm.get_nontrivial_rist_elem W_open W_nonempty
+
+  have f_in_ristU : f ∈ RigidStabilizer G U := by
+    exact rigidStabilizer_mono W_ss_U f_in_ristW
+
+  have f_notin_ristV : f ∉ RigidStabilizer G V := by
+    apply rigidStabilizer_compl f_ne_one
+    apply rigidStabilizer_mono _ f_in_ristW
+    calc
+      W = U ∩ (closure V)ᶜ := by unfold_let; rw [Set.diff_eq_compl_inter, Set.inter_comm]
+      _ ⊆ (closure V)ᶜ := Set.inter_subset_right _ _
+      _ ⊆ Vᶜ := by
+        rw [Set.compl_subset_compl]
+        exact subset_closure
+
+  exact f_notin_ristV (rist_ss f_in_ristU)
+
+/--
+A corollary of the previous theorem is that the rigid stabilizers of two regular sets `U` and `V`
+are equal if and only if `U = V`.
+--/
+theorem rigidStabilizer_eq_iff (G : Type _) [Group G] {α : Type _} [TopologicalSpace α]
+  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
+  {U V : Set α} (U_reg : Regular U) (V_reg : Regular V):
+  G•[U] = G•[V] ↔ U = V :=
+by
+  constructor
+  · intro rist_eq
+    apply le_antisymm <;> simp only [Set.le_eq_subset]
+    all_goals {
+      rw [rigidStabilizer_subset_iff G] <;> try assumption
+      rewrite [rist_eq]
+      rfl
+    }
+  · intro H_eq
+    rw [H_eq]
 
 
 end Rubin

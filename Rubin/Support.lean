@@ -3,6 +3,7 @@ import Mathlib.GroupTheory.Commutator
 import Mathlib.GroupTheory.Subgroup.Basic
 import Mathlib.GroupTheory.GroupAction.Basic
 import Mathlib.Topology.Basic
+import Mathlib.Topology.Algebra.ConstMulAction
 
 import Rubin.MulActionExt
 import Rubin.SmulImage
@@ -381,17 +382,9 @@ variable {G α : Type _}
 variable [Group G]
 variable [TopologicalSpace α]
 variable [MulAction G α]
-variable [ContinuousMulAction G α]
+variable [ContinuousConstSMul G α]
 
-theorem img_open_open (g : G) (U : Set α) (h : IsOpen U): IsOpen (g •'' U) :=
-  by
-  rw [Rubin.smulImage_eq_inv_preimage]
-  exact Continuous.isOpen_preimage (Rubin.ContinuousMulAction.continuous g⁻¹) U h
-
-#align img_open_open Rubin.img_open_open
-
-theorem support_open (g : G) [T2Space α]: IsOpen (Support α g) :=
-  by
+theorem support_isOpen (g : G) [T2Space α]: IsOpen (Support α g) := by
   apply isOpen_iff_forall_mem_open.mpr
   intro x xmoved
   rcases T2Space.t2 (g • x) x xmoved with ⟨U, V, open_U, open_V, gx_in_U, x_in_V, disjoint_U_V⟩
@@ -401,10 +394,9 @@ theorem support_open (g : G) [T2Space α]: IsOpen (Support α g) :=
         disjoint_U_V
         (mem_inv_smulImage.mp (Set.mem_of_mem_inter_right yW))
         (Set.mem_of_mem_inter_left yW),
-        IsOpen.inter open_V (Rubin.img_open_open g⁻¹ U open_U),
+        IsOpen.inter open_V (smulImage_isOpen g⁻¹ open_U),
         ⟨x_in_V, mem_inv_smulImage.mpr gx_in_U⟩
     ⟩
-#align support_open Rubin.support_open
 
 end Continuous
 

@@ -5,6 +5,7 @@ made up of finite intersections of `RegularSupport α g` for `g : HomeoGroup α`
 
 import Mathlib.Topology.Basic
 import Mathlib.Topology.Homeomorph
+import Mathlib.Topology.Algebra.ConstMulAction
 
 import Rubin.LocallyDense
 import Rubin.Topology
@@ -349,7 +350,7 @@ open Topology
 variable (G α : Type _)
 variable [Group G]
 variable [TopologicalSpace α] [T2Space α] [LocallyCompactSpace α] [HasNoIsolatedPoints α]
-variable [MulAction G α] [LocallyDense G α] [ContinuousMulAction G α]
+variable [MulAction G α] [LocallyDense G α] [ContinuousConstSMul G α]
 
 -- TODO: clean this lemma to not mention W anymore?
 lemma proposition_3_2_subset

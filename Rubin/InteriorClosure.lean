@@ -226,21 +226,15 @@ Set.Finite.induction_on' S_finite (by simp) (by
   · exact IH
 )
 
-theorem interiorClosure_smulImage' {G : Type _} [Group G] [MulAction G α]
-  (g : G) (U : Set α)
-  (g_continuous : ∀ S : Set α, IsOpen S → IsOpen (g •'' S) ∧ IsOpen (g⁻¹ •'' S)) :
+theorem interiorClosure_smulImage {G : Type _} [Group G] [MulAction G α] [ContinuousConstSMul G α]
+  (g : G) (U : Set α) :
   InteriorClosure (g •'' U) = g •'' InteriorClosure U :=
 by
   simp
-  rw [<-smulImage_interior' _ _ g_continuous]
-  rw [<-smulImage_closure' _ _ g_continuous]
+  rw [<-smulImage_interior]
+  rw [<-smulImage_closure]
 
-theorem interiorClosure_smulImage {G : Type _} [Group G] [MulAction G α] [ContinuousMulAction G α]
-  (g : G) (U : Set α) :
-  InteriorClosure (g •'' U) = g •'' InteriorClosure U :=
-  interiorClosure_smulImage' g U (continuousMulAction_elem_continuous α g)
-
-theorem smulImage_regular {G : Type _} [Group G] [MulAction G α] [ContinuousMulAction G α]
+theorem smulImage_regular {G : Type _} [Group G] [MulAction G α] [ContinuousConstSMul G α]
   (g : G) (U : Set α) :
   Regular U ↔ Regular (g •'' U) :=
 by

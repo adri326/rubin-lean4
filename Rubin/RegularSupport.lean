@@ -48,13 +48,13 @@ variable {G α : Type _}
 variable [Group G]
 variable [TopologicalSpace α]
 variable [MulAction G α]
-variable [ContinuousMulAction G α]
+variable [ContinuousConstSMul G α]
 
 theorem support_subset_regularSupport [T2Space α] {g : G} :
   Support α g ⊆ RegularSupport α g :=
 by
   apply interiorClosure_subset
-  apply support_open (α := α) (g := g)
+  apply support_isOpen (α := α) (g := g)
 #align support_in_regular_support Rubin.support_subset_regularSupport
 
 theorem regularSupport_subset {g : G} {U : Set α} :

@@ -1,6 +1,7 @@
 import Mathlib.Logic.Equiv.Defs
 import Mathlib.Topology.Basic
 import Mathlib.Topology.Homeomorph
+import Mathlib.Topology.Algebra.ConstMulAction
 
 import Rubin.LocallyDense
 import Rubin.Topology
@@ -119,8 +120,8 @@ instance homeoGroup_mulAction₁ : MulAction (HomeoGroup α) α where
     intro f g x
     rfl
 
-instance homeoGroup_mulAction₁_continuous : Rubin.ContinuousMulAction (HomeoGroup α) α where
-  continuous := by
+instance homeoGroup_mulAction₁_continuous : ContinuousConstSMul (HomeoGroup α) α where
+  continuous_const_smul := by
     intro h
     constructor
     intro S S_open
@@ -143,24 +144,21 @@ instance homeoGroup_mulAction₁_faithful : FaithfulSMul (HomeoGroup α) α wher
 theorem HomeoGroup.smulImage_eq_image (g : HomeoGroup α) (S : Set α) :
   g •'' S = ⇑g.toHomeomorph '' S := rfl
 
-section ContinuousMulActionCoe
+section FromContinuousConstSMul
 
 variable {G : Type _} [Group G]
-variable [MulAction G α] [Rubin.ContinuousMulAction G α]
+variable [MulAction G α] [ContinuousConstSMul G α]
 
 /--
 `fromContinuous` is a structure-preserving transformation from a continuous `MulAction` to a `HomeoGroup`
 --/
-def HomeoGroup.fromContinuous (α : Type _) [TopologicalSpace α] [MulAction G α] [Rubin.ContinuousMulAction G α]
+def HomeoGroup.fromContinuous (α : Type _) [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α]
   (g : G) : HomeoGroup α :=
-  HomeoGroup.from (Rubin.ContinuousMulAction.toHomeomorph α g)
+  HomeoGroup.from (Homeomorph.smul g)
 
 @[simp]
 theorem HomeoGroup.fromContinuous_def (g : G) :
-  HomeoGroup.from (Rubin.ContinuousMulAction.toHomeomorph α g) = HomeoGroup.fromContinuous α g := rfl
-
--- instance homeoGroup_coe_fromContinuous : Coe G (HomeoGroup α) where
---   coe := fun g => HomeoGroup.fromContinuous α g
+  HomeoGroup.from (Homeomorph.smul g) = HomeoGroup.fromContinuous α g := rfl
 
 @[simp]
 theorem HomeoGroup.fromContinuous_smul (g : G) :
@@ -169,7 +167,7 @@ by
   intro x
   unfold fromContinuous
   rw [<-HomeoGroup.smul₁_def', HomeoGroup.from_toHomeomorph]
-  unfold Rubin.ContinuousMulAction.toHomeomorph
+  unfold Homeomorph.smul
   simp
 
 theorem HomeoGroup.fromContinuous_one :
@@ -216,7 +214,8 @@ by
   repeat rw [Rubin.mem_support]
   rw [<-HomeoGroup.smul₁_def, <-HomeoGroup.fromContinuous_def]
   rw [HomeoGroup.from_toHomeomorph]
-  rw [Rubin.ContinuousMulAction.toHomeomorph_toFun]
+  rw [Homeomorph.smul]
+  simp only [Equiv.toFun_as_coe, MulAction.toPerm_apply]
 
 @[simp]
 theorem HomeoGroup.fromContinuous_regularSupport (g : G) :
@@ -232,7 +231,7 @@ by
   repeat rw [Rubin.smulImage_def]
   simp
 
-def HomeoGroup.fromContinuous_embedding (α : Type _) [TopologicalSpace α] [MulAction G α] [Rubin.ContinuousMulAction G α] [FaithfulSMul G α]: G ↪ (HomeoGroup α) where
+def HomeoGroup.fromContinuous_embedding (α : Type _) [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]: G ↪ (HomeoGroup α) where
   toFun := fun (g : G) => HomeoGroup.fromContinuous α g
   inj' := by
     intro g h fromCont_eq
@@ -245,7 +244,7 @@ def HomeoGroup.fromContinuous_embedding (α : Type _) [TopologicalSpace α] [Mul
 theorem HomeoGroup.fromContinuous_embedding_toFun [FaithfulSMul G α] (g : G):
   HomeoGroup.fromContinuous_embedding α g = HomeoGroup.fromContinuous α g := rfl
 
-def HomeoGroup.fromContinuous_monoidHom (α : Type _) [TopologicalSpace α] [MulAction G α] [Rubin.ContinuousMulAction G α] [FaithfulSMul G α]: G →* (HomeoGroup α) where
+def HomeoGroup.fromContinuous_monoidHom (α : Type _) [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]: G →* (HomeoGroup α) where
   toFun := fun (g : G) => HomeoGroup.fromContinuous α g
   map_one' := by
     simp
@@ -255,120 +254,4 @@ def HomeoGroup.fromContinuous_monoidHom (α : Type _) [TopologicalSpace α] [Mul
     intros
     rw [fromContinuous_mul]
 
--- theorem HomeoGroup.fromContinuous_rigidStabilizer (U : Set α) [FaithfulSMul G α]:
---   Rubin.RigidStabilizer (HomeoGroup α) U = Subgroup.map (HomeoGroup.fromContinuous_monoidHom α) (Rubin.RigidStabilizer G U) :=
--- by
---   ext g
---   rw [<-Subgroup.mem_carrier]
---   unfold Rubin.RigidStabilizer
---   simp
---   sorry
-
-end ContinuousMulActionCoe
-
-namespace Rubin
-
-section Other
-
--- TODO: move this somewhere else
-/--
-## Proposition 3.1
---/
-theorem rigidStabilizer_subset_iff (G : Type _) {α : Type _} [Group G] [TopologicalSpace α]
-  [MulAction G α] [ContinuousMulAction G α] [FaithfulSMul G α]
-  [h_lm : LocallyMoving G α]
-  {U V : Set α} (U_reg : Regular U) (V_reg : Regular V):
-  U ⊆ V ↔ RigidStabilizer G U ≤ RigidStabilizer G V :=
-by
-  constructor
-  exact rigidStabilizer_mono
-  intro rist_ss
-
-  by_contra U_not_ss_V
-
-  let W := U \ closure V
-  have W_nonempty : Set.Nonempty W := by
-    by_contra W_empty
-    apply U_not_ss_V
-    apply subset_from_diff_closure_eq_empty
-    · assumption
-    · exact U_reg.isOpen
-    · rw [Set.not_nonempty_iff_eq_empty] at W_empty
-      exact W_empty
-  have W_ss_U : W ⊆ U := by
-    simp
-    exact Set.diff_subset _ _
-  have W_open : IsOpen W := by
-    unfold_let
-    rw [Set.diff_eq_compl_inter]
-    apply IsOpen.inter
-    simp
-    exact U_reg.isOpen
-
-  have ⟨f, f_in_ristW, f_ne_one⟩ := h_lm.get_nontrivial_rist_elem W_open W_nonempty
-
-  have f_in_ristU : f ∈ RigidStabilizer G U := by
-    exact rigidStabilizer_mono W_ss_U f_in_ristW
-
-  have f_notin_ristV : f ∉ RigidStabilizer G V := by
-    apply rigidStabilizer_compl f_ne_one
-    apply rigidStabilizer_mono _ f_in_ristW
-    calc
-      W = U ∩ (closure V)ᶜ := by unfold_let; rw [Set.diff_eq_compl_inter, Set.inter_comm]
-      _ ⊆ (closure V)ᶜ := Set.inter_subset_right _ _
-      _ ⊆ Vᶜ := by
-        rw [Set.compl_subset_compl]
-        exact subset_closure
-
-  exact f_notin_ristV (rist_ss f_in_ristU)
-
-theorem rigidStabilizer_eq_iff (G : Type _) [Group G] {α : Type _} [TopologicalSpace α]
-  [MulAction G α] [ContinuousMulAction G α] [FaithfulSMul G α] [LocallyMoving G α]
-  {U V : Set α} (U_reg : Regular U) (V_reg : Regular V):
-  RigidStabilizer G U = RigidStabilizer G V ↔ U = V :=
-by
-  constructor
-  · intro rist_eq
-    apply le_antisymm <;> simp only [Set.le_eq_subset]
-    all_goals {
-      rw [rigidStabilizer_subset_iff G] <;> try assumption
-      rewrite [rist_eq]
-      rfl
-    }
-  · intro H_eq
-    rw [H_eq]
-
-theorem homeoGroup_rigidStabilizer_subset_iff {α : Type _} [TopologicalSpace α]
-  [h_lm : LocallyMoving (HomeoGroup α) α]
-  {U V : Set α} (U_reg : Regular U) (V_reg : Regular V):
-  U ⊆ V ↔ RigidStabilizer (HomeoGroup α) U ≤ RigidStabilizer (HomeoGroup α) V :=
-by
-  rw [rigidStabilizer_subset_iff (HomeoGroup α) U_reg V_reg]
-
-theorem homeoGroup_rigidStabilizer_eq_iff {α : Type _} [TopologicalSpace α]
-  [LocallyMoving (HomeoGroup α) α]
-  {U V : Set α} (U_reg : Regular U) (V_reg : Regular V):
-  RigidStabilizer (HomeoGroup α) U = RigidStabilizer (HomeoGroup α) V ↔ U = V :=
-by
-  constructor
-  · intro rist_eq
-    apply le_antisymm <;> simp only [Set.le_eq_subset]
-    all_goals {
-      rw [homeoGroup_rigidStabilizer_subset_iff] <;> try assumption
-      rewrite [rist_eq]
-      rfl
-    }
-  · intro H_eq
-    rw [H_eq]
-
-theorem homeoGroup_rigidStabilizer_injective {α : Type _} [TopologicalSpace α] [LocallyMoving (HomeoGroup α) α]
-  : Function.Injective (fun U : { S : Set α // Regular S } => RigidStabilizer (HomeoGroup α) U.val) :=
-by
-  intro ⟨U, U_reg⟩
-  intro ⟨V, V_reg⟩
-  simp
-  exact (homeoGroup_rigidStabilizer_eq_iff U_reg V_reg).mp
-
-end Other
-
-end Rubin
+end FromContinuousConstSMul

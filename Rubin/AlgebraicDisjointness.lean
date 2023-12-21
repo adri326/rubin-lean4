@@ -3,6 +3,7 @@ import Mathlib.GroupTheory.Subgroup.Basic
 import Mathlib.GroupTheory.Subgroup.Actions
 import Mathlib.GroupTheory.Commutator
 import Mathlib.Topology.Basic
+import Mathlib.Topology.Algebra.ConstMulAction
 import Mathlib.Data.Fintype.Perm
 import Mathlib.Tactic.FinCases
 import Mathlib.Tactic.IntervalCases
@@ -123,7 +124,7 @@ variable {G α : Type _}
 variable [Group G]
 variable [TopologicalSpace α]
 variable [MulAction G α]
-variable [ContinuousMulAction G α]
+variable [ContinuousConstSMul G α]
 variable [FaithfulSMul G α]
 
 -- Kind of a boring lemma but okay

@@ -113,7 +113,7 @@ by
   unfold asSets RigidStabilizerBasis
   simp
 
-variable [ContinuousMulAction G α]
+variable [ContinuousConstSMul G α]
 
 lemma RigidStabilizerBasis.smulImage_mem₀ {H : Subgroup G} (H_in_ristBasis : H ∈ RigidStabilizerBasis G α)
   (f : G) : ((fun g => f * g * f⁻¹) '' H.carrier) ∈ RigidStabilizerBasis.asSets G α :=
@@ -183,8 +183,7 @@ by
     exact y_in_H
 
 def RigidStabilizerBasisMul (G α : Type _) [Group G] [MulAction G α] [TopologicalSpace α]
-  [ContinuousMulAction G α] (f : G) (H : Subgroup G)
-  : Subgroup G
+  [ContinuousConstSMul G α] (f : G) (H : Subgroup G) : Subgroup G
 where
   carrier := (fun g => f * g * f⁻¹) '' H.carrier
   mul_mem' := by
