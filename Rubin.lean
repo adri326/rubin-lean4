@@ -1180,11 +1180,11 @@ theorem IsRigidSubgroup.conj {U : Set G} (U_rigid : IsRigidSubgroup U) (g : G) :
 def AlgebraicSubsets (V : Set G) : Set (Subgroup G) :=
   {W ∈ AlgebraicCentralizerBasis G | W ≤ V}
 
-def AlgebraicOrbit (F : Ultrafilter G) (U : Set G) : Set (Subgroup G) :=
+def AlgebraicOrbit (F : Filter G) (U : Set G) : Set (Subgroup G) :=
   { (W_rigid.conj g).toSubgroup | (g ∈ U) (W ∈ F) (W_rigid : IsRigidSubgroup W) }
 
 structure RubinFilter (G : Type _) [Group G] where
-  filter : Ultrafilter G
+  filter : Filter G
   -- rigid_basis : ∀ S ∈ filter, ∃ T ⊆ S, IsRigidSubgroup T
   converges : ∀ U ∈ filter,
     IsRigidSubgroup U →
@@ -1193,7 +1193,7 @@ structure RubinFilter (G : Type _) [Group G] where
   -- Only really used to prove that ∀ S : Rigid, T : Rigid, S T ∈ F, S ∩ T : Rigid
   ne_bot : {1} ∉ filter
 
-instance : Coe (RubinFilter G) (Ultrafilter G) where
+instance : Coe (RubinFilter G) (Filter G) where
   coe := RubinFilter.filter
 
 section Equivalence
@@ -1219,7 +1219,7 @@ instance RubinFilter.to_action_filter_neBot {F : RubinFilter G} [Nonempty α] : 
       simp
       use S ∩ T
       have ST_in_F : (S ∩ T) ∈ F.filter := by
-        rw [<-Ultrafilter.mem_coe]
+        -- rw [<-Ultrafilter.mem_coe]
         apply Filter.inter_mem <;> assumption
       have ST_subgroup : IsRigidSubgroup (S ∩ T) := by
         constructor
@@ -1256,7 +1256,7 @@ by
     apply Filter.mem_iInf_of_mem ⟨U, U_in_filter, U_rigid⟩
     intro x
     simp
-  · sorry
+  · sorry -- pain
 
 noncomputable def RubinFilter.to_action_ultrafilter (F : RubinFilter G) [Nonempty α]: Ultrafilter α :=
   Ultrafilter.of (F.to_action_filter α)
@@ -1272,7 +1272,7 @@ by
   }
 
   let ⟨V, V_rigid, V_ss_U, algsubs_ss_algorb⟩ := F.converges U U_in_F U_rigid
-  let V' := V_rigid.toSubgroup
+  -- let V' := V_rigid.toSubgroup
   -- TODO: subst V' to simplify the proof?
 
   use V_rigid.toRegularSupportBasis α
@@ -1346,9 +1346,7 @@ by
       group
       assumption
 
-end Equivalence
-
--- TODO: prove that for every rubinfilter, there exists an associated ultrafilter on α that converges
+-- Idea: prove that for every rubinfilter, there exists an associated ultrafilter on α that converges
 
 instance RubinFilterSetoid (G : Type _) [Group G] : Setoid (RubinFilter G) where
   r F F' := ∀ (U : Set G), IsRigidSubgroup U →
@@ -1369,20 +1367,99 @@ instance RubinFilterSetoid (G : Type _) [Group G] : Setoid (RubinFilter G) where
       specialize h₂₃ U U_rigid
       exact Iff.trans h₁₂ h₂₃
 
+def RubinFilterBasis : Set (Set (RubinFilter G)) :=
+  (fun S : Subgroup G => { F : RubinFilter G | (S : Set G) ∈ F.filter }) '' AlgebraicCentralizerBasis G
+
+instance : TopologicalSpace (RubinFilter G) := TopologicalSpace.generateFrom RubinFilterBasis
+
 def RubinSpace (G : Type _) [Group G] := Quotient (RubinFilterSetoid G)
+
+instance : TopologicalSpace (RubinSpace G) := by
+  unfold RubinSpace
+  infer_instance
+
+instance : MulAction G (RubinSpace G) := sorry
+
+end Equivalence
+
+section Convert
+open Topology
+
+variable (G α : Type _)
+variable [Group G]
+variable [TopologicalSpace α] [Nonempty α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α] [LocallyDense G α]
+
+def RubinFilter.fromElement (x : α) : RubinFilter G where
+  filter := ⨅ (S ∈ 𝓝 x), Filter.principal G•[S]
+  converges := by
+    sorry
+  ne_bot := by
+    sorry -- this will be fun to try and prove
+
+-- Alternate idea: don't try to compute the associated ultrafilter, and only define a predicate?
+theorem RubinFilter.converging_element (F : RubinFilter G) :
+  ∃ p : α, ClusterPt p (F.to_action_ultrafilter α) :=
+by
+  have univ_in_F : Set.univ ∈ F.filter := Filter.univ_mem
+  have univ_in_basis : IsRigidSubgroup (G := G) Set.univ := by
+    constructor
+    sorry -- TODO: prove that Set.univ ≠ {1}, from locallydense
+    use {}
+    simp
+
+  let ⟨p, p_in_basis, clusterPt_p⟩ := RubinFilter.to_action_ultrafilter_converges α F univ_in_F univ_in_basis
+
+  use p
+
+noncomputable def RubinFilter.toElement (F : RubinFilter G) : α :=
+  (F.converging_element G α).choose
+
+theorem RubinFilter.toElement_equiv (F F' : RubinFilter G) (equiv : F ≈ F'):
+  F.toElement G α = F'.toElement G α :=
+by
+
+  sorry
+
+theorem rubin' (hα : RubinAction G α) : EquivariantHomeomorph G α (RubinSpace G) where
+  toFun := fun x => ⟦RubinFilter.fromElement (G := G) α x⟧
+  invFun := fun f => f.liftOn (RubinFilter.toElement G α) (RubinFilter.toElement_equiv G α)
+  continuous_toFun := by
+    simp
+    constructor
+    intro S S_open
+    rw [<-isOpen_coinduced]
+    -- Note the sneaky different IsOpen's
+    -- TODO: apply topologicalbasis on both isopen
+    sorry
+  continuous_invFun := by
+    simp
+    sorry
+  left_inv := by
+    intro x
+    simp
+    sorry
+  right_inv := by
+    intro F
+    nth_rw 2 [<-Quotient.out_eq F]
+    rw [Quotient.eq]
+    simp
+    sorry
+  equivariant := by
+    simp
+    sorry
+
+end Convert
+
+
 
 -- Topology can be generated from the disconnectedness of the filters
 
 variable {β : Type _}
-
 variable [TopologicalSpace β] [MulAction G β] [ContinuousConstSMul G β]
 
+#check IsOpen.smul
 
-instance : TopologicalSpace (RubinSpace G) := sorry
-
-instance : MulAction G (RubinSpace G) := sorry
-
-theorem rubin' (hα : RubinAction G α) : EquivariantHomeomorph G α (RubinSpace G) := by sorry
 
 theorem rubin (hα : RubinAction G α) (hβ : RubinAction G β) : EquivariantHomeomorph G α β := by
   -- by composing rubin' hα
