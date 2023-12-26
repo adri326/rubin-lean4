@@ -119,6 +119,20 @@ by
   have rist_ne_bot := h_lm.locally_moving U U_open U_nonempty
   exact (or_iff_right rist_ne_bot).mp (Subgroup.bot_or_exists_ne_one _)
 
+theorem LocallyMoving.nontrivial_elem (G α : Type _) [Group G] [TopologicalSpace α]
+  [MulAction G α] [LocallyMoving G α] [Nonempty α] :
+  ∃ g: G, g ≠ 1 :=
+by
+  let ⟨g, _, g_ne_one⟩ := (get_nontrivial_rist_elem (G := G) (α := α) isOpen_univ Set.univ_nonempty)
+  use g
+
+theorem LocallyMoving.nontrivial {G α : Type _} [Group G] [TopologicalSpace α]
+  [MulAction G α] [LocallyMoving G α] [Nonempty α] : Nontrivial G where
+  exists_pair_ne := by
+    use 1
+    simp only [ne_comm]
+    exact nontrivial_elem G α
+
 variable {G α : Type _}
 variable [Group G]
 variable [TopologicalSpace α]
