@@ -1312,7 +1312,7 @@ by
   have univ_rigid : IsRigidSubgroup (G := G) Set.univ := by
     constructor
     simp [Set.eq_singleton_iff_unique_mem]
-    exact LocallyMoving.nontrivial_elem
+    exact LocallyMoving.nontrivial_elem G α
     use {}
     simp
 
