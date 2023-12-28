@@ -280,6 +280,14 @@ by
   rw [Set.nonempty_coe_sort]
   exact Filter.InBasis.basis_nonempty F_basis
 
+theorem Filter.InBasis.principal {S : Set α} (S_in_B : S ∈ B) :
+  (Filter.principal S).InBasis B :=
+by
+  intro T
+  simp only [mem_principal]
+  intro T_in_pS
+  use S
+
 theorem Filter.InBasis.basis_hasBasis (F_basis : Filter.InBasis F B):
   F.HasBasis (fun S => S ∈ Filter.InBasis.basis F B) id :=
 by
@@ -913,6 +921,10 @@ instance : CoeOut (@UltrafilterInBasis α B) (Filter α) where
 instance : Membership (Set α) (UltrafilterInBasis B) where
   mem := fun s U => s ∈ U.filter
 
+@[simp]
+theorem UltrafilterInBasis.mem_coe (U : UltrafilterInBasis B) (S : Set α):
+  S ∈ U.filter ↔ S ∈ U := by rfl
+
 instance (U : UltrafilterInBasis B): Filter.NeBot (U.filter) where
   ne' := U.ne_bot.ne
 
@@ -965,13 +977,19 @@ by
 
 theorem UltrafilterInBasis.coe_in_basis (U : UltrafilterInBasis B) : Filter.InBasis U B := U.in_basis
 
-theorem UltrafilterInBasis.map_basis_ultra [Nonempty α] {β : Type _}
+theorem UltrafilterInBasis.map_basis_ultra {β : Type _}
   (empty_notin_B : ∅ ∉ B)
   (map : OrderIsoOn (Set α) (Set β) B)
   (U : UltrafilterInBasis B) :
   ∀ (F : Filter β), F.InBasis (map.toFun '' B) → F.NeBot →
   F ≤ Filter.InBasis.map_basis U B map → Filter.InBasis.map_basis U B map ≤ F :=
 by
+  have α_nonempty: Nonempty α := by
+    by_contra α_trivial
+    rw [not_nonempty_iff] at α_trivial
+    apply U.ne_bot.ne
+    exact Filter.filter_eq_bot_of_isEmpty U.filter
+
   intro F F_in_basis F_neBot F_le_map
   intro S S_in_F
 
@@ -1003,7 +1021,7 @@ by
   · rw [map.rightInv_on T T_in_mB]
     exact T_ss_S
 
-def UltrafilterInBasis.map_basis [Nonempty α] {β : Type _} [Nonempty β]
+def UltrafilterInBasis.map_basis {β : Type _}
   (empty_notin_B : ∅ ∉ B)
   (map : OrderIsoOn (Set α) (Set β) B)
   (empty_notin_mB : ∅ ∉ map.toFun '' B)
@@ -1011,16 +1029,102 @@ def UltrafilterInBasis.map_basis [Nonempty α] {β : Type _} [Nonempty β]
   UltrafilterInBasis (map.toFun '' B)
 where
   filter := Filter.InBasis.map_basis U.filter B map.toFun
-  in_basis := Filter.InBasis.map_basis_inBasis' map U.in_basis
+  in_basis := U.in_basis.map_basis_inBasis' map
   ne_bot := by
+    have β_nonempty : Nonempty β := by
+      by_contra β_trivial
+      rw [not_nonempty_iff] at β_trivial
+      apply empty_notin_mB
+      rw [Subsingleton.mem_iff_nonempty]
+      simp
+      let ⟨T, _, T_in_B, _⟩ := U.in_basis _ (Filter.univ_mem)
+      use T
+
     apply Filter.InBasis.map_basis_neBot_of_neBot U.in_basis _ map.toFun_doubleMonotone.monotoneOn
     intro S S_in_B _
     by_contra empty
     rw [Set.not_nonempty_iff_eq_empty] at empty
     apply empty_notin_mB
     use S
-  ultra := by
-    apply map_basis_ultra
-    exact empty_notin_B
+  ultra := U.map_basis_ultra empty_notin_B map
 
--- TODO: show that clusterpt iff le nhds if B is a topological basis
+/-
+theorem compl_not_mem_iff : sᶜ ∉ f ↔ s ∈ f :=
+  ⟨fun hsc =>
+    le_principal_iff.1 <|
+      f.le_of_inf_neBot ⟨fun h => hsc <| mem_of_eq_bot <| by rwa [compl_compl]⟩,
+    compl_not_mem⟩
+-/
+
+theorem UltrafilterInBasis.unique (U : UltrafilterInBasis B) {F : Filter α} [Filter.NeBot F] (F_in_basis : F.InBasis B) :
+  F ≤ U.filter → U.filter = F :=
+by
+  intro F_le_U
+  apply le_antisymm
+  apply U.ultra
+  all_goals assumption
+
+theorem UltrafilterInBasis.le_of_inf_neBot (U : UltrafilterInBasis B)
+  (B_closed : ∀ (b1 b2 : Set α), b1 ∈ B → b2 ∈ B → Set.Nonempty (b1 ∩ b2) → b1 ∩ b2 ∈ B)
+  {F : Filter α} (F_in_basis : F.InBasis B)
+  (inf_neBot : Filter.NeBot (U.filter ⊓ F)) : U.filter ≤ F :=
+by
+  apply le_of_inf_eq
+  symm
+  apply U.unique
+  · exact Filter.InBasis.inf B_closed U.in_basis F_in_basis inf_neBot
+  · exact inf_le_left
+
+theorem UltrafilterInBasis.mem_of_compl_not_mem (U : UltrafilterInBasis B)
+  (B_closed : ∀ (b1 b2 : Set α), b1 ∈ B → b2 ∈ B → Set.Nonempty (b1 ∩ b2) → b1 ∩ b2 ∈ B)
+  {S : Set α} (S_in_B : S ∈ B):
+  Sᶜ ∉ U → S ∈ U :=
+by
+  intro sc_notin_U
+  rw [<-mem_coe, <-Filter.le_principal_iff]
+  apply le_of_inf_neBot U B_closed
+  · exact Filter.InBasis.principal S_in_B
+  · constructor
+    intro eq_bot
+    apply sc_notin_U
+    apply Filter.mem_of_eq_bot
+    rwa [compl_compl]
+
+theorem UltrafilterInBasis.mem_or_compl_mem (U : UltrafilterInBasis B)
+  (B_closed : ∀ (b1 b2 : Set α), b1 ∈ B → b2 ∈ B → Set.Nonempty (b1 ∩ b2) → b1 ∩ b2 ∈ B)
+  {S : Set α} (S_in_B : S ∈ B):
+  Sᶜ ∈ U ∨ S ∈ U :=
+by
+  by_cases S_in_U? : S ∈ U
+  right; exact S_in_U?
+  left
+  by_contra Sc_notin_U
+  apply (U.mem_of_compl_not_mem B_closed S_in_B) at Sc_notin_U
+  exact S_in_U? Sc_notin_U
+
+theorem UltrafilterInBasis.clusterPt_iff_le_nhds [TopologicalSpace α]
+  (U : UltrafilterInBasis B)
+  (B_basis : TopologicalSpace.IsTopologicalBasis B)
+  (B_closed : ∀ (b1 b2 : Set α), b1 ∈ B → b2 ∈ B → Set.Nonempty (b1 ∩ b2) → b1 ∩ b2 ∈ B)
+  (p : α) :
+  ClusterPt p U.filter ↔ U.filter ≤ nhds p :=
+by
+  constructor
+  swap
+  exact fun h => ClusterPt.of_le_nhds h
+  intro p_clusterPt
+  intro S S_in_nhds
+  let ⟨T, T_in_B, p_in_T, T_ss_S⟩ := B_basis.mem_nhds_iff.mp S_in_nhds
+  have T_in_nhds : T ∈ nhds p := by
+    rw [B_basis.mem_nhds_iff]
+    use T
+  apply Filter.mem_of_superset _ T_ss_S
+
+  cases U.mem_or_compl_mem B_closed T_in_B with
+  | inr res => exact res
+  | inl Tc_in_U =>
+    exfalso
+    rw [clusterPt_iff] at p_clusterPt
+    specialize p_clusterPt T_in_nhds Tc_in_U
+    rw [Set.inter_compl_self] at p_clusterPt
+    exact Set.not_nonempty_empty p_clusterPt
