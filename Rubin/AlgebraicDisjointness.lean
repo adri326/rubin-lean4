@@ -17,7 +17,38 @@ import Rubin.LocallyDense
 
 namespace Rubin
 
-structure AlgebraicallyDisjointElem {G : Type _} [Group G] (f g h : G) :=
+variable {G : Type _} [Group G]
+
+theorem Commute.conj (f g h : G) : Commute (f * g * f⁻¹) h ↔ Commute g (f⁻¹ * h * f) := by
+  suffices ∀ (f g h : G), Commute (f * g * f⁻¹) h → Commute g (f⁻¹ * h * f) by
+    constructor
+    · apply this
+    · intro cg
+      symm
+      nth_rw 1 [<-inv_inv f]
+      apply this
+      symm
+      rw [inv_inv]
+      exact cg
+
+  intro f g h fgf_h_comm
+  unfold Commute SemiconjBy at *
+  rw [<-mul_assoc, <-mul_assoc]
+  rw [<-mul_assoc, <-mul_assoc] at fgf_h_comm
+  have gfh_eq : g * f⁻¹ * h = f⁻¹ * h * f * g * f⁻¹ := by
+    repeat rw [mul_assoc f⁻¹]
+    rw [<-fgf_h_comm]
+    group
+  rw [gfh_eq]
+  group
+
+theorem Commute.conj' (f g h : G) : Commute (f⁻¹ * g * f) h ↔ Commute g (f * h * f⁻¹) := by
+  nth_rw 2 [<-inv_inv f]
+  nth_rw 3 [<-inv_inv f]
+  apply Commute.conj
+
+
+structure AlgebraicallyDisjointElem (f g h : G) :=
   non_commute: ¬Commute f h
   fst : G
   snd : G
@@ -28,15 +59,46 @@ structure AlgebraicallyDisjointElem {G : Type _} [Group G] (f g h : G) :=
 
 namespace AlgebraicallyDisjointElem
 
-def comm_elem {G : Type _} [Group G] {f g h : G} (disj_elem : AlgebraicallyDisjointElem f g h) : G :=
+def comm_elem {f g h : G} (disj_elem : AlgebraicallyDisjointElem f g h) : G :=
   ⁅disj_elem.fst, ⁅disj_elem.snd, h⁆⁆
 
 @[simp]
-theorem comm_elem_eq {G : Type _} [Group G] {f g h : G} (disj_elem : AlgebraicallyDisjointElem f g h) :
+theorem comm_elem_eq {f g h : G} (disj_elem : AlgebraicallyDisjointElem f g h) :
   disj_elem.comm_elem = ⁅disj_elem.fst, ⁅disj_elem.snd, h⁆⁆ :=
 by
   unfold comm_elem
   simp
+
+lemma comm_elem_conj (f g h i : G) :
+  ⁅i * f * i⁻¹, ⁅i * g * i⁻¹, i * h * i⁻¹⁆⁆ = i * ⁅f, ⁅g, h⁆⁆ * i⁻¹ := by group
+
+theorem conj {f g h : G} (disj_elem : AlgebraicallyDisjointElem f g h) (i : G): AlgebraicallyDisjointElem (i * f * i⁻¹) (i * g * i⁻¹) (i * h * i⁻¹) where
+  non_commute := by
+    rw [Commute.conj]
+    group
+    exact disj_elem.non_commute
+  fst := i * disj_elem.fst * i⁻¹
+  snd := i * disj_elem.snd * i⁻¹
+  fst_commute := by
+    rw [Commute.conj]
+    group
+    exact disj_elem.fst_commute
+  snd_commute := by
+    rw [Commute.conj]
+    group
+    exact disj_elem.snd_commute
+  comm_elem_nontrivial := by
+    intro eq_one
+    apply disj_elem.comm_elem_nontrivial
+    rw [comm_elem_conj, <-mul_right_inv i] at eq_one
+    apply mul_right_cancel at eq_one
+    nth_rw 2 [<-mul_one i] at eq_one
+    apply mul_left_cancel at eq_one
+    exact eq_one
+  comm_elem_commute := by
+    rw [comm_elem_conj, Commute.conj]
+    rw [(by group : i⁻¹ * (i * g * i⁻¹) * i = g)]
+    exact disj_elem.comm_elem_commute
 
 end AlgebraicallyDisjointElem
 
@@ -116,6 +178,16 @@ noncomputable instance coeFnAlgebraicallyDisjoint : CoeFun
 
 instance coeAlgebraicallyDisjoint : Coe (AlgebraicallyDisjoint f g) (IsAlgebraicallyDisjoint f g) where
   coe := mk
+
+theorem conj (is_alg_disj : IsAlgebraicallyDisjoint f g) (h : G) :
+  IsAlgebraicallyDisjoint (h * f * h⁻¹) (h * g * h⁻¹) :=
+by
+  apply elim at is_alg_disj
+  apply mk
+  intro i nc
+  rw [Commute.conj] at nc
+  rw [(by group : i = h * (h⁻¹ * i * h) * h⁻¹)]
+  exact (is_alg_disj (h⁻¹ * i * h) nc).conj h
 
 end IsAlgebraicallyDisjoint
 
@@ -357,8 +429,24 @@ by
     simp
   simp only [gxg12_eq]
   ext x
-  sorry
-  -- unfold IsAlgebraicallyDisjoint
+  simp
+  constructor
+  · intro ⟨y, y_disj, x_eq⟩
+    use g * y * g⁻¹
+    rw [<-gxg12_eq]
+    refine ⟨?disj, x_eq⟩
+    exact y_disj.conj g
+  · intro ⟨y, y_disj, x_eq⟩
+    use g⁻¹ * y * g
+    constructor
+    · rw [(by group : f = g⁻¹ * (g * f * g⁻¹) * g⁻¹⁻¹)]
+      nth_rw 6 [<-inv_inv g]
+      exact y_disj.conj g⁻¹
+    · nth_rw 3 [<-inv_inv g]
+      simp only [conj_pow]
+      group
+      group at x_eq
+      exact x_eq
 
 
 @[simp]
@@ -423,6 +511,61 @@ theorem AlgebraicCentralizerBasis.empty_not_mem : ∅ ∉ AlgebraicCentralizerBa
   symm
   rw [<-Set.nonempty_iff_ne_empty]
   exact Subgroup.coe_nonempty _
+
+theorem AlgebraicCentralizerBasis.to_subgroup {S : Set G} (S_in_basis : S ∈ AlgebraicCentralizerBasis G):
+  ∃ S' : Subgroup G, S = S' :=
+by
+  rw [mem_iff] at S_in_basis
+  let ⟨_, ⟨seed, S_eq⟩⟩ := S_in_basis
+  use AlgebraicCentralizerInter seed
+
+theorem Set.image_equiv_eq {α β : Type _} (S : Set α) (T : Set β) (f : α ≃ β) :
+  f '' S = T ↔ S = f.symm '' T :=
+by
+  constructor
+  · intro fS_eq_T
+    ext x
+    rw [<-fS_eq_T]
+    simp
+  · intro S_eq_fT
+    ext x
+    rw [S_eq_fT]
+    simp
+
+theorem AlgebraicCentralizerBasis.conj_mem {S : Set G} (S_in_basis : S ∈ AlgebraicCentralizerBasis G)
+  (h : G) : (fun g => h * g * h⁻¹) '' S ∈ AlgebraicCentralizerBasis G :=
+by
+  let ⟨S', S_eq⟩ := to_subgroup S_in_basis
+  rw [S_eq]
+  rw [S_eq, subgroup_mem_iff] at S_in_basis
+  rw [mem_iff]
+
+  have conj_eq : (fun g => h * g * h⁻¹) = (MulAut.conj h).toEquiv := by
+    ext x
+    simp
+
+  constructor
+  · rw [conj_eq]
+    rw [ne_eq, Set.image_equiv_eq]
+    simp
+    rw [<-Subgroup.coe_bot, SetLike.coe_set_eq]
+    exact S_in_basis.left
+  · let ⟨seed, S'_eq⟩ := S_in_basis.right
+    have dec_eq : DecidableEq G := Classical.typeDecidableEq _
+    use Finset.image (fun g => h * g * h⁻¹) seed
+    rw [S'_eq]
+    unfold AlgebraicCentralizerInter
+    ext g
+    rw [conj_eq]
+    rw [Set.mem_image_equiv]
+    simp
+    conv => {
+      rhs
+      intro
+      intro
+      rw [<-SetLike.mem_coe, <-AlgebraicCentralizer.conj, conj_eq, Set.mem_image_equiv]
+    }
+
 
 end AlgebraicCentralizer
 
