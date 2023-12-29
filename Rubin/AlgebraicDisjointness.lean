@@ -396,44 +396,33 @@ by
 /--
 Finite intersections of [`AlgebraicCentralizer`].
 --/
-def AlgebraicCentralizerInter₀ (S : Finset G) : Subgroup G :=
+def AlgebraicCentralizerInter (S : Finset G) : Subgroup G :=
   ⨅ (g ∈ S), AlgebraicCentralizer g
 
-structure AlgebraicCentralizerBasis₀ (G: Type _) [Group G] where
-  seed : Finset G
-  val_ne_bot : AlgebraicCentralizerInter₀ seed ≠ ⊥
+def AlgebraicCentralizerBasis (G : Type _) [Group G] : Set (Set G) :=
+  { S : Set G | S ≠ {1} ∧ ∃ seed : Finset G,
+    S = AlgebraicCentralizerInter seed
+  }
 
-def AlgebraicCentralizerBasis₀.val (B : AlgebraicCentralizerBasis₀ G) : Subgroup G :=
-  AlgebraicCentralizerInter₀ B.seed
+theorem AlgebraicCentralizerBasis.mem_iff (S : Set G) :
+  S ∈ AlgebraicCentralizerBasis G ↔
+    S ≠ {1} ∧ ∃ seed : Finset G, S = AlgebraicCentralizerInter seed
+:= by rfl
 
-theorem AlgebraicCentralizerBasis₀.val_def (B : AlgebraicCentralizerBasis₀ G) :
-  B.val = AlgebraicCentralizerInter₀ B.seed := rfl
-
-def AlgebraicCentralizerBasis (G : Type _) [Group G] : Set (Subgroup G) :=
-  { H.val | H : AlgebraicCentralizerBasis₀ G }
-
-theorem AlgebraicCentralizerBasis.mem_iff (H : Subgroup G) :
-  H ∈ AlgebraicCentralizerBasis G ↔ ∃ B : AlgebraicCentralizerBasis₀ G, B.val = H := by rfl
-
-theorem AlgebraicCentralizerBasis.mem_iff' (H : Subgroup G)
-  (H_ne_bot : H ≠ ⊥) :
-  H ∈ AlgebraicCentralizerBasis G ↔ ∃ seed : Finset G, AlgebraicCentralizerInter₀ seed = H :=
+theorem AlgebraicCentralizerBasis.subgroup_mem_iff (S : Subgroup G) :
+  (S : Set G) ∈ AlgebraicCentralizerBasis G ↔
+    S ≠ ⊥ ∧ ∃ seed : Finset G, S = AlgebraicCentralizerInter seed :=
 by
-  rw [mem_iff]
-  constructor
-  · intro ⟨B, B_eq⟩
-    use B.seed
-    rw [AlgebraicCentralizerBasis₀.val_def] at B_eq
-    exact B_eq
-  · intro ⟨seed, seed_eq⟩
-    let B := AlgebraicCentralizerInter₀ seed
-    have val_ne_bot : B ≠ ⊥ := by
-      unfold_let
-      rw [seed_eq]
-      exact H_ne_bot
-    use ⟨seed, val_ne_bot⟩
-    rw [<-seed_eq]
-    rfl
+  rw [mem_iff, <-Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq]
+  simp
+
+theorem AlgebraicCentralizerBasis.empty_not_mem : ∅ ∉ AlgebraicCentralizerBasis G := by
+  simp [AlgebraicCentralizerBasis]
+  intro _ _
+  rw [<-ne_eq]
+  symm
+  rw [<-Set.nonempty_iff_ne_empty]
+  exact Subgroup.coe_nonempty _
 
 end AlgebraicCentralizer
 

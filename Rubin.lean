@@ -24,12 +24,13 @@ import Rubin.SmulImage
 import Rubin.Support
 import Rubin.Topology
 import Rubin.RigidStabilizer
-import Rubin.RigidStabilizerBasis
+-- import Rubin.RigidStabilizerBasis
 import Rubin.Period
 import Rubin.AlgebraicDisjointness
 import Rubin.RegularSupport
 import Rubin.RegularSupportBasis
 import Rubin.HomeoGroup
+import Rubin.Filter
 
 #align_import rubin
 
@@ -694,43 +695,250 @@ by
   repeat rw [<-proposition_2_1]
   exact alg_disj
 
-#check proposition_2_1
-lemma rigidStabilizerInter_eq_algebraicCentralizerInter {S : Finset G} :
-  RigidStabilizerInter₀ α S = AlgebraicCentralizerInter₀ S :=
+-- lemma remark_2_3' {f g : G} :
+--   (AlgebraicCentralizer f) ⊓ (AlgebraicCentralizer g) ≠ ⊥ →
+--   Set.Nonempty ((RegularSupport α f) ∩ (RegularSupport α g)) :=
+-- by
+--   intro alg_inter_neBot
+--   repeat rw [proposition_2_1 (α := α)] at alg_inter_neBot
+--   rw [ne_eq] at alg_inter_neBot
+
+--   rw [rigidStabilizer_inter_bot_iff_regularSupport_disj] at alg_inter_neBot
+--   rw [Set.not_disjoint_iff_nonempty_inter] at alg_inter_neBot
+--   exact alg_inter_neBot
+
+lemma rigidStabilizer_inter_eq_algebraicCentralizerInter {S : Finset G} :
+  G•[RegularSupport.FiniteInter α S] = AlgebraicCentralizerInter S :=
 by
-  unfold RigidStabilizerInter₀
-  unfold AlgebraicCentralizerInter₀
+  unfold RegularSupport.FiniteInter
+  unfold AlgebraicCentralizerInter
+  rw [rigidStabilizer_iInter_regularSupport']
   simp only [<-proposition_2_1]
-  -- conv => {
-  --   rhs
-  --   congr; intro; congr; intro
-  --   rw [proposition_2_1 (α := α)]
-  -- }
 
-theorem rigidStabilizerBasis_eq_algebraicCentralizerBasis :
-  AlgebraicCentralizerBasis G = RigidStabilizerBasis G α :=
+lemma regularSupportInter_nonEmpty_iff_neBot {S : Finset G} [Nonempty α]:
+  AlgebraicCentralizerInter S ≠ ⊥ ↔
+  Set.Nonempty (RegularSupport.FiniteInter α S) :=
 by
-  apply le_antisymm <;> intro B B_mem
-  any_goals rw [RigidStabilizerBasis.mem_iff]
-  any_goals rw [AlgebraicCentralizerBasis.mem_iff]
-  any_goals rw [RigidStabilizerBasis.mem_iff] at B_mem
-  any_goals rw [AlgebraicCentralizerBasis.mem_iff] at B_mem
+  constructor
+  · rw [<-rigidStabilizer_inter_eq_algebraicCentralizerInter (α := α), ne_eq]
+    intro rist_neBot
+    by_contra eq_empty
+    rw [Set.not_nonempty_iff_eq_empty] at eq_empty
+    rw [eq_empty, rigidStabilizer_empty] at rist_neBot
+    exact rist_neBot rfl
+  · intro nonempty
+    intro eq_bot
+    rw [<-rigidStabilizer_inter_eq_algebraicCentralizerInter (α := α)] at eq_bot
+    rw [<-rigidStabilizer_empty (G := G) (α := α), rigidStabilizer_eq_iff] at eq_bot
+    · rw [eq_bot, Set.nonempty_iff_ne_empty] at nonempty
+      exact nonempty rfl
+    · apply RegularSupport.FiniteInter_regular
+    · simp
 
-  all_goals let ⟨⟨seed, B_ne_bot⟩, B_eq⟩ := B_mem
-
-  any_goals rw [RigidStabilizerBasis₀.val_def] at B_eq
-  any_goals rw [AlgebraicCentralizerBasis₀.val_def] at B_eq
-  all_goals simp at B_eq
-  all_goals rw [<-B_eq]
-
-  rw [<-rigidStabilizerInter_eq_algebraicCentralizerInter (α := α)] at B_ne_bot
+theorem AlgebraicCentralizerBasis.exists_rigidStabilizer_inv (H : Set G) [Nonempty α]:
+  ∃ S ∈ RegularSupportBasis G α, H ∈ AlgebraicCentralizerBasis G → H = G•[S] :=
+by
+  by_cases H_in_basis?: H ∈ AlgebraicCentralizerBasis G
   swap
-  rw [rigidStabilizerInter_eq_algebraicCentralizerInter (α := α)] at B_ne_bot
+  {
+    use Set.univ
+    constructor
+    rw [RegularSupportBasis.mem_iff]
+    constructor
+    · exact Set.univ_nonempty
+    · use ∅
+      unfold RegularSupport.FiniteInter
+      simp
+    · intro H_in_basis
+      exfalso
+      exact H_in_basis? H_in_basis
+  }
 
-  all_goals use ⟨seed, B_ne_bot⟩
+  have ⟨H_ne_one, ⟨seed, H_eq⟩⟩ := (AlgebraicCentralizerBasis.mem_iff H).mp H_in_basis?
 
-  symm
-  all_goals apply rigidStabilizerInter_eq_algebraicCentralizerInter
+  rw [H_eq, <-Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq, <-ne_eq] at H_ne_one
+
+  use RegularSupport.FiniteInter α seed
+  constructor
+  · rw [RegularSupportBasis.mem_iff]
+    constructor
+    · rw [<-regularSupportInter_nonEmpty_iff_neBot]
+      exact H_ne_one
+    · use seed
+  · intro _
+
+    rw [rigidStabilizer_inter_eq_algebraicCentralizerInter]
+    exact H_eq
+
+theorem AlgebraicCentralizerBasis.mem_of_regularSupportBasis {S : Set α}
+  (S_in_basis : S ∈ RegularSupportBasis G α) :
+  (G•[S] : Set G) ∈ AlgebraicCentralizerBasis G :=
+by
+  rw [AlgebraicCentralizerBasis.subgroup_mem_iff]
+  rw [RegularSupportBasis.mem_iff] at S_in_basis
+  let ⟨S_nonempty, ⟨seed, S_eq⟩⟩ := S_in_basis
+
+  have α_nonempty : Nonempty α := by
+    by_contra α_empty
+    rw [not_nonempty_iff] at α_empty
+    rw [Set.nonempty_iff_ne_empty] at S_nonempty
+    apply S_nonempty
+    exact Set.eq_empty_of_isEmpty S
+
+  constructor
+  · rw [S_eq, rigidStabilizer_inter_eq_algebraicCentralizerInter]
+    rw [regularSupportInter_nonEmpty_iff_neBot (α := α)]
+    rw [<-S_eq]
+    exact S_nonempty
+  · use seed
+    rw [S_eq]
+    exact rigidStabilizer_inter_eq_algebraicCentralizerInter
+
+@[simp]
+theorem AlgebraicCentralizerBasis.eq_rist_image [Nonempty α]:
+  (fun S => (G•[S] : Set G)) '' RegularSupportBasis G α = AlgebraicCentralizerBasis G :=
+by
+  ext H
+  constructor
+  · simp
+    intro S S_in_basis H_eq
+    rw [<-H_eq]
+    apply mem_of_regularSupportBasis S_in_basis
+  · intro H_in_basis
+    simp
+    let ⟨S, S_in_rsupp, H_eq⟩ := AlgebraicCentralizerBasis.exists_rigidStabilizer_inv (α := α) H
+    specialize H_eq H_in_basis
+    symm at H_eq
+    use S
+
+noncomputable def rigidStabilizer_inv [Nonempty α] (H : Set G) : Set α :=
+  (AlgebraicCentralizerBasis.exists_rigidStabilizer_inv H).choose
+
+theorem rigidStabilizer_inv_eq [Nonempty α] {H : Set G} (H_in_basis : H ∈ AlgebraicCentralizerBasis G) :
+  H = G•[rigidStabilizer_inv (α := α) H] :=
+by
+  have spec := (AlgebraicCentralizerBasis.exists_rigidStabilizer_inv (α := α) H).choose_spec
+  exact spec.right H_in_basis
+
+theorem rigidStabilizer_in_basis [Nonempty α] (H : Set G) :
+  rigidStabilizer_inv (α := α) H ∈ RegularSupportBasis G α :=
+by
+  have spec := (AlgebraicCentralizerBasis.exists_rigidStabilizer_inv (α := α) H).choose_spec
+  exact spec.left
+
+theorem rigidStabilizer_inv_eq' [Nonempty α] {S : Set α} (S_in_basis : S ∈ RegularSupportBasis G α) :
+  rigidStabilizer_inv (α := α) (G := G) G•[S] = S :=
+by
+  have GS_in_basis : (G•[S] : Set G) ∈ AlgebraicCentralizerBasis G := by
+    exact AlgebraicCentralizerBasis.mem_of_regularSupportBasis S_in_basis
+
+  have eq := rigidStabilizer_inv_eq GS_in_basis (α := α)
+  rw [SetLike.coe_set_eq, rigidStabilizer_eq_iff] at eq
+  · exact eq.symm
+  · exact RegularSupportBasis.regular S_in_basis
+  · exact RegularSupportBasis.regular (rigidStabilizer_in_basis _)
+
+variable [Nonempty α] [HasNoIsolatedPoints α] [LocallyDense G α]
+
+noncomputable def RigidStabilizer.order_iso_on (G α : Type _) [Group G] [Nonempty α] [TopologicalSpace α] [T2Space α]
+  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]
+  [HasNoIsolatedPoints α] [LocallyDense G α] : OrderIsoOn (Set α) (Set G) (RegularSupportBasis G α)
+where
+  toFun := fun S => G•[S]
+  invFun := fun H => rigidStabilizer_inv (α := α) H
+
+  leftInv_on := by
+    intro S S_in_basis
+    simp
+    exact rigidStabilizer_inv_eq' S_in_basis
+
+  rightInv_on := by
+    intro H H_in_basis
+    simp
+    simp at H_in_basis
+    symm
+    exact rigidStabilizer_inv_eq H_in_basis
+
+  toFun_doubleMonotone := by
+    intro S S_in_basis T T_in_basis
+    simp
+    apply rigidStabilizer_subset_iff G (RegularSupportBasis.regular S_in_basis) (RegularSupportBasis.regular T_in_basis)
+
+@[simp]
+theorem RigidStabilizer.order_iso_on_toFun:
+  (RigidStabilizer.order_iso_on G α).toFun = (fun S => (G•[S] : Set G)) :=
+by
+  simp [order_iso_on]
+
+@[simp]
+theorem RigidStabilizer.order_iso_on_invFun:
+  (RigidStabilizer.order_iso_on G α).invFun = (fun S => rigidStabilizer_inv (α := α) S) :=
+by
+  simp [order_iso_on]
+
+noncomputable def RigidStabilizer.inv_order_iso_on (G α : Type _) [Group G] [Nonempty α] [TopologicalSpace α] [T2Space α]
+  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]
+  [HasNoIsolatedPoints α] [LocallyDense G α] : OrderIsoOn (Set G) (Set α) (AlgebraicCentralizerBasis G) :=
+  (RigidStabilizer.order_iso_on G α).inv.mk_of_subset
+    (subset_of_eq (AlgebraicCentralizerBasis.eq_rist_image (α := α) (G := G)).symm)
+
+@[simp]
+theorem RigidStabilizer.inv_order_iso_on_toFun:
+  (RigidStabilizer.inv_order_iso_on G α).toFun = (fun S => rigidStabilizer_inv (α := α) S) :=
+by
+  simp [inv_order_iso_on, order_iso_on]
+
+@[simp]
+theorem RigidStabilizer.inv_order_iso_on_invFun:
+  (RigidStabilizer.inv_order_iso_on G α).invFun = (fun S => (G•[S] : Set G)) :=
+by
+  simp [inv_order_iso_on, order_iso_on]
+
+-- TODO: mark simp theorems as local
+@[simp]
+theorem RegularSupportBasis.eq_inv_rist_image:
+  (fun H => rigidStabilizer_inv (α := α) H) '' AlgebraicCentralizerBasis G = RegularSupportBasis G α :=
+by
+  rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α) (G := G)]
+  rw [Set.image_image]
+  nth_rw 2 [<-OrderIsoOn.leftInv_image (RigidStabilizer.order_iso_on G α)]
+  rw [Function.comp_def]
+  rw [RigidStabilizer.order_iso_on]
+
+lemma RigidStabilizer_doubleMonotone : DoubleMonotoneOn (fun S => G•[S]) (RegularSupportBasis G α) := by
+  have res := (RigidStabilizer.order_iso_on G α).toFun_doubleMonotone
+  simp at res
+  exact res
+
+lemma RigidStabilizer_inv_doubleMonotone : DoubleMonotoneOn (fun S => rigidStabilizer_inv (α := α) S) (AlgebraicCentralizerBasis G) := by
+  have res := (RigidStabilizer.order_iso_on G α).invFun_doubleMonotone
+  simp at res
+  exact res
+
+lemma RigidStabilizer_rightInv {U : Set G} (U_in_basis : U ∈ AlgebraicCentralizerBasis G) :
+  G•[rigidStabilizer_inv (α := α) U] = U :=
+by
+  have res := (RigidStabilizer.order_iso_on G α).rightInv_on U
+  simp at res
+  exact res U_in_basis
+
+lemma RigidStabilizer_leftInv {U : Set α} (U_in_basis : U ∈ RegularSupportBasis G α) :
+  rigidStabilizer_inv (α := α) (G•[U] : Set G) = U :=
+by
+  have res := (RigidStabilizer.order_iso_on G α).leftInv_on U
+  simp at res
+  exact res U_in_basis
+
+theorem AlgebraicCentralizerBasis.mem_of_regularSupportBasis_inv {S : Set G}
+  (S_in_basis : rigidStabilizer_inv (α := α) S ∈ RegularSupportBasis G α) :
+  S ∈ AlgebraicCentralizerBasis G :=
+by
+  let ⟨T, T_in_basis, T_eq⟩ := (RegularSupportBasis.eq_inv_rist_image (G := G) (α := α)).symm ▸ S_in_basis
+  simp only at T_eq
+
+  -- Note: currently not provable, we need to add another requirement to rigidStabilizer_inv
+
+  sorry
 
 end RegularSupport
 
@@ -1020,8 +1228,24 @@ by
     exact proposition_3_5_1 U_in_basis (F : Filter α)
   · exact proposition_3_5_2 (F : Filter α)
 
+theorem proposition_3_5' {U : Set α} (U_in_basis : U ∈ RegularSupportBasis G α)
+  (F : UltrafilterInBasis (RegularSupportBasis G α)):
+  (∃ p ∈ U, ClusterPt p F)
+  ↔ ∃ V : RegularSupportBasis G α, V.val ⊆ U ∧ RSuppSubsets G V.val ⊆ RSuppOrbit F G•[U] :=
+by
+  constructor
+  · simp only [
+      F.clusterPt_iff_le_nhds
+        (RegularSupportBasis.isBasis G α)
+        (RegularSupportBasis.closed_inter G α)
+    ]
+    exact proposition_3_5_1 U_in_basis (F : Filter α)
+  · exact proposition_3_5_2 (F : Filter α)
+
 end Ultrafilter
 
+
+/-
 variable {G α : Type _}
 variable [Group G]
 
@@ -1600,11 +1824,188 @@ theorem rubin' (hα : RubinAction G α) : EquivariantHomeomorph G α (RubinSpace
     sorry
 
 end Convert
+-/
 
 
+section RubinFilter
 
--- Topology can be generated from the disconnectedness of the filters
+variable {G : Type _} [Group G]
+variable {α : Type _} [Nonempty α] [TopologicalSpace α] [HasNoIsolatedPoints α] [T2Space α] [LocallyCompactSpace α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
 
+def AlgebraicSubsets (V : Set G) : Set (Set G) :=
+  {W ∈ AlgebraicCentralizerBasis G | W ⊆ V}
+
+def AlgebraicOrbit (F : Filter G) (U : Set G) : Set (Set G) :=
+  { (fun h => g * h * g⁻¹) '' W | (g ∈ U) (W ∈ F.sets ∩ AlgebraicCentralizerBasis G) }
+
+theorem AlgebraicOrbit.mem_iff (F : Filter G) (U : Set G) (S : Set G):
+  S ∈ AlgebraicOrbit F U ↔ ∃ g ∈ U, ∃ W ∈ F, W ∈ AlgebraicCentralizerBasis G ∧ S = (fun h => g * h * g⁻¹) '' W :=
+by
+  simp [AlgebraicOrbit]
+  simp only [and_assoc, eq_comm]
+
+structure RubinFilter (G : Type _) [Group G] :=
+  filter : UltrafilterInBasis (AlgebraicCentralizerBasis G)
+
+  converges : ∃ V ∈ AlgebraicCentralizerBasis G, AlgebraicSubsets V ⊆ AlgebraicOrbit filter Set.univ
+
+lemma RegularSupportBasis.empty_not_mem' : ∅ ∉ (RigidStabilizer.inv_order_iso_on G α).toFun '' AlgebraicCentralizerBasis G := by
+  simp
+  exact RegularSupportBasis.empty_not_mem _ _
+
+lemma AlgebraicCentralizerBasis.empty_not_mem' : ∅ ∉ (RigidStabilizer.order_iso_on G α).toFun '' RegularSupportBasis G α := by
+  unfold RigidStabilizer.order_iso_on
+  rw [AlgebraicCentralizerBasis.eq_rist_image]
+  exact AlgebraicCentralizerBasis.empty_not_mem
+
+def RubinFilter.map (F : RubinFilter G) (α : Type _)
+  [TopologicalSpace α] [T2Space α] [Nonempty α] [HasNoIsolatedPoints α]
+  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α] : UltrafilterInBasis (RegularSupportBasis G α) :=
+  (
+    F.filter.map_basis
+      AlgebraicCentralizerBasis.empty_not_mem
+      (RigidStabilizer.inv_order_iso_on G α)
+      RegularSupportBasis.empty_not_mem'
+  ).cast (by simp)
+
+def IsRubinFilterOf (A : UltrafilterInBasis (RegularSupportBasis G α)) (B : UltrafilterInBasis (AlgebraicCentralizerBasis G)) : Prop :=
+  ∀ U ∈ RegularSupportBasis G α, U ∈ A ↔ (G•[U] : Set G) ∈ B
+
+theorem RubinFilter.map_isRubinFilterOf (F : RubinFilter G) :
+  IsRubinFilterOf (F.map α) F.filter :=
+by
+  intro U U_in_basis
+  unfold map
+  simp
+  have ⟨U', U'_in_basis, U'_eq⟩ := (RegularSupportBasis.eq_inv_rist_image (G := G) (α := α)).symm ▸ U_in_basis
+  simp only at U'_eq
+  rw [<-U'_eq]
+  rw [Filter.InBasis.map_mem_map_basis_of_basis_set _ RigidStabilizer_inv_doubleMonotone F.filter.in_basis U'_in_basis]
+  rw [RigidStabilizer_rightInv U'_in_basis]
+  rfl
+
+theorem RubinFilter.from_isRubinFilterOf' (F : UltrafilterInBasis (RegularSupportBasis G α)) :
+  IsRubinFilterOf F ((F.map_basis
+    (RegularSupportBasis.empty_not_mem G α)
+    (RigidStabilizer.order_iso_on G α)
+    AlgebraicCentralizerBasis.empty_not_mem'
+  ).cast (by simp)) :=
+by
+  intro U U_in_basis
+  simp
+  rw [Filter.InBasis.map_mem_map_basis_of_basis_set _ RigidStabilizer_doubleMonotone F.in_basis U_in_basis]
+  rfl
+
+theorem IsRubinFilterOf.mem_inv {A : UltrafilterInBasis (RegularSupportBasis G α)}
+  {B : UltrafilterInBasis (AlgebraicCentralizerBasis G)}
+  (filter_of : IsRubinFilterOf A B) {U : Set G} (U_in_basis : U ∈ AlgebraicCentralizerBasis G):
+  U ∈ B ↔ rigidStabilizer_inv U ∈ A :=
+by
+  rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α)] at U_in_basis
+  let ⟨V, V_in_basis, V_eq⟩ := U_in_basis
+  rw [<-V_eq, RigidStabilizer_leftInv V_in_basis]
+  symm
+  exact filter_of V V_in_basis
+
+theorem IsRubinFilterOf.mem_inter_inv {A : UltrafilterInBasis (RegularSupportBasis G α)}
+  {B : UltrafilterInBasis (AlgebraicCentralizerBasis G)}
+  (filter_of : IsRubinFilterOf A B) (U : Set G):
+  U ∈ B.filter.sets ∩ AlgebraicCentralizerBasis G ↔ rigidStabilizer_inv U ∈ A.filter.sets ∩ RegularSupportBasis G α :=
+by
+  constructor
+  · intro ⟨U_in_filter, U_in_basis⟩
+    constructor
+    simp
+    rw [<-filter_of.mem_inv U_in_basis]
+    exact U_in_filter
+    exact rigidStabilizer_in_basis U
+  · intro ⟨iU_in_filter, iU_in_basis⟩
+    have U_in_basis := AlgebraicCentralizerBasis.mem_of_regularSupportBasis_inv iU_in_basis
+    constructor
+    · simp
+      rw [filter_of.mem_inv U_in_basis]
+      exact iU_in_filter
+    · assumption
+
+theorem IsRubinFilterOf.subsets_ss_orbit {A : UltrafilterInBasis (RegularSupportBasis G α)}
+  {B : UltrafilterInBasis (AlgebraicCentralizerBasis G)}
+  (filter_of : IsRubinFilterOf A B)
+  {V : Set α} (V_in_basis : V ∈ RegularSupportBasis G α)
+  {W : Set α} (W_in_basis : W ∈ RegularSupportBasis G α) :
+  RSuppSubsets G W ⊆ RSuppOrbit A G•[V] ↔ AlgebraicSubsets (G•[W]) ⊆ AlgebraicOrbit B.filter G•[V] :=
+by
+  constructor
+  · intro rsupp_ss
+    unfold AlgebraicSubsets AlgebraicOrbit
+    intro U ⟨U_in_basis, U_ss_GW⟩
+    let U' := rigidStabilizer_inv (α := α) U
+    have U'_in_basis : U' ∈ RegularSupportBasis G α := rigidStabilizer_in_basis U
+    have U'_ss_W : U' ⊆ W := by
+      rw [rigidStabilizer_subset_iff (G := G) (RegularSupportBasis.regular U'_in_basis) (RegularSupportBasis.regular W_in_basis)]
+      unfold_let
+      rw [<-SetLike.coe_subset_coe]
+      rw [RigidStabilizer_rightInv (G := G) (α := α) U_in_basis]
+      assumption
+    let ⟨g, g_in_GV, ⟨W, W_in_A, gW_eq_U⟩⟩ := rsupp_ss ⟨U'_in_basis, U'_ss_W⟩
+    use g
+    constructor
+    {
+      simp
+      exact g_in_GV
+    }
+
+    have dec_eq : DecidableEq G := Classical.typeDecidableEq _
+
+    have W_in_basis : W ∈ RegularSupportBasis G α := by
+      rw [smulImage_inv] at gW_eq_U
+      rw [gW_eq_U]
+      apply RegularSupportBasis.smulImage_in_basis
+      assumption
+
+    use G•[W]
+    rw [filter_of.mem_inter_inv]
+    rw [RigidStabilizer_leftInv (G := G) (α := α) W_in_basis]
+    refine ⟨⟨W_in_A, W_in_basis⟩, ?W_eq_U⟩
+    rw [rigidStabilizer_conj_image_eq, gW_eq_U]
+    unfold_let
+    exact RigidStabilizer_rightInv U_in_basis
+  sorry
+
+def RubinFilter.from (F : UltrafilterInBasis (RegularSupportBasis G α)) (F_converges : ∃ p : α, F ≤ nhds p) : RubinFilter G where
+  filter := (F.map_basis
+    (RegularSupportBasis.empty_not_mem G α)
+    (RigidStabilizer.order_iso_on G α)
+    AlgebraicCentralizerBasis.empty_not_mem'
+  ).cast (by simp)
+
+  converges := by
+    let ⟨p, F_le_nhds⟩ := F_converges
+
+    have F_clusterPt : ClusterPt p F := by
+      rw [UltrafilterInBasis.clusterPt_iff_le_nhds]
+      · assumption
+      · exact RegularSupportBasis.isBasis G α
+      · exact RegularSupportBasis.closed_inter G α
+
+    have ⟨⟨W, W_in_basis⟩, W_ss_V, W_subsets_ss_GV_orbit⟩ := (proposition_3_5' (RegularSupportBasis.univ_mem G α) F).mp ⟨p, (Set.mem_univ p), F_clusterPt⟩
+    simp only at W_ss_V
+    simp only at W_subsets_ss_GV_orbit
+
+    use G•[W]
+    constructor
+    {
+      apply AlgebraicCentralizerBasis.mem_of_regularSupportBasis W_in_basis
+    }
+
+    rw [<-Subgroup.coe_top, <-rigidStabilizer_univ (α := α) (G := G)]
+    rw [<-(RubinFilter.from_isRubinFilterOf' F).subsets_ss_orbit (RegularSupportBasis.univ_mem G α) W_in_basis]
+    assumption
+
+
+end RubinFilter
+
+/-
 variable {β : Type _}
 variable [TopologicalSpace β] [MulAction G β] [ContinuousConstSMul G β]
 
@@ -1614,6 +2015,7 @@ variable [TopologicalSpace β] [MulAction G β] [ContinuousConstSMul G β]
 theorem rubin (hα : RubinAction G α) (hβ : RubinAction G β) : EquivariantHomeomorph G α β := by
   -- by composing rubin' hα
   sorry
+-/
 
 end Rubin
 

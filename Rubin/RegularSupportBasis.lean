@@ -44,13 +44,14 @@ by
   simp only [RegularSupportBasis, Set.mem_setOf_eq]
 
 @[simp]
-theorem RegularSupportBasis.regular {S : Set α} (S_mem_basis : S ∈ RegularSupportBasis G α) : Regular S := by
-  let ⟨_, ⟨seed, S_eq_inter⟩⟩ := (RegularSupportBasis.mem_iff S).mp S_mem_basis
-  rw [S_eq_inter, RegularSupport.FiniteInter_sInter]
 
+theorem RegularSupport.FiniteInter_regular (F : Finset G) :
+  Regular (RegularSupport.FiniteInter α F) :=
+by
+  rw [RegularSupport.FiniteInter_sInter]
   apply regular_sInter
   · have set_decidable : DecidableEq (Set α) := Classical.typeDecidableEq (Set α)
-    let fin : Finset (Set α) := seed.image ((fun g => RegularSupport α g))
+    let fin : Finset (Set α) := F.image ((fun g => RegularSupport α g))
 
     apply Set.Finite.ofFinset fin
     simp
@@ -59,6 +60,12 @@ theorem RegularSupportBasis.regular {S : Set α} (S_mem_basis : S ∈ RegularSup
     let ⟨g, ⟨_, Heq⟩⟩ := S_in_set
     rw [<-Heq]
     exact regularSupport_regular α g
+
+@[simp]
+theorem RegularSupportBasis.regular {S : Set α} (S_mem_basis : S ∈ RegularSupportBasis G α) : Regular S := by
+  let ⟨_, ⟨seed, S_eq_inter⟩⟩ := (RegularSupportBasis.mem_iff S).mp S_mem_basis
+  rw [S_eq_inter]
+  apply RegularSupport.FiniteInter_regular
 
 variable [ContinuousConstSMul G α] [DecidableEq G]
 
@@ -103,6 +110,14 @@ by
   rw [RegularSupportBasis.smul_eq']
   rw [RegularSupport.FiniteInter_conj]
   rw [<-S.prop.right.choose_spec]
+
+theorem RegularSupportBasis.smulImage_in_basis {U : Set α} (U_in_basis : U ∈ RegularSupportBasis G α)
+  (f : G) : f •'' U ∈ RegularSupportBasis G α :=
+by
+  have eq := smul_eq f ⟨U, U_in_basis⟩
+  simp only at eq
+  rw [<-eq]
+  exact Subtype.coe_prop _
 
 def RegularSupportBasis.fromSingleton [T2Space α] [FaithfulSMul G α] (g : G) (g_ne_one : g ≠ 1) : { S : Set α // S ∈ RegularSupportBasis G α } :=
   let seed : Finset G := {g}
@@ -235,6 +250,43 @@ by
   · apply subset_trans
     exact rsupp_ss_clW
     exact clW_ss_U
+
+theorem RegularSupportBasis.closed_inter (b1 b2 : Set α)
+  (b1_in_basis : b1 ∈ RegularSupportBasis G α)
+  (b2_in_basis : b2 ∈ RegularSupportBasis G α)
+  (inter_nonempty : Set.Nonempty (b1 ∩ b2)) :
+  (b1 ∩ b2) ∈ RegularSupportBasis G α :=
+by
+  unfold RegularSupportBasis
+  simp
+  constructor
+  assumption
+
+  let ⟨_, ⟨s1, b1_eq⟩⟩ := b1_in_basis
+  let ⟨_, ⟨s2, b2_eq⟩⟩ := b2_in_basis
+
+  have dec_eq : DecidableEq G := Classical.typeDecidableEq G
+  use s1 ∪ s2
+  rw [RegularSupport.FiniteInter_sInter]
+  rw [Finset.coe_union, Set.image_union, Set.sInter_union]
+  repeat rw [<-RegularSupport.FiniteInter_sInter]
+  rw [b2_eq, b1_eq]
+
+theorem RegularSupportBasis.empty_not_mem :
+  ∅ ∉ RegularSupportBasis G α :=
+by
+  intro empty_mem
+  rw [RegularSupportBasis.mem_iff] at empty_mem
+  exact Set.not_nonempty_empty empty_mem.left
+
+theorem RegularSupportBasis.univ_mem [Nonempty α]:
+  Set.univ ∈ RegularSupportBasis G α :=
+by
+  rw [RegularSupportBasis.mem_iff]
+  constructor
+  exact Set.univ_nonempty
+  use ∅
+  simp [RegularSupport.FiniteInter]
 
 end Basis
 end Rubin

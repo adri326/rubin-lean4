@@ -32,6 +32,19 @@ by
   all_goals rw [f_double_mono]
   all_goals assumption
 
+theorem DoubleMonotoneOn.injective' [PartialOrder α] [Preorder β] (f_double_mono : DoubleMonotoneOn f B) :
+  ∀ x ∈ B, ∀ y ∈ B,
+  f x = f y → x = y :=
+by
+  intro x x_in_B y y_in_B fx_eq_fy
+  have fx_eq : f x = Set.restrict B f ⟨x, x_in_B⟩ := by simp
+  have fy_eq : f y = Set.restrict B f ⟨y, y_in_B⟩ := by simp
+
+  rw [fx_eq, fy_eq] at fx_eq_fy
+  apply (injective f_double_mono) at fx_eq_fy
+  simp at fx_eq_fy
+  exact fx_eq_fy
+
 theorem DoubleMonotoneOn.subset_iff {B : Set (Set α)} {f : Set α → Set β} (f_double_mono : DoubleMonotoneOn f B) :
   ∀ s ∈ B, ∀ t ∈ B, s ⊆ t ↔ f s ⊆ f t :=
 by
@@ -65,6 +78,20 @@ where
   toFun_doubleMonotone := by
     intro a a_in_T b b_in_T
     rw [F.toFun_doubleMonotone a (T_ss_S a_in_T) b (T_ss_S b_in_T)]
+
+@[simp]
+theorem OrderIsoOn.mk_of_subset_toFun [Preorder α] [Preorder β] (F : OrderIsoOn α β S)
+  {T : Set α} (T_ss_S : T ⊆ S) : (F.mk_of_subset T_ss_S).toFun = F.toFun :=
+by
+  unfold mk_of_subset
+  rfl
+
+@[simp]
+theorem OrderIsoOn.mk_of_subset_invFun [Preorder α] [Preorder β] (F : OrderIsoOn α β S)
+  {T : Set α} (T_ss_S : T ⊆ S) : (F.mk_of_subset T_ss_S).invFun = F.invFun :=
+by
+  unfold mk_of_subset
+  rfl
 
 theorem OrderIsoOn.invFun_doubleMonotone [Preorder α] [Preorder β] (F : OrderIsoOn α β S) :
   DoubleMonotoneOn F.invFun (F.toFun '' S) :=
@@ -461,6 +488,22 @@ by
     rw [mem_basis_iff_of_basis_set _ mS_in_mB]
 
   rw [Filter.InBasis.mem_image_basis_of_injective_on _ _ map_double_mono.injective S_in_B]
+
+
+theorem Filter.InBasis.mem_map_basis'
+  (map : Set α → Set β) (map_double_mono : DoubleMonotoneOn map B)
+  (F_basis : Filter.InBasis F B) {x : Set β} (x_in_basis : x ∈ map '' B):
+  x ∈ (Filter.InBasis.map_basis F B map) ↔ ∃ y : Set α, y ∈ F ∧ y ∈ B ∧ map y = x :=
+by
+  let ⟨y, y_in_B, y_eq⟩ := x_in_basis
+  rw [<-y_eq]
+  rw [map_mem_map_basis_of_basis_set map map_double_mono F_basis y_in_B]
+  constructor
+  · intro y_in_F
+    use y
+  · intro ⟨z, z_in_F, z_in_B, z_eq_y⟩
+    apply (map_double_mono.injective' z z_in_B y y_in_B) at z_eq_y
+    exact z_eq_y ▸ z_in_F
 
 -- TODO: clean this up :c
 theorem Filter.InBasis.map_basis_comp {γ : Type _} (m₁ : OrderIsoOn (Set α) (Set β) B)
@@ -1048,6 +1091,28 @@ where
     use S
   ultra := U.map_basis_ultra empty_notin_B map
 
+@[simp]
+theorem UltrafilterInBasis.mem_map_basis {β : Type _}
+  (empty_notin_B : ∅ ∉ B)
+  (map : OrderIsoOn (Set α) (Set β) B)
+  (empty_notin_mB : ∅ ∉ map.toFun '' B)
+  (U : UltrafilterInBasis B)
+  (S : Set β):
+  S ∈ U.map_basis empty_notin_B map empty_notin_mB ↔ S ∈ Filter.InBasis.map_basis U.filter B map.toFun :=
+by
+  rw [map_basis]
+  rfl
+
+@[simp]
+theorem UltrafilterInBasis.map_basis_filter {β : Type _}
+  (empty_notin_B : ∅ ∉ B)
+  (map : OrderIsoOn (Set α) (Set β) B)
+  (empty_notin_mB : ∅ ∉ map.toFun '' B)
+  (U : UltrafilterInBasis B):
+  (U.map_basis empty_notin_B map empty_notin_mB).filter = Filter.InBasis.map_basis U.filter B map.toFun :=
+by
+  rw [map_basis]
+
 /-
 theorem compl_not_mem_iff : sᶜ ∉ f ↔ s ∈ f :=
   ⟨fun hsc =>
@@ -1128,3 +1193,31 @@ by
     specialize p_clusterPt T_in_nhds Tc_in_U
     rw [Set.inter_compl_self] at p_clusterPt
     exact Set.not_nonempty_empty p_clusterPt
+
+/--
+Allows substituting the expression for the basis in the type.
+--/
+def UltrafilterInBasis.cast (U : UltrafilterInBasis B) {C : Set (Set α)} (B_eq_C : B = C) :
+  UltrafilterInBasis C where
+  filter := U.filter
+  ne_bot := U.ne_bot
+  in_basis := U.in_basis.mono (subset_of_eq B_eq_C)
+  ultra := by
+    nth_rw 1 [<-B_eq_C]
+    exact U.ultra
+
+@[simp]
+theorem UltrafilterInBasis.mem_cast (U : UltrafilterInBasis B) {C : Set (Set α)} (B_eq_C : B = C) (S : Set α):
+  S ∈ U.cast B_eq_C ↔ S ∈ U := by rw [cast]; rfl
+
+@[simp]
+theorem UltrafilterInBasis.le_cast (U : UltrafilterInBasis B) {C : Set (Set α)} (B_eq_C : B = C) (F : Filter α):
+  F ≤ U.cast B_eq_C ↔ F ≤ U := by rw [cast]
+
+@[simp]
+theorem UltrafilterInBasis.cast_le (U : UltrafilterInBasis B) {C : Set (Set α)} (B_eq_C : B = C) (F : Filter α):
+  U.cast B_eq_C ≤ F ↔ U ≤ F := by rw [cast]
+
+@[simp]
+theorem UltrafilterInBasis.cast_filter (U : UltrafilterInBasis B) {C : Set (Set α)} (B_eq_C : B = C):
+  (U.cast B_eq_C).filter = U.filter := by rw [cast]

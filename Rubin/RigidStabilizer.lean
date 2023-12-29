@@ -159,6 +159,13 @@ by
   rw [f_in_rist x (Set.not_mem_empty x)]
   simp
 
+theorem rigidStabilizer_univ (G α: Type _) [Group G] [MulAction G α]:
+  G•[(Set.univ : Set α)] = ⊤ :=
+by
+  ext g
+  rw [rigidStabilizer_support]
+  simp
+
 theorem rigidStabilizer_sInter (S : Set (Set α)) :
   G•[⋂₀ S] = ⨅ T ∈ S, G•[T] :=
 by
@@ -190,6 +197,18 @@ by
   rw [support_conjugate]
   rw [smulImage_subset_inv]
   simp
+
+theorem rigidStabilizer_conj_image_eq (S : Set α) (f : G) :
+  (fun g => f * g * f⁻¹) '' G•[S] = G•[f •'' S] :=
+by
+  ext x
+  have f_eq : (fun g => f * g * f⁻¹) = (MulAut.conj f).toEquiv := by
+    ext x
+    simp
+
+  rw [f_eq, Set.mem_image_equiv]
+  rw [MulEquiv.toEquiv_eq_coe, MulEquiv.coe_toEquiv_symm, MulAut.conj_symm_apply]
+  simp [rigidStabilizer_smulImage]
 
 theorem orbit_rigidStabilizer_subset {p : α} {U : Set α} (p_in_U : p ∈ U):
   MulAction.orbit G•[U] p ⊆ U :=

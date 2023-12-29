@@ -182,6 +182,14 @@ by
   rw [<-Set.diff_eq_empty]
   exact V_diff_cl_empty
 
+theorem regular_empty (α : Type _) [TopologicalSpace α]: Regular (∅ : Set α) :=
+by
+  simp
+
+theorem regular_univ (α : Type _) [TopologicalSpace α]: Regular (Set.univ : Set α) :=
+by
+  simp
+
 theorem regular_nbhd [T2Space α] {u v : α} (u_ne_v : u ≠ v):
   ∃ (U V : Set α), Regular U ∧ Regular V ∧ Disjoint U V ∧ u ∈ U ∧ v ∈ V :=
 by
