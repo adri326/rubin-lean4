@@ -1612,6 +1612,10 @@ end Convergence
 
 section Setoid
 
+variable {α : Type}
+variable [Nonempty α] [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+
 /--
 Two rubin filters are equivalent if they share the same behavior in regards to which set their converging point `p` lies in.
 --/
@@ -1709,6 +1713,16 @@ by
   rw [<-F₁.le_nhds_eq_lim _ _ F₁_le_nhds]
   rw [<-F₂.le_nhds_eq_lim _ _ F₂_le_nhds]
 
+theorem RubinFilter.lim_eq_iff_eqv (F₁ F₂ : RubinFilter G):
+  F₁ ≈ F₂ ↔ F₁.lim α = F₂.lim α :=
+by
+  constructor
+  apply lim_eq_of_eqv
+  intro lim_eq
+  apply eqv_of_map_converges _ _ (F₁.lim α)
+  · exact le_nhds_lim α F₁
+  · rw [lim_eq]
+    exact le_nhds_lim α F₂
 
 lemma RubinFilter.fromPoint_converges' (p : α) :
   ∃ q : α, (
@@ -1746,6 +1760,17 @@ by
     rw [RubinFilter.map_from_eq]
     apply UltrafilterInBasis.of_le
   · exact le_nhds_lim α F
+
+lemma RubinFilter.lim_in_set (F : RubinFilter G) {S : Set α} (S_in_basis : S ∈ RegularSupportBasis G α) :
+  F.lim α ∈ S ↔ AlgebraicConvergent F.filter.filter G•[S] :=
+by
+  rw [<-(RubinFilter.map_isRubinFilterOf F (α := α)).converges_iff S_in_basis]
+  constructor
+  · intro lim_in_S
+    exact ⟨lim α F, lim_in_S, le_nhds_lim α F⟩
+  · intro ⟨p, p_in_S, F_le_nhds⟩
+    convert p_in_S
+    exact (le_nhds_eq_lim α F p F_le_nhds).symm
 
 def RubinFilterBasis (G : Type _) [Group G] : Set (Set (RubinFilter G)) :=
   (fun S : Set G => { F : RubinFilter G | AlgebraicConvergent F.filter S }) '' AlgebraicCentralizerBasis G
@@ -1810,15 +1835,220 @@ instance : TopologicalSpace (RubinSpace G) := by
   unfold RubinSpace
   infer_instance
 
+end Setoid
+
+end RubinFilter
+
+
+section Basis
+
+variable {G : Type _}
+variable [Group G]
+
+variable (α : Type) [α_nonempty : Nonempty α]
+  [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
+  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+
+lemma AlgebraicConvergent_mono {F : RubinFilter G} {S T : Set G}
+  (S_basis : S ∈ AlgebraicCentralizerBasis G) (T_basis : T ∈ AlgebraicCentralizerBasis G)
+  (S_ss_T : S ⊆ T) (F_converges : AlgebraicConvergent F.filter.filter S) : AlgebraicConvergent F.filter.filter T :=
+by
+  let ⟨S', S'_basis, S'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ S_basis
+  let ⟨T', T'_basis, T'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ T_basis
+  rw [<-S'_eq, <-RubinFilter.lim_in_set F S'_basis (α := α)] at F_converges
+  rw [<-T'_eq, <-RubinFilter.lim_in_set F T'_basis (α := α)]
+  have S'_ss_T' : S' ⊆ T' := by
+    rw [<-S'_eq, <-T'_eq] at S_ss_T
+    simp at S_ss_T
+    rw [<-rigidStabilizer_subset_iff] at S_ss_T
+    any_goals apply RegularSupportBasis.regular (α := α) (G := G)
+    all_goals assumption
+  apply S'_ss_T'
+  assumption
+
+theorem RubinFilterBasis.isBasis : TopologicalSpace.IsTopologicalBasis (RubinFilterBasis G) := by
+  constructor
+  · intro T₁ T₁_in_basis T₂ T₂_in_basis F ⟨F_in_T₁, F_in_T₂⟩
+    let ⟨B₁, B₁_in_basis, B₁_mem⟩ := (mem_iff T₁).mp T₁_in_basis
+    let ⟨B₂, B₂_in_basis, B₂_mem⟩ := (mem_iff T₂).mp T₂_in_basis
+
+    have F_conv₁ := (B₁_mem F).mp F_in_T₁
+    have F_conv₂ := (B₂_mem F).mp F_in_T₂
+
+    let ⟨B₁', B₁'_in_basis, B₁'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ B₁_in_basis
+    let ⟨B₂', B₂'_in_basis, B₂'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ B₂_in_basis
+    simp only at B₁'_eq
+    simp only at B₂'_eq
+
+    rw [<-B₁'_eq, <-RubinFilter.lim_in_set F B₁'_in_basis] at F_conv₁
+    rw [<-B₂'_eq, <-RubinFilter.lim_in_set F B₂'_in_basis] at F_conv₂
+
+    have F_conv₃ : F.lim α ∈ B₁' ∩ B₂' := ⟨F_conv₁, F_conv₂⟩
+
+    have B₃_nonempty : (B₁' ∩ B₂').Nonempty := by use F.lim α
+    have B₃'_in_basis : B₁' ∩ B₂' ∈ RegularSupportBasis G α := by
+      apply RegularSupportBasis.closed_inter
+      all_goals assumption
+
+    have B₃_eq : B₁ ∩ B₂ = G•[B₁' ∩ B₂'] := by
+      rw [rigidStabilizer_inter, Subgroup.coe_inf, B₁'_eq, B₂'_eq]
+
+    have B₃_in_basis : B₁ ∩ B₂ ∈ AlgebraicCentralizerBasis G := by
+      rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α)]
+      use B₁' ∩ B₂'
+      simp
+      exact ⟨B₃'_in_basis, B₃_eq.symm⟩
+
+    have B₃_ne_bot : B₁ ∩ B₂ ≠ {1} := by
+      rw [B₃_eq, <-Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq]
+      rw [rigidStabilizer_empty_iff _ (RegularSupportBasis.regular B₃'_in_basis)]
+      rwa [<-ne_eq, <-Set.nonempty_iff_ne_empty]
+
+    use { F : RubinFilter G | AlgebraicConvergent F.filter (B₁ ∩ B₂) }
+    simp [RubinFilterBasis]
+    refine ⟨⟨B₁ ∩ B₂, ?B_in_basis, rfl⟩, ?F_conv₃, ?T₃_ss_T₁, ?T₃_ss_T₂⟩
+    · apply AlgebraicCentralizerBasis.inter_closed
+      all_goals assumption
+    · rw [<-B₁'_eq, <-B₂'_eq, <-Subgroup.coe_inf, <-rigidStabilizer_inter]
+      rw [<-RubinFilter.lim_in_set F B₃'_in_basis]
+      exact ⟨F_conv₁, F_conv₂⟩
+    · intro X
+      simp [B₁_mem]
+      apply AlgebraicConvergent_mono α B₃_in_basis B₁_in_basis
+      exact Set.inter_subset_left B₁ B₂
+    · intro X
+      simp [B₂_mem]
+      apply AlgebraicConvergent_mono α B₃_in_basis B₂_in_basis
+      exact Set.inter_subset_right B₁ B₂
+  · have univ_in_basis : Set.univ ∈ RubinFilterBasis G := by
+      rw [RubinFilterBasis.mem_iff]
+      use Set.univ
+      refine ⟨AlgebraicCentralizerBasis.univ_mem ?ex_nontrivial, ?F_in_univ⟩
+      {
+        let ⟨x⟩ := α_nonempty
+        let ⟨g, _, g_moving⟩ := get_moving_elem_in_rigidStabilizer G (isOpen_univ (α := α)) (Set.mem_univ x)
+        use g
+        intro g_eq_one
+        rw [g_eq_one, one_smul] at g_moving
+        exact g_moving rfl
+      }
+      intro X
+      simp
+      exact X.converges
+    apply Set.eq_univ_of_univ_subset
+    exact Set.subset_sUnion_of_mem univ_in_basis
+  · rfl
+
+theorem RubinSpace.basis : TopologicalSpace.IsTopologicalBasis (
+  Set.image (Quotient.mk') '' (RubinFilterBasis G)
+) := by
+  refine TopologicalSpace.IsTopologicalBasis.quotientMap (RubinFilterBasis.isBasis α) (quotientMap_quotient_mk') ?open_map
+
+  rw [(RubinFilterBasis.isBasis α).isOpenMap_iff]
+
+  intro U U_in_basis
+
+  apply TopologicalSpace.isOpen_generateFrom_of_mem
+  rw [RubinFilterBasis.mem_iff]
+  rw [RubinFilterBasis.mem_iff] at U_in_basis
+  let ⟨B, B_in_basis, B_mem⟩ := U_in_basis
+  simp
+  refine ⟨B, B_in_basis, ?mem⟩
+  intro F
+
+  let ⟨B', B'_in_basis, B'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ B_in_basis
+  simp only at B'_eq
+
+  simp only [B_mem]
+  rw [<-B'_eq, <-RubinFilter.lim_in_set (α := α) (G := G)]
+  conv => {
+    lhs; congr; intro;
+    rw [<-RubinFilter.lim_in_set (α := α) (G := G) _ B'_in_basis]
+  }
+  swap
+  exact B'_in_basis
+
+  constructor
+  · intro ⟨F', F'_lim, F'_eqv⟩
+    rw [(by rfl : Setoid.r F' F ↔ F' ≈ F)] at F'_eqv
+    rw [RubinFilter.lim_eq_iff_eqv F' F (α := α)] at F'_eqv
+    rwa [<-F'_eqv]
+  · intro F_lim
+    exact ⟨F, F_lim, Setoid.refl F⟩
+
+end Basis
+
+section Equivariant
+
+variable {G : Type _} [Group G]
+variable (α : Type _) [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+
+@[simp]
+lemma RubinSpace.lim_mk (F : RubinFilter G) :
+  RubinSpace.lim (α := α) (⟦F⟧ : RubinSpace G) = F.lim α :=
+by
+  unfold lim
+  simp
+
+@[simp]
+lemma RubinSpace.lim_mk' (F : RubinFilter G) :
+  RubinSpace.lim (α := α) (Quotient.mk' F : RubinSpace G) = F.lim α :=
+by
+  rw [Quotient.mk'_eq_mk]
+  exact RubinSpace.lim_mk α F
+
 theorem RubinSpace.lim_continuous : Continuous (RubinSpace.lim (G := G) (α := α)) := by
-  sorry
+  -- TODO: rename to continuous_iff when upgrading mathlib
+  apply (RegularSupportBasis.isBasis G α).continuous
+  intro S S_in_basis
+  apply TopologicalSpace.isOpen_generateFrom_of_mem
+  rw [RubinFilterBasis.mem_iff]
+  use G•[S]
+  refine ⟨AlgebraicCentralizerBasis.mem_of_regularSupportBasis S_in_basis, ?filters_mem⟩
+  simp
+  simp [<-RubinFilter.lim_in_set _ S_in_basis]
 
 theorem RubinSpace.fromPoint_continuous : Continuous (RubinSpace.fromPoint (G := G) (α := α)) := by
-  sorry
+  apply (RubinSpace.basis (α := α)).continuous
+  simp
+  intro U U_in_basis
+  rw [RubinFilterBasis.mem_iff] at U_in_basis
+  let ⟨V, V_in_basis, U_mem⟩ := U_in_basis
+  -- TODO: automatize this
+  let ⟨V', V'_in_basis, V'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ V_in_basis
+  simp only at V'_eq
 
+  rw [<-V'_eq] at U_mem
+  conv at U_mem => {
+    intro F
+    rw [<-F.lim_in_set V'_in_basis]
+  }
+
+  rw [(RegularSupportBasis.isBasis G α).isOpen_iff]
+  simp
+  intro x F F_in_U F_eqv_fromPoint_x
+  rw [U_mem] at F_in_U
+  have x_eq_F_lim : x = F.lim α := by
+    symm
+    rwa [Quotient.mk'_eq_mk, fromPoint, Quotient.eq, RubinFilter.lim_eq_iff_eqv (α := α), RubinFilter.fromPoint_lim] at F_eqv_fromPoint_x
+
+  refine ⟨V', V'_in_basis, ?x_in_V', ?V'_ss_U⟩
+  rwa [x_eq_F_lim]
+
+  intro y y_in_V'
+  simp
+
+  use RubinFilter.fromPoint (G := G) y
+  constructor
+  rwa [U_mem, RubinFilter.fromPoint_lim]
+
+  rw [Quotient.mk'_eq_mk, RubinSpace.fromPoint]
+
+-- TODO: mind the type variables
 /--
 The canonical homeomorphism from a topological space that a rubin action acts on to
-the rubin space.
+the rubin space associated with the group.
 --/
 noncomputable def RubinSpace.homeomorph : Homeomorph (RubinSpace G) α where
   toFun := RubinSpace.lim
@@ -1827,12 +2057,12 @@ noncomputable def RubinSpace.homeomorph : Homeomorph (RubinSpace G) α where
   left_inv := RubinSpace.fromPoint_lim
   right_inv := RubinSpace.lim_fromPoint
 
-  continuous_toFun := RubinSpace.lim_continuous
-  continuous_invFun := RubinSpace.fromPoint_continuous
+  continuous_toFun := RubinSpace.lim_continuous α
+  continuous_invFun := RubinSpace.fromPoint_continuous α
 
 instance : MulAction G (RubinSpace G) := sorry
 
-end Setoid
+end Equivariant
 
 -- theorem rubin' (hα : RubinAction G α) : EquivariantHomeomorph G α (RubinSpace G) where
 --   toFun := fun x => ⟦⟧
@@ -1840,7 +2070,6 @@ end Setoid
 
 
 
-end RubinFilter
 
 /-
 variable {β : Type _}

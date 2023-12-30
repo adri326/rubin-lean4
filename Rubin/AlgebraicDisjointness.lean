@@ -525,6 +525,14 @@ by
     rw [S_eq_fT]
     simp
 
+theorem AlgebraicCentralizerBasis.univ_mem (ex_non_trivial : ∃ g : G, g ≠ 1): Set.univ ∈ AlgebraicCentralizerBasis G := by
+  rw [mem_iff]
+  constructor
+  symm
+  exact Set.nonempty_compl.mp ex_non_trivial
+  use ∅
+  simp [AlgebraicCentralizerInter]
+
 theorem AlgebraicCentralizerBasis.conj_mem {S : Set G} (S_in_basis : S ∈ AlgebraicCentralizerBasis G)
   (h : G) : (fun g => h * g * h⁻¹) '' S ∈ AlgebraicCentralizerBasis G :=
 by
@@ -559,6 +567,34 @@ by
       rw [<-SetLike.mem_coe, <-AlgebraicCentralizer.conj, conj_eq, Set.mem_image_equiv]
     }
 
+theorem AlgebraicCentralizerBasis.inter_closed
+  {S T : Set G} (S_in_basis : S ∈ AlgebraicCentralizerBasis G) (T_in_basis : T ∈ AlgebraicCentralizerBasis G)
+  (ST_ne_bot : S ∩ T ≠ {1}) :
+  S ∩ T ∈ AlgebraicCentralizerBasis G :=
+by
+  let ⟨S', S_eq⟩ := to_subgroup S_in_basis
+  rw [S_eq]
+  rw [S_eq, subgroup_mem_iff] at S_in_basis
+  let ⟨S'_ne_bot, ⟨S'_seed, S'_eq⟩⟩ := S_in_basis
+
+  let ⟨T', T_eq⟩ := to_subgroup T_in_basis
+  rw [T_eq]
+  rw [T_eq, subgroup_mem_iff] at T_in_basis
+  let ⟨T'_ne_bot, ⟨T'_seed, T'_eq⟩⟩ := T_in_basis
+
+  rw [<-Subgroup.coe_inf, subgroup_mem_iff]
+  rw [S_eq, T_eq, <-Subgroup.coe_inf, <-Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq, <-ne_eq] at ST_ne_bot
+
+  have dec_eq : DecidableEq G := Classical.typeDecidableEq G
+
+  refine ⟨ST_ne_bot, ⟨S'_seed ∪ T'_seed, ?inter_eq⟩⟩
+
+  unfold AlgebraicCentralizerInter
+
+  simp only [<-Finset.mem_coe]
+  rw [Finset.coe_union, iInf_union]
+  rw [S'_eq, T'_eq]
+  rfl
 
 end AlgebraicCentralizer
 

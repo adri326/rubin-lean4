@@ -280,5 +280,12 @@ by
   · intro H_eq
     rw [H_eq]
 
+theorem rigidStabilizer_empty_iff (G : Type _) [Group G] {α : Type _} [TopologicalSpace α]
+  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
+  {U : Set α} (U_reg : Regular U) :
+  G•[U] = ⊥ ↔ U = ∅ :=
+by
+  rw [<-rigidStabilizer_empty (α := α) (G := G)]
+  exact rigidStabilizer_eq_iff G U_reg (regular_empty α)
 
 end Rubin
