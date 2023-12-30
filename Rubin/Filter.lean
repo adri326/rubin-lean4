@@ -292,6 +292,21 @@ by
   any_goals apply B_ss_C
   all_goals assumption
 
+theorem Filter.InBasis.inf_eq_bot_iff {F G : Filter α} (F_in_basis : F.InBasis B) (G_in_basis : G.InBasis B) :
+  F ⊓ G = ⊥ ↔ ∃ U ∈ B, ∃ V ∈ B, U ∈ F ∧ V ∈ G ∧ U ∩ V = ∅ :=
+by
+  rw [Filter.inf_eq_bot_iff]
+  constructor
+  · intro ⟨U, U_in_F, V, V_in_G, UV_empty⟩
+    let ⟨U', U'_in_F, U'_in_B, U'_ss_U⟩ := F_in_basis U U_in_F
+    let ⟨V', V'_in_G, V'_in_B, V'_ss_V⟩ := G_in_basis V V_in_G
+    refine ⟨U', U'_in_B, V', V'_in_B, U'_in_F, V'_in_G, ?inter_empty⟩
+    apply Set.eq_empty_of_subset_empty
+    apply subset_trans _ (subset_of_eq UV_empty)
+    exact Set.inter_subset_inter U'_ss_U V'_ss_V
+  · intro ⟨U, _, V, _, U_in_F, V_in_G, UV_empty⟩
+    exact ⟨U, U_in_F, V, V_in_G, UV_empty⟩
+
 def Filter.InBasis.basis {α : Type _} (F : Filter α) (B : Set (Set α)): Set (Set α) :=
   { S : Set α | S ∈ F ∧ S ∈ B }
 
@@ -1128,6 +1143,23 @@ by
   apply le_antisymm
   apply U.ultra
   all_goals assumption
+
+theorem UltrafilterInBasis.eq_of_le (U U' : UltrafilterInBasis B) :
+  U.filter ≤ U'.filter → U = U' :=
+by
+  intro U_le_U'
+  symm
+  rw [mk.injEq]
+  exact unique _ U.in_basis U_le_U'
+
+theorem UltrafilterInBasis.le_of_basis_sets (U U' : UltrafilterInBasis B) :
+  (∀ S : Set α, S ∈ B → S ∈ U' → S ∈ U) → U.filter ≤ U'.filter :=
+by
+  intro h
+  intro S S_in_U'
+  let ⟨T, T_in_B, T_in_U', T_ss_S⟩ := U'.in_basis _ S_in_U'
+  apply Filter.mem_of_superset _ T_ss_S
+  apply h <;> assumption
 
 theorem UltrafilterInBasis.le_of_inf_neBot (U : UltrafilterInBasis B)
   (B_closed : ∀ (b1 b2 : Set α), b1 ∈ B → b2 ∈ B → Set.Nonempty (b1 ∩ b2) → b1 ∩ b2 ∈ B)

@@ -1275,602 +1275,22 @@ by
 
 theorem proposition_3_5' {U : Set α} (U_in_basis : U ∈ RegularSupportBasis G α)
   (F : UltrafilterInBasis (RegularSupportBasis G α)):
-  (∃ p ∈ U, ClusterPt p F)
-  ↔ ∃ V : RegularSupportBasis G α, V.val ⊆ U ∧ RSuppSubsets G V.val ⊆ RSuppOrbit F G•[U] :=
+  (∃ p ∈ U, F ≤ nhds p)
+  ↔ ∃ V ∈ RegularSupportBasis G α, V ⊆ U ∧ RSuppSubsets G V ⊆ RSuppOrbit F G•[U] :=
 by
   constructor
-  · simp only [
-      F.clusterPt_iff_le_nhds
+  · intro ex_p
+    let ⟨⟨V, V_in_basis⟩, V_ss_U, subsets_ss_orbit⟩ := proposition_3_5_1 U_in_basis (F : Filter α) ex_p
+    exact ⟨V, V_in_basis, V_ss_U, subsets_ss_orbit⟩
+  · intro ⟨V, V_in_basis, V_ss_U, subsets_ss_orbit⟩
+    simp only [
+      <-F.clusterPt_iff_le_nhds
         (RegularSupportBasis.isBasis G α)
         (RegularSupportBasis.closed_inter G α)
     ]
-    exact proposition_3_5_1 U_in_basis (F : Filter α)
-  · exact proposition_3_5_2 (F : Filter α)
+    exact proposition_3_5_2 (F : Filter α) ⟨⟨V, V_in_basis⟩, V_ss_U, subsets_ss_orbit⟩
 
 end Ultrafilter
-
-
-/-
-variable {G α : Type _}
-variable [Group G]
-
-variable [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α]
-
-def IsRigidSubgroup (S : Set G) :=
-  S ≠ {1} ∧ ∃ T : Finset G, S = ⨅ (f ∈ T), AlgebraicCentralizer f
-
-def IsRigidSubgroup.toSubgroup {S : Set G} (S_rigid : IsRigidSubgroup S) : Subgroup G where
-  carrier := S
-  mul_mem' := by
-    let ⟨_, T, S_eq⟩ := S_rigid
-    simp only [S_eq, SetLike.mem_coe]
-    apply Subgroup.mul_mem
-  one_mem' := by
-    let ⟨_, T, S_eq⟩ := S_rigid
-    simp only [S_eq, SetLike.mem_coe]
-    apply Subgroup.one_mem
-  inv_mem' := by
-    let ⟨_, T, S_eq⟩ := S_rigid
-    simp only [S_eq, SetLike.mem_coe]
-    apply Subgroup.inv_mem
-
-@[simp]
-theorem IsRigidSubgroup.mem_subgroup {S : Set G} (S_rigid : IsRigidSubgroup S) (g : G):
-  g ∈ S_rigid.toSubgroup ↔ g ∈ S := by rfl
-
-theorem IsRigidSubgroup.toSubgroup_neBot {S : Set G} (S_rigid : IsRigidSubgroup S) :
-  S_rigid.toSubgroup ≠ ⊥ :=
-by
-  intro eq_bot
-  rw [Subgroup.eq_bot_iff_forall] at eq_bot
-  simp only [mem_subgroup] at eq_bot
-  apply S_rigid.left
-  rw [Set.eq_singleton_iff_unique_mem]
-  constructor
-  · let ⟨S', S'_eq⟩ := S_rigid.right
-    rw [S'_eq, SetLike.mem_coe]
-    exact Subgroup.one_mem _
-  · assumption
-
-lemma Subgroup.coe_eq (S T : Subgroup G) :
-  (S : Set G) = (T : Set G) ↔ S = T :=
-by
-  constructor
-  · intro h
-    ext x
-    repeat rw [<-Subgroup.mem_carrier]
-    have h₁ : ∀ S : Subgroup G, (S : Set G) = S.carrier := by intro h; rfl
-    repeat rw [h₁] at h
-    rw [h]
-  · intro h
-    rw [h]
-
-def IsRigidSubgroup.algebraicCentralizerBasis {S : Set G} (S_rigid : IsRigidSubgroup S) : AlgebraicCentralizerBasis G := ⟨
-  S_rigid.toSubgroup,
-  by
-    rw [AlgebraicCentralizerBasis.mem_iff' _ (IsRigidSubgroup.toSubgroup_neBot S_rigid)]
-    let ⟨S', S'_eq⟩ := S_rigid.right
-    use S'
-    unfold AlgebraicCentralizerInter₀
-    rw [<-Subgroup.coe_eq, <-S'_eq]
-    rfl
-⟩
-
-theorem IsRigidSubgroup.algebraicCentralizerBasis_val {S : Set G} (S_rigid : IsRigidSubgroup S) :
-  S_rigid.algebraicCentralizerBasis.val = S_rigid.toSubgroup := rfl
-
-section toRegularSupportBasis
-
-variable (α : Type _)
-variable [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α]
-variable [FaithfulSMul G α] [T2Space α] [LocallyMoving G α]
-
-theorem IsRigidSubgroup.has_regularSupportBasis {S : Set G} (S_rigid : IsRigidSubgroup S) :
-  ∃ (U : RegularSupportBasis G α), G•[U.val] = S :=
-by
-  let ⟨S_ne_bot, ⟨T, S_eq⟩⟩ := S_rigid
-  rw [S_eq]
-  simp only [Subgroup.coe_eq]
-  rw [S_eq, <-Subgroup.coe_bot, ne_eq, Subgroup.coe_eq, <-ne_eq] at S_ne_bot
-
-
-
-  -- let T' : Finset (HomeoGroup α) := Finset.map (HomeoGroup.fromContinuous_embedding α) T
-
-  let T' := RegularSupport.FiniteInter α T
-
-  have T'_nonempty : Set.Nonempty T' := by
-    simp only [RegularSupport.FiniteInter, proposition_2_1 (G := G) (α := α)] at S_ne_bot
-    rw [ne_eq, <-rigidStabilizer_iInter_regularSupport', <-ne_eq] at S_ne_bot
-    exact rigidStabilizer_neBot S_ne_bot
-
-  have T'_in_basis : T' ∈ RegularSupportBasis G α := by
-    constructor
-    assumption
-    use T
-
-  use ⟨T', T'_in_basis⟩
-  simp [RegularSupport.FiniteInter]
-  rw [rigidStabilizer_iInter_regularSupport']
-  simp only [<-proposition_2_1]
-
-noncomputable def IsRigidSubgroup.toRegularSupportBasis {S : Set G} (S_rigid : IsRigidSubgroup S) :
-  RegularSupportBasis G α
-:= Exists.choose (IsRigidSubgroup.has_regularSupportBasis α S_rigid)
-
-theorem IsRigidSubgroup.toRegularSupportBasis_eq {S : Set G} (S_rigid : IsRigidSubgroup S):
-  G•[(S_rigid.toRegularSupportBasis α).val] = S :=
-by
-  exact Exists.choose_spec (IsRigidSubgroup.has_regularSupportBasis α S_rigid)
-
-theorem IsRigidSubgroup.toRegularSupportBasis_regular {S : Set G} (S_rigid : IsRigidSubgroup S):
-  Regular (S_rigid.toRegularSupportBasis α).val :=
-by
-  apply RegularSupportBasis.regular (G := G)
-  exact (toRegularSupportBasis α S_rigid).prop
-
-theorem IsRigidSubgroup.toRegularSupportBasis_nonempty {S : Set G} (S_rigid : IsRigidSubgroup S):
-  Set.Nonempty (S_rigid.toRegularSupportBasis α).val :=
-by
-  exact (Subtype.prop (S_rigid.toRegularSupportBasis α)).left
-
-theorem IsRigidSubgroup.toRegularSupportBasis_mono {S T : Set G} (S_rigid : IsRigidSubgroup S)
-  (T_rigid : IsRigidSubgroup T) :
-  S ⊆ T ↔ (S_rigid.toRegularSupportBasis α : Set α) ⊆ T_rigid.toRegularSupportBasis α :=
-by
-  rw [rigidStabilizer_subset_iff G (toRegularSupportBasis_regular _ S_rigid) (toRegularSupportBasis_regular _ T_rigid)]
-  constructor
-  · intro S_ss_T
-    rw [<-IsRigidSubgroup.toRegularSupportBasis_eq (α := α) S_rigid] at S_ss_T
-    rw [<-IsRigidSubgroup.toRegularSupportBasis_eq (α := α) T_rigid] at S_ss_T
-    simp at S_ss_T
-    exact S_ss_T
-  · intro Sr_ss_Tr
-    -- TODO: clean that up
-    have Sr_ss_Tr' : (G•[(toRegularSupportBasis α S_rigid).val] : Set G)
-      ⊆ G•[(toRegularSupportBasis α T_rigid).val] :=
-    by
-      simp
-      assumption
-    rw [IsRigidSubgroup.toRegularSupportBasis_eq (α := α) S_rigid] at Sr_ss_Tr'
-    rw [IsRigidSubgroup.toRegularSupportBasis_eq (α := α) T_rigid] at Sr_ss_Tr'
-    assumption
-
-theorem IsRigidSubgroup.toRegularSupportBasis_mono' {S T : Set G} (S_rigid : IsRigidSubgroup S)
-  (T_rigid : IsRigidSubgroup T) :
-  S ⊆ T ↔ (S_rigid.toRegularSupportBasis α : Set α) ⊆ (T_rigid.toRegularSupportBasis α : Set α) :=
-by
-  rw [<-IsRigidSubgroup.toRegularSupportBasis_mono]
-
-@[simp]
-theorem IsRigidSubgroup.toRegularSupportBasis_rigidStabilizer {S : Set G} (S_rigid : IsRigidSubgroup S) :
-  G•[(S_rigid.toRegularSupportBasis α : Set α)] = S :=
-by
-  sorry
-  -- TODO: prove that `G•[S_rigid.toRegularSupportBasis] = S`
-
-@[simp]
-theorem IsRigidSubgroup.toRegularSupportBasis_rigidStabilizer' {S : Set G} (S_rigid : IsRigidSubgroup S) (g : G):
-  g ∈ G•[(S_rigid.toRegularSupportBasis α : Set α)] ↔ g ∈ S :=
-by
-  rw [<-SetLike.mem_coe, IsRigidSubgroup.toRegularSupportBasis_rigidStabilizer]
-
-end toRegularSupportBasis
-
-theorem IsRigidSubgroup.conj {U : Set G} (U_rigid : IsRigidSubgroup U) (g : G) : IsRigidSubgroup ((fun h => g * h * g⁻¹) '' U) := by
-  have conj_bijective : ∀ g : G, Function.Bijective (fun h => g * h * g⁻¹) := by
-    intro g
-    constructor
-    · intro x y; simp
-    · intro x
-      use g⁻¹ * x * g
-      group
-
-  constructor
-  · intro H
-    apply U_rigid.left
-    have h₁ : (fun h => g * h * g⁻¹) '' {1} = {1} := by simp
-    rw [<-h₁] at H
-    apply (Set.image_eq_image (conj_bijective g).left).mp H
-  · let ⟨S, S_eq⟩ := U_rigid.right
-    have dec_eq : DecidableEq G := Classical.typeDecidableEq G
-    use Finset.image (fun h => g * h * g⁻¹) S
-    rw [S_eq]
-    simp
-    simp only [Set.image_iInter (conj_bijective _), AlgebraicCentralizer.conj]
-
-def AlgebraicSubsets (V : Set G) : Set (Subgroup G) :=
-  {W ∈ AlgebraicCentralizerBasis G | W ≤ V}
-
-def AlgebraicOrbit (F : Filter G) (U : Set G) : Set (Subgroup G) :=
-  { (W_rigid.conj g).toSubgroup | (g ∈ U) (W ∈ F) (W_rigid : IsRigidSubgroup W) }
-
-structure RubinFilter (G : Type _) [Group G] where
-  -- Issue: It's *really hard* to generate ultrafilters on G that satisfy the other conditions of this rubinfilter
-  filter : Ultrafilter G
-
-  -- Note: the following condition cannot be met by ultrafilters in G,
-  -- and doesn't seem to be necessary
-  -- rigid_basis : ∀ S ∈ filter, ∃ T ⊆ S, IsRigidSubgroup T
-
-  -- Equivalent formulation of convergence
-  converges : ∀ U ∈ filter,
-    IsRigidSubgroup U →
-    ∃ V : Set G, IsRigidSubgroup V ∧ V ⊆ U ∧ AlgebraicSubsets V ⊆ AlgebraicOrbit filter U
-
-  -- Only really used to prove that ∀ S : Rigid, T : Rigid, S T ∈ F, S ∩ T : Rigid
-  ne_bot : {1} ∉ filter
-
-instance : Coe (RubinFilter G) (Ultrafilter G) where
-  coe := RubinFilter.filter
-
-section Equivalence
-open Topology
-
-variable {G : Type _} [Group G]
-variable (α : Type _)
-variable [TopologicalSpace α] [T2Space α] [MulAction G α] [ContinuousConstSMul G α]
-variable [FaithfulSMul G α] [LocallyDense G α] [LocallyCompactSpace α] [HasNoIsolatedPoints α]
-
--- TODO: either see whether we actually need this step, or change these names to something memorable
--- This is an attempt to convert a RubinFilter G back to an Ultrafilter α
-def RubinFilter.to_action_filter (F : RubinFilter G) : Filter α :=
-  ⨅ (S : { S : Set G // S ∈ F.filter ∧ IsRigidSubgroup S }), (Filter.principal (S.prop.right.toRegularSupportBasis α))
-
-
-instance RubinFilter.to_action_filter_neBot {F : RubinFilter G} [Nonempty α] : Filter.NeBot (F.to_action_filter α) :=
-  by
-    unfold to_action_filter
-    rw [Filter.iInf_neBot_iff_of_directed]
-    · intro ⟨S, S_in_F, S_rigid⟩
-      simp
-      apply IsRigidSubgroup.toRegularSupportBasis_nonempty
-    · intro ⟨S, S_in_F, S_rigid⟩ ⟨T, T_in_F, T_rigid⟩
-      simp
-      use S ∩ T
-      have ST_in_F : (S ∩ T) ∈ F.filter := by
-        -- rw [<-Ultrafilter.mem_coe]
-        apply Filter.inter_mem <;> assumption
-      have ST_subgroup : IsRigidSubgroup (S ∩ T) := by
-        constructor
-        swap
-        · let ⟨S_seed, S_eq⟩ := S_rigid.right
-          let ⟨T_seed, T_eq⟩ := T_rigid.right
-          have dec_eq : DecidableEq G := Classical.typeDecidableEq G
-          use S_seed ∪ T_seed
-          rw [Finset.iInf_union, S_eq, T_eq]
-          simp
-        · -- TODO: check if we can't prove this without using F.ne_bot;
-          -- we might be able to use convergence
-          intro ST_eq_bot
-          apply F.ne_bot
-          rw [<-ST_eq_bot]
-          exact ST_in_F
-          -- sorry
-      use ⟨ST_in_F, ST_subgroup⟩
-
-      repeat rw [<-IsRigidSubgroup.toRegularSupportBasis_mono' (α := α)]
-      constructor
-      exact Set.inter_subset_left S T
-      exact Set.inter_subset_right S T
-
--- theorem RubinFilter.to_action_filter_converges' (F : RubinFilter G) :
---   ∀ U : Set α, U ∈ RegularSupportBasis G α → U ∈ F.to_action_filter →
---   ∃ V ⊆ F.to_action_filter, V ⊆ U ∧
-
-theorem RubinFilter.to_action_filter_mem {F : RubinFilter G} {U : Set G} (U_rigid : IsRigidSubgroup U) :
-  U ∈ F.filter ↔ (U_rigid.toRegularSupportBasis α : Set α) ∈ F.to_action_filter α :=
-by
-  sorry
-
-theorem RubinFilter.to_action_filter_mem' {F : RubinFilter G} {U : Set α} (U_in_basis : U ∈ RegularSupportBasis G α) :
-  U ∈ F.to_action_filter α ↔ (G•[U] : Set G) ∈ F.filter :=
-by
-  -- trickier to prove but should be possible
-  sorry
-
-theorem RubinFilter.to_action_filter_clusterPt [Nonempty α] (F : RubinFilter G) :
-  ∃ p : α, ClusterPt p (F.to_action_filter α) :=
-by
-  have univ_in_basis : Set.univ ∈ RegularSupportBasis G α := by
-    rw [RegularSupportBasis.mem_iff]
-    simp
-    use {}
-    simp [RegularSupport.FiniteInter]
-
-  have univ_rigid : IsRigidSubgroup (G := G) Set.univ := by
-    constructor
-    simp [Set.eq_singleton_iff_unique_mem]
-    exact LocallyMoving.nontrivial_elem G α
-    use {}
-    simp
-
-  suffices ∃ p ∈ Set.univ, ClusterPt p (F.to_action_filter α) by
-    let ⟨p, _, clusterPt⟩ := this
-    use p
-
-  apply proposition_3_5_2 (G := G) (α := α)
-  simp
-  let ⟨S, S_rigid, _, S_subsets_ss_orbit⟩ := F.converges _ Filter.univ_mem univ_rigid
-
-  use S_rigid.toRegularSupportBasis α
-  constructor
-  simp
-
-  unfold RSuppSubsets RSuppOrbit
-  simp
-  intro T T_in_basis T_ss_S
-
-
-  let T' := G•[T]
-  have T_regular : Regular T := sorry -- easy
-  have T'_rigid : IsRigidSubgroup (T' : Set G) := sorry -- provable
-  have T'_ss_S : (T' : Set G) ⊆ S := sorry -- using one of our lovely theorems
-
-  have T'_in_subsets : T' ∈ AlgebraicSubsets S := by
-    unfold AlgebraicSubsets
-    simp
-    constructor
-    sorry -- prove that rigid subgroups are in the algebraic centralizer basis
-    exact T'_ss_S
-
-  let ⟨g, _, W, W_in_F, W_rigid, W_conj⟩ := S_subsets_ss_orbit T'_in_subsets
-
-  use g
-  constructor
-  sorry -- TODO: G•[univ] = top
-
-  let W' := W_rigid.toRegularSupportBasis α
-  have W'_regular : Regular (W' : Set α) := by
-    apply RegularSupportBasis.regular (G := G)
-    simp
-  use W'
-
-  constructor
-  rw [<-RubinFilter.to_action_filter_mem]
-  assumption
-
-  rw [<-rigidStabilizer_eq_iff (α := α) (G := G) ((smulImage_regular _ _).mp W'_regular) T_regular]
-
-  ext i
-  rw [rigidStabilizer_smulImage]
-  unfold_let at W_conj
-  rw [<-W_conj]
-  simp
-  constructor
-  · intro
-    use g⁻¹ * i * g
-    constructor
-    assumption
-    group
-  · intro ⟨j, j_in_W, gjg_eq_i⟩
-    rw [<-gjg_eq_i]
-    group
-    assumption
-
--- theorem RubinFilter.to_action_filter_le_nhds [Nonempty α] (F : RubinFilter G) :
---   ∃ p : α, (F.to_action_filter α) ≤ 𝓝 p :=
--- by
---   let ⟨p, p_clusterPt⟩ := to_action_filter_clusterPt α F
---   use p
---   intro S S_in_nhds
---   rw [(RegularSupportBasis.isBasis G α).mem_nhds_iff] at S_in_nhds
---   let ⟨T, T_in_basis, p_in_T, T_ss_S⟩ := S_in_nhds
-
---   suffices T ∈ F.to_action_filter α by
---     apply Filter.sets_of_superset (F.to_action_filter α) this T_ss_S
-
---   rw [RubinFilter.to_action_filter_mem' _ T_in_basis]
-
---   intro S p_in_S S_open
---   sorry
-
-lemma RubinFilter.mem_to_action_filter (F : RubinFilter G) {U : Set G} (U_rigid : IsRigidSubgroup U) :
-  U ∈ F.filter ↔ (U_rigid.toRegularSupportBasis α : Set α) ∈ F.to_action_filter α :=
-by
-  unfold to_action_filter
-  constructor
-  · intro U_in_filter
-    apply Filter.mem_iInf_of_mem ⟨U, U_in_filter, U_rigid⟩
-    intro x
-    simp
-  · sorry -- pain
-
-noncomputable def RubinFilter.to_action_ultrafilter (F : RubinFilter G) [Nonempty α]: Ultrafilter α :=
-  Ultrafilter.of (F.to_action_filter α)
-
-theorem RubinFilter.to_action_ultrafilter_converges (F : RubinFilter G) [Nonempty α] [LocallyDense G α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] {U : Set G}
-  (U_in_F : U ∈ F.filter) (U_rigid : IsRigidSubgroup U):
-  ∃ p ∈ (U_rigid.toRegularSupportBasis α).val, ClusterPt p (F.to_action_ultrafilter α) :=
-by
-  rw [proposition_3_5 (G := G)]
-  swap
-  {
-    apply Subtype.prop (IsRigidSubgroup.toRegularSupportBasis α U_rigid)
-  }
-
-  let ⟨V, V_rigid, V_ss_U, algsubs_ss_algorb⟩ := F.converges U U_in_F U_rigid
-  -- let V' := V_rigid.toSubgroup
-  -- TODO: subst V' to simplify the proof?
-
-  use V_rigid.toRegularSupportBasis α
-  constructor
-  {
-    rw [<-IsRigidSubgroup.toRegularSupportBasis_mono]
-    exact V_ss_U
-  }
-
-  unfold RSuppSubsets RSuppOrbit
-  simp
-  intro S S_in_basis S_ss_V
-  -- let ⟨S', S'_eq⟩ := S_in_basis.right
-
-  have S_regular : Regular S := RegularSupportBasis.regular S_in_basis
-
-  have S_nonempty : Set.Nonempty S := S_in_basis.left
-
-  have GS_ss_V : G•[S] ≤ V := by
-    rw [<-V_rigid.toRegularSupportBasis_eq (α := α)]
-    simp only [Set.le_eq_subset, SetLike.coe_subset_coe]
-    rw [<-rigidStabilizer_subset_iff G (α := α) S_regular (IsRigidSubgroup.toRegularSupportBasis_regular _ V_rigid)]
-    assumption
-
-  -- TODO: show that G•[S] ∈ AlgebraicSubsets V
-  have GS_in_algsubs_V : G•[S] ∈ AlgebraicSubsets V := by
-    unfold AlgebraicSubsets
-    simp
-    constructor
-    · rw [rigidStabilizerBasis_eq_algebraicCentralizerBasis (α := α)]
-      let ⟨S', S'_eq⟩ := S_in_basis.right
-      rw [RigidStabilizerBasis.mem_iff' _ (LocallyMoving.locally_moving _ S_regular.isOpen S_nonempty)]
-      use S'
-      rw [RigidStabilizerInter₀, S'_eq, RegularSupport.FiniteInter, rigidStabilizer_iInter_regularSupport']
-    · exact GS_ss_V
-
-  let ⟨g, g_in_U, W, W_in_F, W_rigid, Wconj_eq_GS⟩ := algsubs_ss_algorb GS_in_algsubs_V
-
-  use g
-  constructor
-  {
-
-    assumption
-  }
-
-  use W_rigid.toRegularSupportBasis α
-  constructor
-  · apply Ultrafilter.of_le
-    rw [<-RubinFilter.mem_to_action_filter]
-    assumption
-  · rw [<-rigidStabilizer_eq_iff G]
-    swap
-    {
-      rw [<-smulImage_regular (G := G)]
-      apply IsRigidSubgroup.toRegularSupportBasis_regular
-    }
-    swap
-    exact S_regular
-
-    ext i
-    rw [rigidStabilizer_smulImage, <-Wconj_eq_GS]
-    simp
-    constructor
-    · intro gig_in_W
-      use g⁻¹ * i * g
-      constructor; exact gig_in_W
-      group
-    · intro ⟨j, j_in_W, gjg_eq_i⟩
-      rw [<-gjg_eq_i]
-      group
-      assumption
-
--- Idea: prove that for every rubinfilter, there exists an associated ultrafilter on α that converges
-
-instance RubinFilterSetoid (G : Type _) [Group G] : Setoid (RubinFilter G) where
-  r F F' := ∀ (U : Set G), IsRigidSubgroup U →
-    ((∃ V : Set G, V ≤ U ∧ AlgebraicSubsets V ⊆ AlgebraicOrbit F.filter U)
-    ↔ (∃ V' : Set G, V' ≤ U ∧ AlgebraicSubsets V' ⊆ AlgebraicOrbit F'.filter U))
-  iseqv := by
-    constructor
-    · intros
-      simp
-    · intro F F' h
-      intro U U_rigid
-      symm
-      exact h U U_rigid
-    · intro F₁ F₂ F₃
-      intro h₁₂ h₂₃
-      intro U U_rigid
-      specialize h₁₂ U U_rigid
-      specialize h₂₃ U U_rigid
-      exact Iff.trans h₁₂ h₂₃
-
-def RubinFilterBasis : Set (Set (RubinFilter G)) :=
-  (fun S : Subgroup G => { F : RubinFilter G | (S : Set G) ∈ F.filter }) '' AlgebraicCentralizerBasis G
-
-instance : TopologicalSpace (RubinFilter G) := TopologicalSpace.generateFrom RubinFilterBasis
-
-def RubinSpace (G : Type _) [Group G] := Quotient (RubinFilterSetoid G)
-
-instance : TopologicalSpace (RubinSpace G) := by
-  unfold RubinSpace
-  infer_instance
-
-instance : MulAction G (RubinSpace G) := sorry
-
-end Equivalence
-
-section Convert
-open Topology
-
-variable (G α : Type _)
-variable [Group G]
-variable [TopologicalSpace α] [Nonempty α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
-variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α] [LocallyDense G α]
-
-instance RubinFilter.fromElement_neBot (x : α) : Filter.NeBot (⨅ (S ∈ 𝓝 x), Filter.principal (G•[S] : Set G)) := by sorry
-
-noncomputable def RubinFilter.fromElement (x : α) : RubinFilter G where
-  filter := @Ultrafilter.of _ (⨅ (S ∈ 𝓝 x), Filter.principal (G•[S] : Set G)) (RubinFilter.fromElement_neBot G α x)
-  converges := by
-    sorry
-  ne_bot := by
-    sorry -- this will be fun to try and prove
-
--- Alternate idea: don't try to compute the associated ultrafilter, and only define a predicate?
-theorem RubinFilter.converging_element (F : RubinFilter G) :
-  ∃ p : α, ClusterPt p (F.to_action_ultrafilter α) :=
-by
-  have univ_in_F : Set.univ ∈ F.filter := Filter.univ_mem
-  have univ_in_basis : IsRigidSubgroup (G := G) Set.univ := by
-    constructor
-    sorry -- TODO: prove that Set.univ ≠ {1}, from locallydense
-    use {}
-    simp
-
-  let ⟨p, p_in_basis, clusterPt_p⟩ := RubinFilter.to_action_ultrafilter_converges α F univ_in_F univ_in_basis
-
-  use p
-
-noncomputable def RubinFilter.toElement (F : RubinFilter G) : α :=
-  (F.converging_element G α).choose
-
-theorem RubinFilter.toElement_equiv (F F' : RubinFilter G) (equiv : F ≈ F'):
-  F.toElement G α = F'.toElement G α :=
-by
-
-  sorry
-
-theorem rubin' (hα : RubinAction G α) : EquivariantHomeomorph G α (RubinSpace G) where
-  toFun := fun x => ⟦RubinFilter.fromElement (G := G) α x⟧
-  invFun := fun f => f.liftOn (RubinFilter.toElement G α) (RubinFilter.toElement_equiv G α)
-  continuous_toFun := by
-    simp
-    constructor
-    intro S S_open
-    rw [<-isOpen_coinduced]
-    -- Note the sneaky different IsOpen's
-    -- TODO: apply topologicalbasis on both isopen
-    sorry
-  continuous_invFun := by
-    simp
-    sorry
-  left_inv := by
-    intro x
-    simp
-    sorry
-  right_inv := by
-    intro F
-    nth_rw 2 [<-Quotient.out_eq F]
-    rw [Quotient.eq]
-    simp
-    sorry
-  equivariant := by
-    simp
-    sorry
-
-end Convert
--/
-
 
 section RubinFilter
 
@@ -1890,10 +1310,15 @@ by
   simp [AlgebraicOrbit]
   simp only [and_assoc, eq_comm]
 
+def AlgebraicConvergent {G : Type _} [Group G]
+  (F : Filter G)
+  (U : Set G) : Prop :=
+  ∃ V ∈ AlgebraicCentralizerBasis G, V ⊆ U ∧ AlgebraicSubsets V ⊆ AlgebraicOrbit F U
+
 structure RubinFilter (G : Type _) [Group G] :=
   filter : UltrafilterInBasis (AlgebraicCentralizerBasis G)
 
-  converges : ∃ V ∈ AlgebraicCentralizerBasis G, AlgebraicSubsets V ⊆ AlgebraicOrbit filter Set.univ
+  converges : AlgebraicConvergent filter.filter Set.univ
 
 lemma RegularSupportBasis.empty_not_mem' : ∅ ∉ (RigidStabilizer.inv_order_iso_on G α).toFun '' AlgebraicCentralizerBasis G := by
   simp
@@ -2040,6 +1465,35 @@ by
     unfold_let
     rw [RigidStabilizer_leftInv U_in_basis]
 
+theorem IsRubinFilterOf.converges_iff {A : UltrafilterInBasis (RegularSupportBasis G α)}
+  {B : UltrafilterInBasis (AlgebraicCentralizerBasis G)}
+  (filter_of : IsRubinFilterOf A B)
+  {V : Set α} (V_in_basis : V ∈ RegularSupportBasis G α)
+  :
+  (∃ p ∈ V, A ≤ nhds p) ↔
+  AlgebraicConvergent B.filter G•[V] :=
+by
+  unfold AlgebraicConvergent
+  constructor
+  · rw [proposition_3_5' V_in_basis]
+    intro ⟨W, W_in_basis, W_ss_V, subsets_ss_orbit⟩
+    use G•[W]
+    rw [<-filter_of.subsets_ss_orbit W_in_basis]
+    refine ⟨?GW_in_basis, ?GW_ss_GV, subsets_ss_orbit⟩
+    exact AlgebraicCentralizerBasis.mem_of_regularSupportBasis W_in_basis
+    simp
+    rwa [<-rigidStabilizer_subset_iff _ (RegularSupportBasis.regular W_in_basis) (RegularSupportBasis.regular V_in_basis)]
+  · intro ⟨W, W_in_basis, W_ss_GV, subsets_ss_orbit⟩
+    rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α)] at W_in_basis
+    let ⟨W', W'_in_basis, W'_eq⟩ := W_in_basis
+    simp only at W'_eq
+    rw [proposition_3_5' V_in_basis]
+    use W'
+    rw [filter_of.subsets_ss_orbit W'_in_basis, W'_eq]
+    refine ⟨W'_in_basis, ?W'_ss_V, subsets_ss_orbit⟩
+    rw [<-W'_eq] at W_ss_GV
+    simp at W_ss_GV
+    rwa [<-rigidStabilizer_subset_iff _ (RegularSupportBasis.regular W'_in_basis) (RegularSupportBasis.regular V_in_basis)] at W_ss_GV
 
 def RubinFilter.from (F : UltrafilterInBasis (RegularSupportBasis G α)) (F_converges : ∃ p : α, F ≤ nhds p) : RubinFilter G where
   filter := (F.map_basis
@@ -2051,26 +1505,339 @@ def RubinFilter.from (F : UltrafilterInBasis (RegularSupportBasis G α)) (F_conv
   converges := by
     let ⟨p, F_le_nhds⟩ := F_converges
 
-    have F_clusterPt : ClusterPt p F := by
-      rw [UltrafilterInBasis.clusterPt_iff_le_nhds]
-      · assumption
-      · exact RegularSupportBasis.isBasis G α
-      · exact RegularSupportBasis.closed_inter G α
+    have ⟨W, W_in_basis, _, W_subsets_ss_GV_orbit⟩ := (proposition_3_5' (RegularSupportBasis.univ_mem G α) F).mp ⟨p, (Set.mem_univ p), F_le_nhds⟩
 
-    have ⟨⟨W, W_in_basis⟩, W_ss_V, W_subsets_ss_GV_orbit⟩ := (proposition_3_5' (RegularSupportBasis.univ_mem G α) F).mp ⟨p, (Set.mem_univ p), F_clusterPt⟩
-    simp only at W_ss_V
-    simp only at W_subsets_ss_GV_orbit
-
-    use G•[W]
-    constructor
-    {
-      apply AlgebraicCentralizerBasis.mem_of_regularSupportBasis W_in_basis
-    }
+    refine ⟨
+      G•[W],
+      by apply AlgebraicCentralizerBasis.mem_of_regularSupportBasis W_in_basis,
+      by simp,
+      ?subsets_ss_orbit
+    ⟩
 
     rw [<-Subgroup.coe_top, <-rigidStabilizer_univ (α := α) (G := G)]
-    -- (RegularSupportBasis.univ_mem G α)
-    rw [<-(RubinFilter.from_isRubinFilterOf' F).subsets_ss_orbit W_in_basis]
-    assumption
+    rwa [<-(RubinFilter.from_isRubinFilterOf' F).subsets_ss_orbit W_in_basis]
+
+
+theorem RubinFilter.from_isRubinFilterOf (F : UltrafilterInBasis (RegularSupportBasis G α)) (F_converges : ∃ p : α, F ≤ nhds p):
+  IsRubinFilterOf F (RubinFilter.from F F_converges).filter := RubinFilter.from_isRubinFilterOf' F
+
+theorem RubinFilter.map_from_eq (F : UltrafilterInBasis (RegularSupportBasis G α)) (F_converges : ∃ p : α, F ≤ nhds p):
+  (RubinFilter.from F F_converges).map α = F :=
+by
+  apply UltrafilterInBasis.eq_of_le
+  apply UltrafilterInBasis.le_of_basis_sets
+  intro S S_in_B S_in_F
+
+  rw [(RubinFilter.from_isRubinFilterOf F F_converges) S S_in_B] at S_in_F
+  rw [(RubinFilter.map_isRubinFilterOf (RubinFilter.from F F_converges) (α := α)) S S_in_B]
+
+  exact S_in_F
+
+section Convergence
+
+variable (α : Type _)
+variable [Nonempty α] [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+
+theorem RubinFilter.map_converges (F : RubinFilter G):
+  ∃ p : α, (F.map α).filter ≤ nhds p :=
+by
+  suffices ∃ p ∈ Set.univ, (F.map α).filter ≤ nhds p by
+    let ⟨p, _, f_le_nhds⟩ := this
+    exact ⟨p, f_le_nhds⟩
+
+  rw [proposition_3_5' (RegularSupportBasis.univ_mem G α)]
+  let ⟨V, V_in_basis, _, subsets_ss_orbit⟩ := F.converges
+  simp only [Set.subset_univ, true_and, Subtype.exists, exists_prop]
+  use rigidStabilizer_inv V
+  refine ⟨(rigidStabilizer_inv_in_basis V).mp V_in_basis, ?subsets_ss_orbit⟩
+  rw [(RubinFilter.map_isRubinFilterOf F (α := α)).subsets_ss_orbit
+    ((rigidStabilizer_inv_in_basis V).mp V_in_basis)
+  ]
+  rw [RigidStabilizer_rightInv V_in_basis]
+  simp
+  exact subsets_ss_orbit
+
+theorem RubinFilter.from_map_eq (F : RubinFilter G):
+  RubinFilter.from (F.map α) (RubinFilter.map_converges α F) = F :=
+by
+  rw [mk.injEq]
+  apply UltrafilterInBasis.eq_of_le
+  apply UltrafilterInBasis.le_of_basis_sets
+  intro S S_in_B S_in_F
+
+  rw [(RubinFilter.from_isRubinFilterOf (F.map α) (RubinFilter.map_converges α F)).mem_inv S_in_B]
+  rw [<-(RubinFilter.map_isRubinFilterOf F (α := α)).mem_inv S_in_B]
+  exact S_in_F
+
+noncomputable def RubinFilter.lim (F : RubinFilter G)
+  : α := Exists.choose (RubinFilter.map_converges F (α := α))
+
+theorem RubinFilter.le_nhds_lim (F : RubinFilter G) :
+  F.map α ≤ nhds (F.lim α) := (RubinFilter.map_converges F (α := α)).choose_spec
+
+theorem RubinFilter.le_nhds_eq_lim (F : RubinFilter G) (p : α) :
+  F.map α ≤ nhds p → p = F.lim α :=
+by
+  intro F_le_p
+  have F_le_lim := F.le_nhds_lim (α := α)
+  by_contra p_ne_lim
+  rw [<-ne_eq, <-disjoint_nhds_nhds] at p_ne_lim
+  apply (map F α).ne_bot.ne
+  exact Filter.empty_mem_iff_bot.mp (p_ne_lim F_le_p F_le_lim trivial)
+
+lemma RubinFilter.lim_mem_iff (F : RubinFilter G) {T : Set α} (T_in_basis : T ∈ RegularSupportBasis G α) :
+  F.lim α ∈ T ↔ ∃ V ∈ RegularSupportBasis G α, V ⊆ T ∧ RSuppSubsets G V ⊆ RSuppOrbit (F.map α) G•[T] :=
+by
+  rw [<-proposition_3_5' T_in_basis]
+
+  constructor
+  · intro lim_in_T
+    use lim α F
+    exact ⟨lim_in_T, le_nhds_lim α F⟩
+  · intro ⟨p, p_in_T, le_nhds_p⟩
+    exact (F.le_nhds_eq_lim α p le_nhds_p) ▸ p_in_T
+
+lemma RubinFilter.exists_nhds_iff_lim_in_set (F : RubinFilter G) (T : Set α) :
+  (∃ p ∈ T, F.map α ≤ nhds p) ↔ F.lim α ∈ T :=
+by
+  constructor
+  · intro ⟨p, p_in_T, F_le_nhds⟩
+    convert p_in_T
+    exact (F.le_nhds_eq_lim α p F_le_nhds).symm
+  · intro lim_in_T
+    exact ⟨lim α F, lim_in_T, le_nhds_lim α F⟩
+
+end Convergence
+
+section Setoid
+
+/--
+Two rubin filters are equivalent if they share the same behavior in regards to which set their converging point `p` lies in.
+--/
+instance RubinFilterSetoid (G : Type _) [Group G] : Setoid (RubinFilter G) where
+  r F F' := ∀ (U : Set G), U ∈ AlgebraicCentralizerBasis G →
+    (AlgebraicConvergent F.filter U ↔ AlgebraicConvergent F'.filter U)
+  iseqv := by
+    constructor
+    · intros
+      simp
+    · intro F F' h
+      intro U U_rigid
+      symm
+      exact h U U_rigid
+    · intro F₁ F₂ F₃
+      intro h₁₂ h₂₃
+      intro U U_rigid
+      specialize h₁₂ U U_rigid
+      specialize h₂₃ U U_rigid
+      exact Iff.trans h₁₂ h₂₃
+
+lemma RubinFilter.lim_mem_iff_of_eqv {F₁ F₂ : RubinFilter G} (F_equiv : F₁ ≈ F₂)
+  {S : Set α} (S_in_basis : S ∈ RegularSupportBasis G α) :
+  F₁.lim α ∈ S ↔ F₂.lim α ∈ S
+:= by
+  have F₁_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₁ (α := α))
+  have F₂_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₂ (α := α))
+
+  rw [F₁.lim_mem_iff α S_in_basis, <-proposition_3_5' S_in_basis]
+  rw [F₁_rubinFilterOf.converges_iff S_in_basis]
+  rw [F_equiv _ (AlgebraicCentralizerBasis.mem_of_regularSupportBasis S_in_basis)]
+  rw [<-F₂_rubinFilterOf.converges_iff S_in_basis]
+  rw [F₂.lim_mem_iff α S_in_basis, <-proposition_3_5' S_in_basis]
+
+lemma RubinFilter.mem_nhds_lim_iff_of_eqv {F₁ F₂ : RubinFilter G} (F_equiv : F₁ ≈ F₂)
+  (S : Set α) : S ∈ nhds (F₁.lim α) ↔ S ∈ nhds (F₂.lim α) :=
+by
+  suffices ∀ F₁ F₂ : RubinFilter G, F₁ ≈ F₂ → ∀ S : Set α, S ∈ nhds (F₁.lim α) → S ∈ nhds (F₂.lim α) by
+    constructor
+    apply this _ _ F_equiv
+    apply this _ _ (Setoid.symm F_equiv)
+
+  have basis := RegularSupportBasis.isBasis G α
+
+  intro F₁ F₂ F_equiv S S_in_nhds_F₁
+  rw [basis.mem_nhds_iff] at S_in_nhds_F₁
+  let ⟨T, T_in_basis, lim₁_in_T, T_ss_S⟩ := S_in_nhds_F₁
+
+  rw [basis.mem_nhds_iff]
+  use T
+  refine ⟨T_in_basis, ?lim₂_in_T, T_ss_S⟩
+
+  rw [lim_mem_iff_of_eqv F_equiv T_in_basis] at lim₁_in_T
+  exact lim₁_in_T
+
+theorem RubinFilter.lim_eq_of_eqv {F₁ F₂ : RubinFilter G} (F_equiv : F₁ ≈ F₂) :
+  F₁.lim α = F₂.lim α :=
+by
+  apply RubinFilter.le_nhds_eq_lim
+  have nhds_lim_in_basis := nhds_in_basis (lim α F₁) (RegularSupportBasis.isBasis G α)
+
+  apply UltrafilterInBasis.le_of_inf_neBot _ (RegularSupportBasis.closed_inter G α) nhds_lim_in_basis
+
+  constructor
+  intro eq_bot
+
+  rw [Filter.inf_eq_bot_iff] at eq_bot
+  let ⟨U, U_in_F₂, V, V_in_nhds, UV_empty⟩ := eq_bot
+
+  rw [mem_nhds_lim_iff_of_eqv F_equiv] at V_in_nhds
+  apply (F₂.map α).ne_bot.ne
+  rw [<-inf_eq_left.mpr (F₂.le_nhds_lim α)]
+  rw [Filter.inf_eq_bot_iff]
+  exact ⟨U, U_in_F₂, V, V_in_nhds, UV_empty⟩
+
+theorem RubinFilter.eqv_of_map_converges (F₁ F₂ : RubinFilter G) (p : α):
+  F₁.map α ≤ nhds p → F₂.map α ≤ nhds p → F₁ ≈ F₂ :=
+by
+  intro F₁_le_nhds F₂_le_nhds
+  intro S S_in_basis
+
+  have F₁_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₁ (α := α))
+  have F₂_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₂ (α := α))
+
+  rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α)] at S_in_basis
+  let ⟨S', S'_in_basis, S'_eq⟩ := S_in_basis
+  simp only at S'_eq
+  rw [<-S'_eq]
+
+  rw [<-F₁_rubinFilterOf.converges_iff S'_in_basis]
+  rw [<-F₂_rubinFilterOf.converges_iff S'_in_basis]
+
+  rw [F₁.exists_nhds_iff_lim_in_set α S']
+  rw [F₂.exists_nhds_iff_lim_in_set α S']
+  rw [<-F₁.le_nhds_eq_lim _ _ F₁_le_nhds]
+  rw [<-F₂.le_nhds_eq_lim _ _ F₂_le_nhds]
+
+
+lemma RubinFilter.fromPoint_converges' (p : α) :
+  ∃ q : α, (
+  UltrafilterInBasis.of
+    (RegularSupportBasis.closed_inter G α)
+    (nhds_in_basis p (RegularSupportBasis.isBasis G α))
+  ).filter ≤ nhds q :=
+by
+  use p
+  apply UltrafilterInBasis.of_le
+
+def RubinFilter.fromPoint (p : α) : RubinFilter G :=
+  RubinFilter.from (
+    UltrafilterInBasis.of
+      (RegularSupportBasis.closed_inter G α)
+      (nhds_in_basis p (RegularSupportBasis.isBasis G α))
+    )
+    (RubinFilter.fromPoint_converges' p)
+
+@[simp]
+theorem RubinFilter.fromPoint_lim (p : α) :
+  (RubinFilter.fromPoint (G := G) p).lim α = p :=
+by
+  symm
+  apply RubinFilter.le_nhds_eq_lim
+  unfold fromPoint
+  rw [RubinFilter.map_from_eq]
+  apply UltrafilterInBasis.of_le
+
+theorem RubinFilter.lim_fromPoint_eqv (F : RubinFilter G) :
+  RubinFilter.fromPoint (F.lim α) ≈ F :=
+by
+  apply eqv_of_map_converges _ _ (F.lim α)
+  · unfold fromPoint
+    rw [RubinFilter.map_from_eq]
+    apply UltrafilterInBasis.of_le
+  · exact le_nhds_lim α F
+
+def RubinFilterBasis (G : Type _) [Group G] : Set (Set (RubinFilter G)) :=
+  (fun S : Set G => { F : RubinFilter G | AlgebraicConvergent F.filter S }) '' AlgebraicCentralizerBasis G
+
+instance : TopologicalSpace (RubinFilter G) := TopologicalSpace.generateFrom (RubinFilterBasis G)
+
+theorem RubinFilterBasis.mem_iff (S : Set (RubinFilter G)) :
+  S ∈ RubinFilterBasis G ↔ ∃ B ∈ AlgebraicCentralizerBasis G, ∀ F : RubinFilter G, F ∈ S ↔ AlgebraicConvergent F.filter B :=
+by
+  unfold RubinFilterBasis
+  simp
+  conv => {
+    lhs; congr; intro B; rhs
+    rw [eq_comm, Set.ext_iff]
+  }
+
+def RubinSpace (G : Type _) [Group G] := Quotient (RubinFilterSetoid G)
+
+def RubinSpace.fromPoint (p : α) : RubinSpace G :=
+  ⟦RubinFilter.fromPoint p⟧
+
+instance : Membership (RubinFilter G) (RubinSpace G) where
+  mem := fun F Q => ⟦F⟧ = Q
+
+theorem RubinSpace.mem_iff (F : RubinFilter G) (Q : RubinSpace G) :
+  F ∈ Q ↔ ⟦F⟧ = Q := by rfl
+
+theorem RubinSpace.fromPoint_converges (p : α) :
+  ∀ F : RubinFilter G, F ∈ RubinSpace.fromPoint (G := G) p → F.lim α = p :=
+by
+  intro F
+  unfold fromPoint
+  rw [mem_iff, Quotient.eq]
+  intro F_eqv_from
+  convert RubinFilter.lim_eq_of_eqv F_eqv_from
+  clear F_eqv_from
+  simp
+
+noncomputable def RubinSpace.lim (Q : RubinSpace G) : α :=
+  Q.liftOn (RubinFilter.lim α) (fun _a _b eqv => RubinFilter.lim_eq_of_eqv eqv)
+
+theorem RubinSpace.lim_fromPoint (p : α) :
+  RubinSpace.lim (RubinSpace.fromPoint (G := G) p) = p :=
+by
+  unfold lim
+  let ⟨Q, Q_eq⟩ := (RubinSpace.fromPoint (G := G) p).exists_rep
+  rw [<-Q_eq]
+  simp
+  apply RubinSpace.fromPoint_converges p Q
+  rwa [mem_iff]
+
+theorem RubinSpace.fromPoint_lim (Q : RubinSpace G) :
+  RubinSpace.fromPoint (Q.lim (α := α)) = Q :=
+by
+  let ⟨Q', Q'_eq⟩ := Q.exists_rep
+  rw [<-Q'_eq, lim, fromPoint]
+  simp
+  rw [Quotient.eq]
+  apply RubinFilter.lim_fromPoint_eqv
+
+instance : TopologicalSpace (RubinSpace G) := by
+  unfold RubinSpace
+  infer_instance
+
+theorem RubinSpace.lim_continuous : Continuous (RubinSpace.lim (G := G) (α := α)) := by
+  sorry
+
+theorem RubinSpace.fromPoint_continuous : Continuous (RubinSpace.fromPoint (G := G) (α := α)) := by
+  sorry
+
+/--
+The canonical homeomorphism from a topological space that a rubin action acts on to
+the rubin space.
+--/
+noncomputable def RubinSpace.homeomorph : Homeomorph (RubinSpace G) α where
+  toFun := RubinSpace.lim
+  invFun := RubinSpace.fromPoint
+
+  left_inv := RubinSpace.fromPoint_lim
+  right_inv := RubinSpace.lim_fromPoint
+
+  continuous_toFun := RubinSpace.lim_continuous
+  continuous_invFun := RubinSpace.fromPoint_continuous
+
+instance : MulAction G (RubinSpace G) := sorry
+
+end Setoid
+
+-- theorem rubin' (hα : RubinAction G α) : EquivariantHomeomorph G α (RubinSpace G) where
+--   toFun := fun x => ⟦⟧
+--   invFun := fun S => sorry
+
 
 
 end RubinFilter
@@ -2078,9 +1845,6 @@ end RubinFilter
 /-
 variable {β : Type _}
 variable [TopologicalSpace β] [MulAction G β] [ContinuousConstSMul G β]
-
-#check IsOpen.smul
-
 
 theorem rubin (hα : RubinAction G α) (hβ : RubinAction G β) : EquivariantHomeomorph G α β := by
   -- by composing rubin' hα

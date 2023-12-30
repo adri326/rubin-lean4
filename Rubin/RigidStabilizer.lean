@@ -147,6 +147,7 @@ by
   repeat rw [rigidStabilizer_support]
   rw [Set.subset_inter_iff]
 
+@[simp]
 theorem rigidStabilizer_empty (G α: Type _) [Group G] [MulAction G α] [FaithfulSMul G α]:
   G•[(∅ : Set α)] = ⊥ :=
 by
@@ -159,6 +160,7 @@ by
   rw [f_in_rist x (Set.not_mem_empty x)]
   simp
 
+@[simp]
 theorem rigidStabilizer_univ (G α: Type _) [Group G] [MulAction G α]:
   G•[(Set.univ : Set α)] = ⊤ :=
 by

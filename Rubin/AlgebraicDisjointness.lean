@@ -388,10 +388,7 @@ theorem smul_injective_within_period {g : G} {p : α} {n : ℕ}
   (period_eq_n : Period.period p g = n) :
   Function.Injective (fun (i : Fin n) => g ^ (i : ℕ) • p) :=
 by
-  have zpow_fix : (fun (i : Fin n) => g ^ (i : ℕ) • p) = (fun (i : Fin n) => g ^ (i : ℤ) • p) := by
-    ext x
-    simp
-  rw [zpow_fix]
+  simp only [<-zpow_coe_nat]
   apply moves_inj
   intro k one_le_k k_lt_n
 
@@ -434,20 +431,16 @@ by
   · intro ⟨y, y_disj, x_eq⟩
     use g * y * g⁻¹
     rw [<-gxg12_eq]
-    refine ⟨?disj, x_eq⟩
-    exact y_disj.conj g
+    exact ⟨y_disj.conj g, x_eq⟩
   · intro ⟨y, y_disj, x_eq⟩
     use g⁻¹ * y * g
     constructor
-    · rw [(by group : f = g⁻¹ * (g * f * g⁻¹) * g⁻¹⁻¹)]
-      nth_rw 6 [<-inv_inv g]
-      exact y_disj.conj g⁻¹
+    · convert y_disj.conj g⁻¹ using 1
+      all_goals group
     · nth_rw 3 [<-inv_inv g]
       simp only [conj_pow]
+      rw [x_eq]
       group
-      group at x_eq
-      exact x_eq
-
 
 @[simp]
 theorem AlgebraicCentralizer.conj (f g : G) :
