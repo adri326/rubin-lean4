@@ -24,12 +24,10 @@ import Rubin.SmulImage
 import Rubin.Support
 import Rubin.Topology
 import Rubin.RigidStabilizer
--- import Rubin.RigidStabilizerBasis
 import Rubin.Period
 import Rubin.AlgebraicDisjointness
 import Rubin.RegularSupport
 import Rubin.RegularSupportBasis
-import Rubin.HomeoGroup
 import Rubin.Filter
 
 #align_import rubin
@@ -37,32 +35,53 @@ import Rubin.Filter
 namespace Rubin
 open Rubin.Tactic
 
--- TODO: find a home
-theorem equiv_congr_ne {ι ι' : Type _} (e : ι ≃ ι') {x y : ι} : x ≠ y → e x ≠ e y :=
-  by
-  intro x_ne_y
-  by_contra h
-  apply x_ne_y
-  convert congr_arg e.symm h <;> simp only [Equiv.symm_apply_apply]
-#align equiv.congr_ne Rubin.equiv_congr_ne
-
 ----------------------------------------------------------------
 section Rubin
 
 ----------------------------------------------------------------
 section RubinActions
 
-structure RubinAction (G α : Type _) extends
-  Group G,
-  TopologicalSpace α,
-  MulAction G α,
-  FaithfulSMul G α
-where
+-- TODO: debate whether having this structure is relevant or not,
+-- since the instance inference engine doesn't play well with it.
+-- One alternative would be to lay out all of the properties as-is (without their class wrappers),
+-- then provide ways to reconstruct them in instances.
+structure RubinAction (G α : Type _) where
+  group : Group G
+  action : MulAction G α
+  topology : TopologicalSpace α
+  faithful : FaithfulSMul G α
   locally_compact : LocallyCompactSpace α
   hausdorff : T2Space α
   no_isolated_points : HasNoIsolatedPoints α
-  locallyDense : LocallyDense G α
+  locally_dense : LocallyDense G α
 #align rubin_action Rubin.RubinAction
+
+/--
+Constructs a RubinAction from ambient instances.
+If needed, missing instances can be passed as named parameters.
+--/
+def RubinAction.mk' (G α : Type _)
+  [group : Group G] [topology : TopologicalSpace α] [hausdorff : T2Space α] [action : MulAction G α]
+  [faithful : FaithfulSMul G α] [locally_compact : LocallyCompactSpace α]
+  [no_isolated_points : HasNoIsolatedPoints α] [locally_dense : LocallyDense G α] :
+  RubinAction G α := ⟨
+    group,
+    action,
+    topology,
+    faithful,
+    locally_compact,
+    hausdorff,
+    no_isolated_points,
+    locally_dense
+  ⟩
+
+variable {G α : Type _}
+
+instance RubinAction.instGroup (act : RubinAction G α) : Group G := act.group
+
+instance RubinAction.instFaithful (act : RubinAction G α) : @FaithfulSMul G α (@MulAction.toSMul G α act.group.toMonoid act.action) := act.faithful
+
+instance RubinAction.topologicalSpace (act : RubinAction G α) : TopologicalSpace α := act.topology
 
 end RubinActions
 
@@ -2317,6 +2336,7 @@ theorem RubinFilter.mul_smul (g h : G) (F : RubinFilter G) : (F.smul g).smul h =
   rw [Filter.map_map, <-MulAut.coe_mul]
   rw [Filter.InBasis.map_basis_toOrderIsoSet _ F.filter.in_basis]
 
+-- Note: awfully slow to compile (since it isn't noncomputable, it gets compiled down to IR)
 def RubinSpace.smul (Q : RubinSpace G) (g : G) : RubinSpace G :=
   Quotient.map (fun F => F.smul g) (fun _ _ F_eqv => RubinFilter.smul_eqv_of_eqv g F_eqv) Q
 
@@ -2344,9 +2364,9 @@ instance : MulAction G (RubinSpace G) where
 
 theorem RubinSpace.smul_def (g : G) (Q : RubinSpace G) : g • Q = Q.smul g := rfl
 
-noncomputable def rubin' : EquivariantHomeomorph G (RubinSpace G) α where
+noncomputable def RubinSpace.equivariantHomeomorph : EquivariantHomeomorph G (RubinSpace G) α where
   toHomeomorph := RubinSpace.homeomorph (G := G) α
-  equivariant := by
+  toFun_equivariant' := by
     intro g Q
     simp [RubinSpace.homeomorph]
     rw [RubinSpace.smul_def]
@@ -2356,20 +2376,18 @@ noncomputable def rubin' : EquivariantHomeomorph G (RubinSpace G) α where
 
 end Equivariant
 
--- theorem rubin' (hα : RubinAction G α) : EquivariantHomeomorph G α (RubinSpace G) where
---   toFun := fun x => ⟦⟧
---   invFun := fun S => sorry
+variable (G : Type _)
+variable [Group G] [Nontrivial G]
+variable (α : Type _) [TopologicalSpace α] [T2Space α] [LocallyCompactSpace α] [HasNoIsolatedPoints α]
+variable [MulAction G α] [FaithfulSMul G α] [ContinuousConstSMul G α] [LocallyDense G α]
+variable (β : Type _) [TopologicalSpace β] [T2Space β] [LocallyCompactSpace β] [HasNoIsolatedPoints β]
+variable [MulAction G β] [FaithfulSMul G β] [ContinuousConstSMul G β] [LocallyDense G β]
 
-
-
-/-
-variable {β : Type _}
-variable [TopologicalSpace β] [MulAction G β] [ContinuousConstSMul G β]
-
-theorem rubin (hα : RubinAction G α) (hβ : RubinAction G β) : EquivariantHomeomorph G α β := by
-  -- by composing rubin' hα
-  sorry
--/
+noncomputable def rubin : EquivariantHomeomorph G α β :=
+  let α_nonempty : Nonempty α := by rwa [LocallyMoving.nonempty_iff_nontrivial G]
+  let β_nonempty : Nonempty β := by rwa [LocallyMoving.nonempty_iff_nontrivial G]
+  (RubinSpace.equivariantHomeomorph (G := G) (α := α)).inv.trans
+    (RubinSpace.equivariantHomeomorph (G := G) (α := β))
 
 end Rubin
 

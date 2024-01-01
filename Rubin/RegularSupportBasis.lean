@@ -11,7 +11,6 @@ import Rubin.LocallyDense
 import Rubin.Topology
 import Rubin.Support
 import Rubin.RegularSupport
-import Rubin.HomeoGroup
 
 namespace Rubin
 

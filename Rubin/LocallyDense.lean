@@ -126,12 +126,28 @@ by
   let ⟨g, _, g_ne_one⟩ := (get_nontrivial_rist_elem (G := G) (α := α) isOpen_univ Set.univ_nonempty)
   use g
 
-theorem LocallyMoving.nontrivial {G α : Type _} [Group G] [TopologicalSpace α]
+theorem LocallyMoving.nontrivial (G α : Type _) [Group G] [TopologicalSpace α]
   [MulAction G α] [LocallyMoving G α] [Nonempty α] : Nontrivial G where
   exists_pair_ne := by
     use 1
     simp only [ne_comm]
     exact nontrivial_elem G α
+
+theorem LocallyMoving.nonempty_iff_nontrivial (G α : Type _) [Group G] [TopologicalSpace α]
+  [MulAction G α] [FaithfulSMul G α] [LocallyMoving G α] : Nonempty α ↔ Nontrivial G :=
+by
+  constructor
+  · intro; exact LocallyMoving.nontrivial G α
+  · intro nontrivial
+    by_contra α_empty
+    rw [not_nonempty_iff] at α_empty
+    let ⟨g, h, g_ne_h⟩ := nontrivial.exists_pair_ne
+    apply g_ne_h
+    apply FaithfulSMul.eq_of_smul_eq_smul (α := α)
+    intro a
+    exfalso
+    exact α_empty.false a
+
 
 variable {G α : Type _}
 variable [Group G]

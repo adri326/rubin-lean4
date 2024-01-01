@@ -1,5 +1,6 @@
 import Mathlib.GroupTheory.Subgroup.Basic
 import Mathlib.GroupTheory.GroupAction.Basic
+import Mathlib.GroupTheory.GroupAction.Hom
 import Mathlib.Topology.Basic
 import Mathlib.Topology.Homeomorph
 import Mathlib.Topology.Algebra.ConstMulAction
@@ -9,33 +10,88 @@ import Rubin.MulActionExt
 
 namespace Rubin
 
--- TODO: give this a notation?
--- TODO: coe to / extend MulActionHom
+section Equivariant
+
+-- TODO: rename or remove?
+def IsEquivariant (G : Type _) {β : Type _} [Group G] [MulAction G α]
+    [MulAction G β] (f : α → β) :=
+  ∀ g : G, ∀ x : α, f (g • x) = g • f x
+
+-- TODO: rename to MulActionHomeomorph
 structure EquivariantHomeomorph (G α β : Type _) [Group G] [TopologicalSpace α]
     [TopologicalSpace β] [MulAction G α] [MulAction G β] extends Homeomorph α β where
-  equivariant : is_equivariant G toFun
-#align equivariant_homeomorph Rubin.EquivariantHomeomorph
+  toFun_equivariant' : IsEquivariant G toFun
 
-variable {G α β : Type _}
+variable {G α β γ: Type*}
 variable [Group G]
-variable [TopologicalSpace α] [TopologicalSpace β]
+variable [TopologicalSpace α] [TopologicalSpace β] [TopologicalSpace γ]
+variable [MulAction G α] [MulAction G β] [MulAction G γ]
 
-theorem equivariant_fun [MulAction G α] [MulAction G β]
-    (h : EquivariantHomeomorph G α β) :
-    is_equivariant G h.toFun :=
-  h.equivariant
-#align equivariant_fun Rubin.equivariant_fun
+theorem EquivariantHomeomorph.toFun_equivariant (f : EquivariantHomeomorph G α β) :
+  IsEquivariant G f.toHomeomorph :=
+by
+  show IsEquivariant G f.toFun
+  exact f.toFun_equivariant'
 
-theorem equivariant_inv [MulAction G α] [MulAction G β]
-    (h : EquivariantHomeomorph G α β) :
-    is_equivariant G h.invFun :=
-  by
+instance EquivariantHomeomorph.smulHomClass : SMulHomClass (EquivariantHomeomorph G α β) G α β where
+  coe := fun f => f.toFun
+  coe_injective' := by
+    show Function.Injective (fun f => f.toHomeomorph)
+    refine Function.Injective.comp FunLike.coe_injective ?mk_inj
+    intro f g
+    rw [mk.injEq]
+    tauto
+  map_smul := fun f => f.toFun_equivariant
+
+theorem EquivariantHomeomorph.invFun_equivariant
+  (h : EquivariantHomeomorph G α β) :
+  IsEquivariant G h.invFun :=
+by
   intro g x
   symm
-  let e := congr_arg h.invFun (h.equivariant g (h.invFun x))
+  let e := congr_arg h.invFun (h.toFun_equivariant' g (h.invFun x))
   rw [h.left_inv _, h.right_inv _] at e
   exact e
-#align equivariant_inv Rubin.equivariant_inv
+
+def EquivariantHomeomorph.trans (f₁ : EquivariantHomeomorph G α β) (f₂ : EquivariantHomeomorph G β γ) :
+  EquivariantHomeomorph G α γ
+where
+  toHomeomorph := Homeomorph.trans f₁.toHomeomorph f₂.toHomeomorph
+  toFun_equivariant' := by
+    intro g x
+    simp
+    rw [f₁.toFun_equivariant]
+    rw [f₂.toFun_equivariant]
+
+@[simp]
+theorem EquivariantHomeomorph.trans_toFun (f₁ : EquivariantHomeomorph G α β) (f₂ : EquivariantHomeomorph G β γ) :
+  (f₁.trans f₂).toFun = f₂.toFun ∘ f₁.toFun :=
+by
+  simp [trans]
+  rfl
+
+@[simp]
+theorem EquivariantHomeomorph.trans_invFun (f₁ : EquivariantHomeomorph G α β) (f₂ : EquivariantHomeomorph G β γ) :
+  (f₁.trans f₂).invFun = f₁.invFun ∘ f₂.invFun :=
+by
+  simp [trans]
+  rfl
+
+def EquivariantHomeomorph.inv (f : EquivariantHomeomorph G α β) :
+  EquivariantHomeomorph G β α
+where
+  toHomeomorph := f.symm
+  toFun_equivariant' := f.invFun_equivariant
+
+@[simp]
+theorem EquivariantHomeomorph.inv_toFun (f : EquivariantHomeomorph G α β) :
+  f.inv.toFun = f.invFun := rfl
+
+@[simp]
+theorem EquivariantHomeomorph.inv_invFun (f : EquivariantHomeomorph G α β) :
+  f.inv.invFun = f.toFun := rfl
+
+end Equivariant
 
 open Topology
 
