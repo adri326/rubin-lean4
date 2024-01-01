@@ -596,6 +596,37 @@ by
   rw [S'_eq, T'_eq]
   rfl
 
+
+def MulAut.conj_order_iso (g : G) : Set G ≃o Set G := (MulAut.conj g).toEquiv.toOrderIsoSet
+
+theorem AlgebraicCentralizerBasis.eq_conj_self (g : G) :
+  (MulAut.conj_order_iso g) '' AlgebraicCentralizerBasis G = AlgebraicCentralizerBasis G :=
+by
+  ext S
+  simp [MulAut.conj_order_iso]
+  conv => {
+    lhs
+    congr; intro x
+    rw [Equiv.toOrderIsoSet_apply]
+  }
+  simp
+  constructor
+  · intro ⟨T, T_in_basis, T_eq⟩
+    rw [<-T_eq]
+    exact conj_mem T_in_basis g
+  · intro S_in_basis
+    use (fun h => g⁻¹ * h * g⁻¹⁻¹) '' S
+    refine ⟨conj_mem S_in_basis g⁻¹, ?S_eq⟩
+    rw [Set.image_image]
+    group
+    rw [Set.image_id']
+
+theorem AlgebraicCentralizerBasis.conj_mem' {S : Set G} (S_in_basis : S ∈ AlgebraicCentralizerBasis G) (g : G) :
+  (MulAut.conj_order_iso g) S ∈ AlgebraicCentralizerBasis G :=
+by
+  show (fun i => g * i * g⁻¹) '' S ∈ AlgebraicCentralizerBasis G
+  exact conj_mem S_in_basis g
+
 end AlgebraicCentralizer
 
 end Rubin

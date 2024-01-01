@@ -1637,6 +1637,9 @@ instance RubinFilterSetoid (G : Type _) [Group G] : Setoid (RubinFilter G) where
       specialize h₂₃ U U_rigid
       exact Iff.trans h₁₂ h₂₃
 
+theorem RubinFilter.eqv_def (F₁ F₂ : RubinFilter G):
+  F₁ ≈ F₂ ↔ ∀ U ∈ AlgebraicCentralizerBasis G, AlgebraicConvergent F₁.filter U ↔ AlgebraicConvergent F₂.filter U := by rfl
+
 lemma RubinFilter.lim_mem_iff_of_eqv {F₁ F₂ : RubinFilter G} (F_equiv : F₁ ≈ F₂)
   {S : Set α} (S_in_basis : S ∈ RegularSupportBasis G α) :
   F₁.lim α ∈ S ↔ F₂.lim α ∈ S
@@ -1771,6 +1774,86 @@ by
   · intro ⟨p, p_in_S, F_le_nhds⟩
     convert p_in_S
     exact (le_nhds_eq_lim α F p F_le_nhds).symm
+
+lemma RubinFilter.rigidStabilizer_mem_of_lim_in_set (F : RubinFilter G) {S : Set α} (S_in_basis : S ∈ RegularSupportBasis G α)
+  (lim_in_set : F.lim α ∈ S) :
+  (G•[S] : Set G) ∈ F.filter :=
+by
+  have S_in_F : S ∈ F.map α := by
+    apply RubinFilter.le_nhds_lim
+    refine (IsOpen.mem_nhds_iff ?isOpen).mpr lim_in_set
+    exact (RegularSupportBasis.regular S_in_basis).isOpen
+  rwa [F.map_isRubinFilterOf S S_in_basis] at S_in_F
+
+theorem AlgebraicSubsets.conj (S T: Set G) (g : G) :
+  S ∈ AlgebraicSubsets T → (MulAut.conj g) '' S ∈ AlgebraicSubsets ((MulAut.conj g) '' T) :=
+by
+  unfold AlgebraicSubsets
+  simp
+  intro S_in_subsets S_ss_T
+  refine ⟨AlgebraicCentralizerBasis.conj_mem S_in_subsets g, ?S_ss_T⟩
+  rwa [Set.preimage_image_eq _ conj_injective]
+
+theorem AlgebraicConvergent.conj {F : Filter G} {S : Set G}
+  (convergent : AlgebraicConvergent F S)
+  (g : G) :
+  AlgebraicConvergent (F.map (MulAut.conj g)) ((MulAut.conj g) '' S) :=
+by
+  unfold AlgebraicConvergent at *
+  let ⟨V, V_in_basis, V_ss_S, V_subsets_ss_orbit⟩ := convergent
+  refine ⟨
+    (MulAut.conj g) '' V,
+    AlgebraicCentralizerBasis.conj_mem V_in_basis g,
+    Set.image_subset _ V_ss_S,
+    ?subsets_ss_orbit
+  ⟩
+  unfold AlgebraicOrbit
+
+  intro U U_in_subsets
+  have gU_in_subsets : ⇑(MulAut.conj g⁻¹) '' U ∈ AlgebraicSubsets V := by
+    convert AlgebraicSubsets.conj U ((MulAut.conj g) '' V) g⁻¹ U_in_subsets
+    rw [Set.image_image]
+    simp only [map_inv, MulAut.conj_apply, map_mul, MulAut.conj_inv_apply, mul_left_inv, one_mul]
+    group
+    rw [Set.image_id']
+
+  have ⟨h, h_in_S, W, ⟨W_in_F, W_in_basis⟩, W_eq⟩ := V_subsets_ss_orbit gU_in_subsets
+
+  refine ⟨g * h * g⁻¹, (by simp; assumption), ?rest⟩
+
+  refine ⟨(MulAut.conj g) '' W,
+    ⟨
+      Filter.image_mem_map W_in_F,
+      by simp [MulAut.conj]; apply AlgebraicCentralizerBasis.conj_mem W_in_basis⟩,
+    ?W_eq
+  ⟩
+  rw [Set.image_image]
+  simp only [MulAut.conj_apply, conj_mul, mul_inv_rev, inv_inv]
+  group
+  simp only [zpow_neg, zpow_one]
+
+  have conj₁ : (fun i => g * h * i * h⁻¹ * g⁻¹) = (MulAut.conj (g * h)).toEquiv := by
+    ext i
+    simp
+    group
+
+  rw [conj₁, Set.image_equiv_eq_preimage_symm]
+
+  rw [
+    (by rfl : (MulAut.conj g⁻¹) '' U = (MulAut.conj g⁻¹).toEquiv '' U),
+    (by rfl : (fun i => h * i * h⁻¹) '' W = (MulAut.conj h).toEquiv '' W),
+    Equiv.eq_image_iff_symm_image_eq,
+    <-Set.preimage_equiv_eq_image_symm,
+    Set.image_equiv_eq_preimage_symm,
+    Set.preimage_preimage
+  ] at W_eq
+
+  convert W_eq using 2
+  ext i
+  rw [MulEquiv.toEquiv_eq_coe, MulEquiv.coe_toEquiv_symm, MulAut.conj_symm_apply]
+  simp
+  group
+
 
 def RubinFilterBasis (G : Type _) [Group G] : Set (Set (RubinFilter G)) :=
   (fun S : Set G => { F : RubinFilter G | AlgebraicConvergent F.filter S }) '' AlgebraicCentralizerBasis G
@@ -1978,7 +2061,7 @@ theorem RubinSpace.basis : TopologicalSpace.IsTopologicalBasis (
 
 end Basis
 
-section Equivariant
+section Homeomorph
 
 variable {G : Type _} [Group G]
 variable (α : Type _) [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
@@ -2060,14 +2143,222 @@ noncomputable def RubinSpace.homeomorph : Homeomorph (RubinSpace G) α where
   continuous_toFun := RubinSpace.lim_continuous α
   continuous_invFun := RubinSpace.fromPoint_continuous α
 
-instance : MulAction G (RubinSpace G) := sorry
+end Homeomorph
+
+section Equivariant
+
+variable {G : Type _} [Group G]
+variable {α : Type _} [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+
+-- TODO: move elsewhere
+@[simp]
+theorem Group.range_conj_eq_univ {G : Type*} [Group G] (g : G) :
+  Set.range (fun i => g * i * g⁻¹) = Set.univ :=
+by
+  ext h
+  simp
+  use g⁻¹ * h * g
+  group
+
+@[simp]
+theorem Group.range_conj'_eq_univ {G : Type*} [Group G] (g : G) :
+  Set.range (fun i => g⁻¹ * i * g) = Set.univ :=
+by
+  nth_rw 2 [<-inv_inv g]
+  exact Group.range_conj_eq_univ g⁻¹
+
+def RubinFilter.smul (F : RubinFilter G) (g : G) : RubinFilter G where
+  filter := (F.filter.map_basis
+    (AlgebraicCentralizerBasis.empty_not_mem (G := G))
+    ((MulAut.conj_order_iso g).orderIsoOn (AlgebraicCentralizerBasis G))
+    (by
+      rw [OrderIso.orderIsoOn_image]
+      rw [AlgebraicCentralizerBasis.eq_conj_self g]
+      apply AlgebraicCentralizerBasis.empty_not_mem
+    )
+  ).cast (AlgebraicCentralizerBasis.eq_conj_self g)
+
+  converges := by
+    simp [MulAut.conj_order_iso]
+    rw [Filter.InBasis.map_basis_toOrderIsoSet _ F.filter.in_basis]
+    convert AlgebraicConvergent.conj F.converges g
+    simp
+
+theorem RubinFilter.smul_lim (F : RubinFilter G) (g : G) :
+  (F.smul g).lim α = g • F.lim α :=
+by
+  symm
+  apply le_nhds_eq_lim
+
+  intro U gU_in_nhds
+  rw [<-smulFilter_nhds, mem_smulFilter_iff] at gU_in_nhds
+  rw [RubinFilter.map]
+  simp [smul]
+
+  -- Please look away
+  let m₁ := (MulAut.conj_order_iso g).orderIsoOn (AlgebraicCentralizerBasis G)
+  let m₂: OrderIsoOn (Set G) (Set α) (m₁.toFun '' (AlgebraicCentralizerBasis G)) :=
+    (RigidStabilizer.inv_order_iso_on G α).mk_of_subset (by
+      nth_rw 3 [<-AlgebraicCentralizerBasis.eq_conj_self g]
+      unfold_let
+      rfl
+    )
+  have eq := Filter.InBasis.map_basis_comp (α := G) (β := G) (γ := α) m₁ m₂ F.filter.in_basis
+  simp at eq
+  rw [AlgebraicCentralizerBasis.eq_conj_self g] at eq
+
+  rw [eq]
+  clear eq m₁ m₂
+
+  rw [Filter.InBasis.mem_map_basis _ _ F.filter.in_basis]
+  swap
+  {
+    intro S S_in_basis T T_in_basis S_ss_T
+    -- simp [MulAut.conj_order_iso]
+    apply RigidStabilizer_inv_doubleMonotone.monotoneOn
+    any_goals apply AlgebraicCentralizerBasis.conj_mem'
+    any_goals assumption
+    apply OrderIso.monotone
+    assumption
+  }
+
+  simp [MulAut.conj_order_iso]
+  rw [(RegularSupportBasis.isBasis G α).mem_nhds_iff] at gU_in_nhds
+  let ⟨T, T_in_basis, lim_in_T, T_ss_gU⟩ := gU_in_nhds
+  refine ⟨G•[T], ?T_in_filter, ?T_in_basis, ?inv_T_ss_U⟩
+  · exact rigidStabilizer_mem_of_lim_in_set F T_in_basis lim_in_T
+  · exact AlgebraicCentralizerBasis.mem_of_regularSupportBasis T_in_basis
+  · rw [Equiv.toOrderIsoSet_apply]
+    simp
+    rw [rigidStabilizer_conj_image_eq, RigidStabilizer_leftInv]
+    rwa [smulImage_subset_inv]
+    have dec_eq : DecidableEq G := Classical.typeDecidableEq _
+    apply RegularSupportBasis.smulImage_in_basis
+    assumption
+
+theorem RubinFilter.smul_eqv_of_eqv (g : G) {F₁ F₂ : RubinFilter G}
+  (F_eqv : F₁ ≈ F₂) : (F₁.smul g ≈ F₂.smul g) :=
+by
+  rw [RubinFilter.eqv_def]
+  intro U U_in_basis
+  simp [smul, MulAut.conj_order_iso]
+  repeat rw [Filter.InBasis.map_basis_toOrderIsoSet]
+  any_goals exact F₁.filter.in_basis
+  any_goals exact F₂.filter.in_basis
+
+  rw [RubinFilter.eqv_def] at F_eqv
+  specialize F_eqv ((MulAut.conj g⁻¹) '' U) ?gU_in_basis
+  {
+    exact AlgebraicCentralizerBasis.conj_mem' U_in_basis g⁻¹
+  }
+  rw [map_inv] at F_eqv
+
+  constructor
+  · intro F₁_conv
+    have F₁_conv' := AlgebraicConvergent.conj F₁_conv g⁻¹
+    rw [Filter.map_map, <-MulAut.coe_mul, map_inv, mul_left_inv, MulAut.coe_one, Filter.map_id] at F₁_conv'
+    rw [F_eqv] at F₁_conv'
+    convert AlgebraicConvergent.conj F₁_conv' g using 1
+    simp [Set.image_image]
+    group
+    simp
+  · intro F₂_conv
+    have F₂_conv' := AlgebraicConvergent.conj F₂_conv g⁻¹
+    rw [Filter.map_map, <-MulAut.coe_mul, map_inv, mul_left_inv, MulAut.coe_one, Filter.map_id] at F₂_conv'
+    rw [<-F_eqv] at F₂_conv'
+    convert AlgebraicConvergent.conj F₂_conv' g using 1
+    simp [Set.image_image]
+    group
+    simp
+
+theorem RubinFilter.smul_one (F : RubinFilter G) : RubinFilter.smul F 1 = F :=
+by
+  rw [smul, mk.injEq]
+  rw [UltrafilterInBasis.mk.injEq]
+  simp [MulAut.conj_order_iso]
+  rw [Filter.InBasis.map_basis_toOrderIsoSet _ F.filter.in_basis]
+  rw [MulAut.coe_one, Filter.map_id]
+
+theorem RubinFilter.mul_smul (g h : G) (F : RubinFilter G) : (F.smul g).smul h = F.smul (h * g) := by
+  unfold smul
+  rw [mk.injEq, UltrafilterInBasis.mk.injEq]
+  unfold MulAut.conj_order_iso
+  simp
+
+  rw [Filter.InBasis.map_basis_toOrderIsoSet _ F.filter.in_basis]
+  rw [Filter.InBasis.map_basis_toOrderIsoSet]
+  swap
+  {
+    -- TODO: lemmatize
+    intro S S_in_mF
+    rw [Filter.mem_map] at S_in_mF
+    have ⟨T, T_in_F, T_in_basis, T_ss_gS⟩ := F.filter.in_basis _ S_in_mF
+    use (MulAut.conj g⁻¹) ⁻¹' T
+    constructor
+    · rw [Filter.mem_map, Set.preimage_preimage]
+      simp
+      group
+      simp
+      exact T_in_F
+    constructor
+    · show (MulAut.conj g⁻¹).toEquiv ⁻¹' T ∈ AlgebraicCentralizerBasis G
+      rw [Set.preimage_equiv_eq_image_symm]
+      show (MulEquiv.symm (MulAut.conj g⁻¹)) '' T ∈ AlgebraicCentralizerBasis G
+      rw [<-MulAut.inv_def, map_inv, inv_inv]
+      exact AlgebraicCentralizerBasis.conj_mem T_in_basis g
+    · show (MulAut.conj g⁻¹).toEquiv ⁻¹' T ⊆ S
+      rw [Set.preimage_equiv_eq_image_symm, Equiv.subset_image]
+      have T_ss_gS : T ⊆ (MulAut.conj g).toEquiv ⁻¹' S := T_ss_gS
+      rw [Set.preimage_equiv_eq_image_symm] at T_ss_gS
+      rw [map_inv, MulAut.inv_def]
+      exact T_ss_gS
+  }
+  rw [Filter.map_map, <-MulAut.coe_mul]
+  rw [Filter.InBasis.map_basis_toOrderIsoSet _ F.filter.in_basis]
+
+def RubinSpace.smul (Q : RubinSpace G) (g : G) : RubinSpace G :=
+  Quotient.map (fun F => F.smul g) (fun _ _ F_eqv => RubinFilter.smul_eqv_of_eqv g F_eqv) Q
+
+theorem RubinSpace.smul_mk (F : RubinFilter G) (g : G) :
+  RubinSpace.smul (⟦F⟧ : RubinSpace G) g = ⟦F.smul g⟧ := by simp [RubinSpace.smul]
+
+instance : MulAction G (RubinSpace G) where
+  smul := fun g Q => Q.smul g
+
+  one_smul := by
+    intro Q
+    let ⟨F, F_eq⟩ := Q.exists_rep
+    rw [<-F_eq]
+    show RubinSpace.smul ⟦F⟧ 1 = ⟦F⟧
+    rw [RubinSpace.smul_mk]
+    rw [RubinFilter.smul_one]
+
+  mul_smul := by
+    intro g h Q
+    let ⟨F, F_eq⟩ := Q.exists_rep
+    rw [<-F_eq]
+    show RubinSpace.smul ⟦F⟧ (g * h) = RubinSpace.smul (RubinSpace.smul ⟦F⟧ h) g
+    repeat rw [RubinSpace.smul_mk]
+    rw [RubinFilter.mul_smul]
+
+theorem RubinSpace.smul_def (g : G) (Q : RubinSpace G) : g • Q = Q.smul g := rfl
+
+noncomputable def rubin' : EquivariantHomeomorph G (RubinSpace G) α where
+  toHomeomorph := RubinSpace.homeomorph (G := G) α
+  equivariant := by
+    intro g Q
+    simp [RubinSpace.homeomorph]
+    rw [RubinSpace.smul_def]
+    let ⟨F, F_eq⟩ := Q.exists_rep
+    rw [<-F_eq, RubinSpace.smul_mk, RubinSpace.lim_mk, RubinSpace.lim_mk]
+    rw [RubinFilter.smul_lim]
 
 end Equivariant
 
 -- theorem rubin' (hα : RubinAction G α) : EquivariantHomeomorph G α (RubinSpace G) where
 --   toFun := fun x => ⟦⟧
 --   invFun := fun S => sorry
-
 
 
 

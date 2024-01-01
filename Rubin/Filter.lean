@@ -1,4 +1,6 @@
 import Mathlib.Order.Filter.Basic
+import Mathlib.Order.Hom.CompleteLattice
+
 import Mathlib.Topology.Basic
 import Mathlib.Topology.Bases
 import Mathlib.Topology.Separation
@@ -244,8 +246,19 @@ def OrderIso.orderIsoOn (F : α ≃o β) (S : Set α) : OrderIsoOn α β S where
     intro a _ b _
     exact Iff.symm (RelIso.map_rel_iff F)
 
-instance : Coe (α ≃o β) (OrderIsoOn α β S) where
-  coe := fun f => OrderIso.orderIsoOn f S
+-- instance : Coe (α ≃o β) (OrderIsoOn α β S) where
+--   coe := fun f => OrderIso.orderIsoOn f S
+
+@[simp]
+theorem OrderIso.orderIsoOn_toFun (F : α ≃o β) (S : Set α) :
+  (OrderIso.orderIsoOn F S).toFun = F.toFun := rfl
+
+@[simp]
+theorem OrderIso.orderIsoOn_invFun (F : α ≃o β) (S : Set α) :
+  (OrderIso.orderIsoOn F S).invFun = F.invFun := rfl
+
+theorem OrderIso.orderIsoOn_image (F : α ≃o β) (S T : Set α) :
+  (OrderIso.orderIsoOn F S).toFun '' T = F '' T := rfl
 
 def OrderIsoOn.identity (α : Type _) [Preorder α] (S : Set α) : OrderIsoOn α α S where
   toFun := id
@@ -722,6 +735,32 @@ by
   nth_rw 1 [map.inv_invFun]
   rw [Filter.InBasis.map_basis_le_inv _ G_basis F_basis]
   simp
+
+@[simp]
+theorem Filter.InBasis.map_basis_toOrderIsoSet {M : Type*} (map : M) [EquivLike M α β]
+  {F : Filter α} (F_basis : F.InBasis B) :
+  Filter.InBasis.map_basis F B (EquivLike.toEquiv map).toOrderIsoSet =
+  F.map map :=
+by
+  simp
+  ext S
+  rw [mem_map_basis _ _ F_basis, Filter.mem_map, F_basis.basis_hasBasis.mem_iff, basis]
+  swap
+  {
+    apply Monotone.monotoneOn
+    exact OrderHomClass.mono _
+  }
+  simp
+  rw [(by rfl : map ⁻¹' S = (EquivLike.toEquiv map) ⁻¹' S)]
+  rw [Set.preimage_equiv_eq_image_symm]
+  conv => {
+    lhs; congr; intro y
+    rw [Equiv.toOrderIsoSet_apply]
+  }
+  conv => {
+    rhs; congr; intro y
+    rw [<-Equiv.subset_image, and_assoc]
+  }
 
 instance Filter.InBasis.order_bot : OrderBot { F : Filter α // F.InBasis B ∨ F = ⊥ } where
   bot := ⟨⊥, by right; rfl ⟩
