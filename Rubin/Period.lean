@@ -19,13 +19,15 @@ theorem period_le_fix {p : α} {g : G} {m : ℕ} (m_pos : m > 0)
     (gmp_eq_p : g ^ m • p = p) : 0 < Rubin.Period.period p g ∧ Rubin.Period.period p g ≤ m :=
   by
   constructor
-  · by_contra h'; have period_zero : Rubin.Period.period p g = 0; linarith;
-    rcases Nat.sInf_eq_zero.1 period_zero with ⟨cont, h_1⟩ | h; linarith;
-    exact Set.eq_empty_iff_forall_not_mem.mp h ↑m ⟨m_pos, gmp_eq_p⟩
+  · by_contra h'
+    have period_zero : Rubin.Period.period p g = 0 := by linarith
+    rcases Nat.sInf_eq_zero.1 period_zero with ⟨cont, _⟩ | h
+    · linarith
+    · exact Set.eq_empty_iff_forall_not_mem.mp h ↑m ⟨m_pos, gmp_eq_p⟩
   exact Nat.sInf_le ⟨m_pos, gmp_eq_p⟩
 #align period_le_fix Rubin.Period.period_le_fix
 
-theorem notfix_le_period {p : α} {g : G} {n : ℕ} (n_pos : n > 0)
+theorem notfix_le_period {p : α} {g : G} {n : ℕ}
     (period_pos : Rubin.Period.period p g > 0) (pmoves : ∀ i : ℕ, 0 < i → i < n → g ^ i • p ≠ p) :
     n ≤ Rubin.Period.period p g := by
   by_contra period_le
@@ -34,10 +36,10 @@ theorem notfix_le_period {p : α} {g : G} {n : ℕ} (n_pos : n > 0)
       (Nat.sInf_mem (Nat.nonempty_of_pos_sInf period_pos)).2
 #align notfix_le_period Rubin.Period.notfix_le_period
 
-theorem notfix_le_period' {p : α} {g : G} {n : ℕ} (n_pos : n > 0)
+theorem notfix_le_period' {p : α} {g : G} {n : ℕ}
     (period_pos : 0 < Rubin.Period.period p g)
     (pmoves : ∀ i : Fin n, 0 < (i : ℕ) → g ^ (i : ℕ) • p ≠ p) : n ≤ Rubin.Period.period p g :=
-  Rubin.Period.notfix_le_period n_pos period_pos fun (i : ℕ) (i_pos : 0 < i) (i_lt_n : i < n) =>
+  Rubin.Period.notfix_le_period period_pos fun (i : ℕ) (i_pos : 0 < i) (i_lt_n : i < n) =>
     pmoves (⟨i, i_lt_n⟩ : Fin n) i_pos
 #align notfix_le_period' Rubin.Period.notfix_le_period'
 
@@ -65,7 +67,7 @@ theorem moves_within_period' {z : ℤ} (g : G) (x : α) :
   0 < z → z < period x g → g^z • x ≠ x :=
 by
   intro n_pos n_lt_period
-  rw [<-Int.ofNat_natAbs_eq_of_nonneg _ (Int.le_of_lt n_pos)]
+  rw [<-Int.natAbs_of_nonneg (Int.le_of_lt n_pos)]
   rw [zpow_ofNat]
   apply moves_within_period
   · rw [<-Int.natAbs_zero]
@@ -86,7 +88,7 @@ theorem periods_lemmas {U : Set α} (U_nonempty : Set.Nonempty U) {H : Subgroup 
     (exp_ne_zero : Monoid.exponent H ≠ 0) :
     (Rubin.Period.periods U H).Nonempty ∧
       BddAbove (Rubin.Period.periods U H) ∧
-        ∃ (m : ℕ) (m_pos : m > 0), ∀ (p : α) (g : H), g ^ m • p = p :=
+        ∃ (m : ℕ), m > 0 ∧ ∀ (p : α) (g : H), g ^ m • p = p :=
 by
   rcases Monoid.exponentExists_iff_ne_zero.2 exp_ne_zero with ⟨m, m_pos, gm_eq_one⟩
   have gmp_eq_p : ∀ (p : α) (g : H), g ^ m • p = p := by
@@ -135,7 +137,7 @@ theorem zero_lt_period_le_Sup_periods {U : Set α} (U_nonempty : U.Nonempty)
         Rubin.Period.period (p : α) (g : G) ≤ sSup (Rubin.Period.periods U H) :=
 by
   rcases Rubin.Period.periods_lemmas U_nonempty exp_ne_zero with
-    ⟨periods_nonempty, periods_bounded, m, m_pos, gmp_eq_p⟩
+    ⟨_periods_nonempty, periods_bounded, m, m_pos, gmp_eq_p⟩
   intro p g
   have period_in_periods : Rubin.Period.period (p : α) (g : G) ∈ Rubin.Period.periods U H := by
     use p; use g

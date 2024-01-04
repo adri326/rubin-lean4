@@ -387,16 +387,18 @@ variable [ContinuousConstSMul G α]
 theorem support_isOpen (g : G) [T2Space α]: IsOpen (Support α g) := by
   apply isOpen_iff_forall_mem_open.mpr
   intro x xmoved
-  rcases T2Space.t2 (g • x) x xmoved with ⟨U, V, open_U, open_V, gx_in_U, x_in_V, disjoint_U_V⟩
-  exact
-    ⟨V ∩ (g⁻¹ •'' U), fun y yW =>
-      Disjoint.ne_of_mem
-        disjoint_U_V
-        (mem_inv_smulImage.mp (Set.mem_of_mem_inter_right yW))
-        (Set.mem_of_mem_inter_left yW),
-        IsOpen.inter open_V (smulImage_isOpen g⁻¹ open_U),
-        ⟨x_in_V, mem_inv_smulImage.mpr gx_in_U⟩
-    ⟩
+  let ⟨U, V, open_U, open_V, gx_in_U, x_in_V, disjoint_U_V⟩ := T2Space.t2 xmoved
+
+  refine ⟨
+    V ∩ (g⁻¹ •'' U),
+    ?subset,
+    IsOpen.inter open_V (smulImage_isOpen g⁻¹ open_U),
+    ⟨x_in_V, mem_inv_smulImage.mpr gx_in_U⟩
+  ⟩
+  intro y ⟨yV, yU⟩
+  apply Disjoint.ne_of_mem disjoint_U_V _ yV
+  rw [mem_inv_smulImage] at yU
+  exact yU
 
 end Continuous
 

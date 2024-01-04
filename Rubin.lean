@@ -463,7 +463,6 @@ by
       apply ge_antisymm
       {
         apply Period.notfix_le_period'
-        · exact n_pos
         · apply Period.period_pos'
           · exact Set.nonempty_of_mem p_in_U
           · exact exp_ne_zero
@@ -2101,8 +2100,7 @@ by
   exact RubinSpace.lim_mk α F
 
 theorem RubinSpace.lim_continuous : Continuous (RubinSpace.lim (G := G) (α := α)) := by
-  -- TODO: rename to continuous_iff when upgrading mathlib
-  apply (RegularSupportBasis.isBasis G α).continuous
+  rw [(RegularSupportBasis.isBasis G α).continuous_iff]
   intro S S_in_basis
   apply TopologicalSpace.isOpen_generateFrom_of_mem
   rw [RubinFilterBasis.mem_iff]
