@@ -9,25 +9,25 @@ import Rubin.MulActionExt
 
 namespace Rubin
 
--- TODO: give this a notation?
 -- TODO: coe to / extend MulActionHom
 structure EquivariantHomeomorph (G α β : Type _) [Group G] [TopologicalSpace α]
     [TopologicalSpace β] [MulAction G α] [MulAction G β] extends Homeomorph α β where
   equivariant : is_equivariant G toFun
 #align equivariant_homeomorph Rubin.EquivariantHomeomorph
 
+@[inherit_doc]
+notation:25 α " ≃ₜ[" G "] " β => EquivariantHomeomorph G α β
+
 variable {G α β : Type _}
 variable [Group G]
-variable [TopologicalSpace α] [TopologicalSpace β]
+variable [TopologicalSpace α] [TopologicalSpace β] [MulAction G α] [MulAction G β]
 
-theorem equivariant_fun [MulAction G α] [MulAction G β]
-    (h : EquivariantHomeomorph G α β) :
+theorem equivariant_fun (h : EquivariantHomeomorph G α β) :
     is_equivariant G h.toFun :=
   h.equivariant
 #align equivariant_fun Rubin.equivariant_fun
 
-theorem equivariant_inv [MulAction G α] [MulAction G β]
-    (h : EquivariantHomeomorph G α β) :
+theorem equivariant_inv (h : EquivariantHomeomorph G α β) :
     is_equivariant G h.invFun :=
   by
   intro g x
@@ -36,6 +36,26 @@ theorem equivariant_inv [MulAction G α] [MulAction G β]
   rw [h.left_inv _, h.right_inv _] at e
   exact e
 #align equivariant_inv Rubin.equivariant_inv
+
+protected def symm (h : α ≃ₜ[G] β) : β ≃ₜ[G] α where
+  continuous_toFun := h.continuous_invFun
+  continuous_invFun := h.continuous_toFun
+  toEquiv := h.toEquiv.symm
+  equivariant := equivariant_inv h
+
+protected def refl : α ≃ₜ[G] α where
+  continuous_toFun := continuous_id
+  continuous_invFun := continuous_id
+  toEquiv := Equiv.refl α
+  equivariant := is_equivariant_refl
+
+/-- Composition of two homeomorphisms. -/
+protected def trans {γ  : Type _} [TopologicalSpace γ] [MulAction G γ]
+  (h₁ : α ≃ₜ[G] β) (h₂ : β ≃ₜ[G] γ) : α ≃ₜ[G] γ where
+  continuous_toFun := h₂.continuous_toFun.comp h₁.continuous_toFun
+  continuous_invFun := h₁.continuous_invFun.comp h₂.continuous_invFun
+  toEquiv := Equiv.trans h₁.toEquiv h₂.toEquiv
+  equivariant := is_equivariant_trans h₁.toFun h₂.toFun h₁.equivariant h₂.equivariant
 
 open Topology
 

@@ -43,6 +43,16 @@ def is_equivariant (G : Type _) {β : Type _} [Group G] [MulAction G α]
   ∀ g : G, ∀ x : α, f (g • x) = g • f x
 #align is_equivariant Rubin.is_equivariant
 
+lemma is_equivariant_refl {G : Type _} [Group G] [MulAction G α] : is_equivariant G (id : α → α) := by
+  intro g x
+  rw [id_eq, id_eq]
+
+lemma is_equivariant_trans {G : Type _} [Group G] [MulAction G α] [MulAction G β] [MulAction G γ]
+  (h₁ : α → β) (h₂ : β → γ) (e₁ : is_equivariant G h₁) (e₂ : is_equivariant G h₂) :
+    is_equivariant G (h₂ ∘ h₁) := by
+   intro g x
+   rw [Function.comp_apply, Function.comp_apply, e₁, e₂]
+
 lemma disjoint_not_mem {α : Type _} {U V : Set α} (disj: Disjoint U V) :
   ∀ {x : α}, x ∈ U → x ∉ V :=
 by
