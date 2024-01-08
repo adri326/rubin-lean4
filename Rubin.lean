@@ -2354,11 +2354,11 @@ noncomputable def rubin' : EquivariantHomeomorph G (RubinSpace G) α where
     rw [<-F_eq, RubinSpace.smul_mk, RubinSpace.lim_mk, RubinSpace.lim_mk]
     rw [RubinFilter.smul_lim]
 
-variable {β : Type _}
+variable {β : Type}
 variable [TopologicalSpace β] [MulAction G β]
 
 theorem rubin (hα : RubinAction G α) (hβ : RubinAction G β) : EquivariantHomeomorph G α β := by
-  let h₁ := @rubin'
+  let h₁ := @rubin' (G := G)
   let h₂ := @rubin' (α := β) -- why doesn't this work?
   exact h₂.trans h₁.symm
 
