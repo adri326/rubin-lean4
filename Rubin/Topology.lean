@@ -38,15 +38,11 @@ theorem equivariant_inv (h : EquivariantHomeomorph G α β) :
 #align equivariant_inv Rubin.equivariant_inv
 
 protected def symm (h : α ≃ₜ[G] β) : β ≃ₜ[G] α where
-  continuous_toFun := h.continuous_invFun
-  continuous_invFun := h.continuous_toFun
-  toEquiv := h.toEquiv.symm
+  toHomeomorph := h.toHomeomorph.symm
   equivariant := equivariant_inv h
 
 protected def refl : α ≃ₜ[G] α where
-  continuous_toFun := continuous_id
-  continuous_invFun := continuous_id
-  toEquiv := Equiv.refl α
+  toHomeomorph := Homeomorph.refl α
   equivariant := is_equivariant_refl
 
 /-- Composition of two homeomorphisms. -/
