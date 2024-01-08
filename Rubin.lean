@@ -826,6 +826,15 @@ by
     symm at H_eq
     use S
 
+variable (α)
+
+theorem AlgebraicCentralizerBasis.to_regular [Nonempty α] {S : Set G}
+    (S_in_basis : S ∈ AlgebraicCentralizerBasis G) : ∃ T ∈ RegularSupportBasis G α, G•[T] = S := by
+  rw [<-eq_rist_image (α := α)] at S_in_basis
+  exact S_in_basis
+
+variable {α}
+
 noncomputable def rigidStabilizer_inv [Nonempty α] (H : Set G) : Set α :=
   (AlgebraicCentralizerBasis.exists_rigidStabilizer_inv H).choose
 
@@ -1390,8 +1399,7 @@ theorem IsRubinFilterOf.mem_inv {A : UltrafilterInBasis (RegularSupportBasis G �
   (filter_of : IsRubinFilterOf A B) {U : Set G} (U_in_basis : U ∈ AlgebraicCentralizerBasis G):
   U ∈ B ↔ rigidStabilizer_inv U ∈ A :=
 by
-  rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α)] at U_in_basis
-  let ⟨V, V_in_basis, V_eq⟩ := U_in_basis
+  let ⟨V, V_in_basis, V_eq⟩ := AlgebraicCentralizerBasis.to_regular α U_in_basis
   rw [<-V_eq, RigidStabilizer_leftInv V_in_basis]
   symm
   exact filter_of V V_in_basis
@@ -1502,9 +1510,7 @@ by
     simp
     rwa [<-rigidStabilizer_subset_iff _ (RegularSupportBasis.regular W_in_basis) (RegularSupportBasis.regular V_in_basis)]
   · intro ⟨W, W_in_basis, W_ss_GV, subsets_ss_orbit⟩
-    rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α)] at W_in_basis
-    let ⟨W', W'_in_basis, W'_eq⟩ := W_in_basis
-    simp only at W'_eq
+    let ⟨W', W'_in_basis, W'_eq⟩ := AlgebraicCentralizerBasis.to_regular α W_in_basis
     rw [proposition_3_5' V_in_basis]
     use W'
     rw [filter_of.subsets_ss_orbit W'_in_basis, W'_eq]
@@ -1721,9 +1727,7 @@ by
   have F₁_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₁ (α := α))
   have F₂_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₂ (α := α))
 
-  rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α)] at S_in_basis
-  let ⟨S', S'_in_basis, S'_eq⟩ := S_in_basis
-  simp only at S'_eq
+  let ⟨S', S'_in_basis, S'_eq⟩ := AlgebraicCentralizerBasis.to_regular α S_in_basis
   rw [<-S'_eq]
 
   rw [<-F₁_rubinFilterOf.converges_iff S'_in_basis]
@@ -1954,8 +1958,8 @@ lemma AlgebraicConvergent_mono {F : RubinFilter G} {S T : Set G}
   (S_basis : S ∈ AlgebraicCentralizerBasis G) (T_basis : T ∈ AlgebraicCentralizerBasis G)
   (S_ss_T : S ⊆ T) (F_converges : AlgebraicConvergent F.filter.filter S) : AlgebraicConvergent F.filter.filter T :=
 by
-  let ⟨S', S'_basis, S'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ S_basis
-  let ⟨T', T'_basis, T'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ T_basis
+  let ⟨S', S'_basis, S'_eq⟩ := AlgebraicCentralizerBasis.to_regular α S_basis
+  let ⟨T', T'_basis, T'_eq⟩ := AlgebraicCentralizerBasis.to_regular α T_basis
   rw [<-S'_eq, <-RubinFilter.lim_in_set F S'_basis (α := α)] at F_converges
   rw [<-T'_eq, <-RubinFilter.lim_in_set F T'_basis (α := α)]
   have S'_ss_T' : S' ⊆ T' := by
@@ -1976,10 +1980,8 @@ theorem RubinFilterBasis.isBasis : TopologicalSpace.IsTopologicalBasis (RubinFil
     have F_conv₁ := (B₁_mem F).mp F_in_T₁
     have F_conv₂ := (B₂_mem F).mp F_in_T₂
 
-    let ⟨B₁', B₁'_in_basis, B₁'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ B₁_in_basis
-    let ⟨B₂', B₂'_in_basis, B₂'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ B₂_in_basis
-    simp only at B₁'_eq
-    simp only at B₂'_eq
+    let ⟨B₁', B₁'_in_basis, B₁'_eq⟩ := AlgebraicCentralizerBasis.to_regular α B₁_in_basis
+    let ⟨B₂', B₂'_in_basis, B₂'_eq⟩ := AlgebraicCentralizerBasis.to_regular α B₂_in_basis
 
     rw [<-B₁'_eq, <-RubinFilter.lim_in_set F B₁'_in_basis] at F_conv₁
     rw [<-B₂'_eq, <-RubinFilter.lim_in_set F B₂'_in_basis] at F_conv₂
@@ -2057,8 +2059,7 @@ theorem RubinSpace.basis : TopologicalSpace.IsTopologicalBasis (
   refine ⟨B, B_in_basis, ?mem⟩
   intro F
 
-  let ⟨B', B'_in_basis, B'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ B_in_basis
-  simp only at B'_eq
+  let ⟨B', B'_in_basis, B'_eq⟩ := AlgebraicCentralizerBasis.to_regular α B_in_basis
 
   simp only [B_mem]
   rw [<-B'_eq, <-RubinFilter.lim_in_set (α := α) (G := G)]
@@ -2115,9 +2116,7 @@ theorem RubinSpace.fromPoint_continuous : Continuous (RubinSpace.fromPoint (G :=
   intro U U_in_basis
   rw [RubinFilterBasis.mem_iff] at U_in_basis
   let ⟨V, V_in_basis, U_mem⟩ := U_in_basis
-  -- TODO: automatize this
-  let ⟨V', V'_in_basis, V'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ V_in_basis
-  simp only at V'_eq
+  let ⟨V', V'_in_basis, V'_eq⟩ := AlgebraicCentralizerBasis.to_regular α V_in_basis
 
   rw [<-V'_eq] at U_mem
   conv at U_mem => {
@@ -2168,22 +2167,12 @@ variable {G : Type _} [Group G]
 variable {α : Type _} [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
 
--- TODO: move elsewhere
-@[simp]
-theorem Group.range_conj_eq_univ {G : Type*} [Group G] (g : G) :
-  Set.range (fun i => g * i * g⁻¹) = Set.univ :=
+theorem _root_.EquivLike.image_univ {α β γ: Type*} [EquivLike γ α β] (f : γ) :
+  f '' Set.univ = Set.univ :=
 by
-  ext h
-  simp
-  use g⁻¹ * h * g
-  group
-
-@[simp]
-theorem Group.range_conj'_eq_univ {G : Type*} [Group G] (g : G) :
-  Set.range (fun i => g⁻¹ * i * g) = Set.univ :=
-by
-  nth_rw 2 [<-inv_inv g]
-  exact Group.range_conj_eq_univ g⁻¹
+  rw [Set.image_univ]
+  show Set.range (f : Equiv α β) = Set.univ
+  exact Equiv.range_eq_univ _
 
 def RubinFilter.smul (F : RubinFilter G) (g : G) : RubinFilter G where
   filter := (F.filter.map_basis
@@ -2200,7 +2189,7 @@ def RubinFilter.smul (F : RubinFilter G) (g : G) : RubinFilter G where
     simp [MulAut.conj_order_iso]
     rw [Filter.InBasis.map_basis_toOrderIsoSet _ F.filter.in_basis]
     convert AlgebraicConvergent.conj F.converges g
-    simp
+    rw [EquivLike.image_univ]
 
 theorem RubinFilter.smul_lim (F : RubinFilter G) (g : G) :
   (F.smul g).lim α = g • F.lim α :=
