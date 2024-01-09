@@ -5,6 +5,24 @@ namespace Rubin
 variable {G α β : Type _} [Group G]
 variable [MulAction G α]
 
+
+-- Note: I'm not sure if this shouldn't just be stated as-is in EquivariantHomeomorph,
+-- since we already have SmulHomClass
+def IsEquivariant (G : Type _) {β : Type _} [Group G] [MulAction G α]
+    [MulAction G β] (f : α → β) :=
+  ∀ g : G, ∀ x : α, f (g • x) = g • f x
+
+lemma IsEquivariant.refl {G : Type _} [Group G] [MulAction G α] : IsEquivariant G (id : α → α) := by
+  intro g x
+  rw [id_eq, id_eq]
+
+lemma IsEquivariant.trans {G : Type _} [Group G] [MulAction G α] [MulAction G β] [MulAction G γ]
+  (h₁ : α → β) (h₂ : β → γ) (e₁ : IsEquivariant G h₁) (e₂ : IsEquivariant G h₂) :
+    IsEquivariant G (h₂ ∘ h₁) := by
+   intro g x
+   rw [Function.comp_apply, Function.comp_apply, e₁, e₂]
+
+
 theorem smul_congr (g : G) {x y : α} (h : x = y) : g • x = g • y :=
   congr_arg ((· • ·) g) h
 #align smul_congr Rubin.smul_congr

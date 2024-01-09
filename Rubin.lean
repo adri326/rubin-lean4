@@ -1,7 +1,7 @@
 /-
 Copyright (c) 2023 Laurent Bartholdi. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
-Author : Laurent Bartholdi
+Author : Laurent Bartholdi and Émilie Burgun
 -/
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Finset.Card
@@ -2373,7 +2373,7 @@ variable [MulAction G β] [FaithfulSMul G β] [ContinuousConstSMul G β] [Locall
 noncomputable def rubin : EquivariantHomeomorph G α β :=
   let α_nonempty : Nonempty α := by rwa [LocallyMoving.nonempty_iff_nontrivial G]
   let β_nonempty : Nonempty β := by rwa [LocallyMoving.nonempty_iff_nontrivial G]
-  (RubinSpace.equivariantHomeomorph (G := G) (α := α)).inv.trans
+  (RubinSpace.equivariantHomeomorph (G := G) (α := α)).symm.trans
     (RubinSpace.equivariantHomeomorph (G := G) (α := β))
 
 end Rubin
