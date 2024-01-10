@@ -7,7 +7,7 @@ import Mathlib.Topology.Separation
 
 section Order
 
-variable {α β : Type _}
+variable {α : Type _} {β : Type _}
 
 def DoubleMonotoneOn [Preorder α] [Preorder β] (f: α → β) (B : Set α): Prop :=
   ∀ x, x ∈ B → ∀ y, y ∈ B → (x ≤ y ↔ f x ≤ f y)
@@ -1003,7 +1003,7 @@ This is a formulation for prefilters in a basis that are ultra.
 It is a weaker statement than regular ultrafilters,
 but it allows for some nice properties, like the equivalence of cluster points and neighborhoods.
 --/
-structure UltrafilterInBasis {α : Type} (B : Set (Set α)) :=
+structure UltrafilterInBasis {α : Type _} (B : Set (Set α)) :=
   filter : Filter α
 
   in_basis : Filter.InBasis filter B

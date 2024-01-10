@@ -68,12 +68,9 @@ end RubinActions
 
 section AlgebraicDisjointness
 
-variable {G α : Type _}
-variable [TopologicalSpace α]
-variable [Group G]
-variable [MulAction G α]
-variable [ContinuousConstSMul G α]
-variable [FaithfulSMul G α]
+variable {G : Type u} [Group G]
+variable {α : Type v} [TopologicalSpace α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]
 
 -- TODO: modify the proof to be less "let everything"-y, especially the first half
 lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp_disjoint : Disjoint (Support α f) (Support α g)) : AlgebraicallyDisjoint f g := by
@@ -669,9 +666,8 @@ by
     exact h_in_rist
   }
 
-variable {G α : Type _}
-variable [Group G]
-variable [TopologicalSpace α] [T2Space α]
+variable {G : Type u} [Group G]
+variable {α : Type v} [TopologicalSpace α] [T2Space α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
 /--
@@ -844,7 +840,7 @@ by
 
 variable [Nonempty α] [HasNoIsolatedPoints α] [LocallyDense G α]
 
-noncomputable def RigidStabilizer.order_iso_on (G α : Type _) [Group G] [Nonempty α] [TopologicalSpace α] [T2Space α]
+noncomputable def RigidStabilizer.order_iso_on (G : Type u) (α : Type v) [Group G] [Nonempty α] [TopologicalSpace α] [T2Space α]
   [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]
   [HasNoIsolatedPoints α] [LocallyDense G α] : OrderIsoOn (Set α) (Set G) (RegularSupportBasis G α)
 where
@@ -991,7 +987,8 @@ section HomeoGroup
 
 open Topology
 
-variable {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α]
+variable {G : Type u} [Group G]
+variable {α : Type v} [TopologicalSpace α] [T2Space α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
 theorem exists_compact_closure_of_le_nhds {α : Type _} [TopologicalSpace α] [T2Space α] [LocallyCompactSpace α] (F : Filter α):
@@ -1030,9 +1027,8 @@ end HomeoGroup
 
 section Ultrafilter
 
-variable {G α : Type _}
-variable [Group G]
-variable [TopologicalSpace α] [T2Space α]
+variable {G : Type u} [Group G]
+variable {α : Type v} [TopologicalSpace α] [T2Space α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
 def RSuppSubsets (G : Type _) {α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] (V : Set α) : Set (Set α) :=
@@ -1294,8 +1290,8 @@ end Ultrafilter
 
 section RubinFilter
 
-variable {G : Type _} [Group G]
-variable {α : Type _} [Nonempty α] [TopologicalSpace α] [HasNoIsolatedPoints α] [T2Space α] [LocallyCompactSpace α]
+variable {G : Type u} [Group G]
+variable {α : Type v} [Nonempty α] [TopologicalSpace α] [HasNoIsolatedPoints α] [T2Space α] [LocallyCompactSpace α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
 
 def AlgebraicSubsets (V : Set G) : Set (Set G) :=
@@ -1535,8 +1531,7 @@ by
 
 section Convergence
 
-variable (α : Type _)
-variable [Nonempty α] [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
+variable (α : Type v) [Nonempty α] [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
 
 theorem RubinFilter.map_converges (F : RubinFilter G):
@@ -1612,8 +1607,7 @@ end Convergence
 
 section Setoid
 
-variable {α : Type}
-variable [Nonempty α] [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
+variable {α : Type v} [Nonempty α] [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
 
 /--
@@ -1925,12 +1919,9 @@ end RubinFilter
 
 section Basis
 
-variable {G : Type _}
-variable [Group G]
-
-variable (α : Type) [α_nonempty : Nonempty α]
-  [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
-  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+variable {G : Type u} [Group G]
+variable (α : Type v) [α_nonempty : Nonempty α] [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
 
 lemma AlgebraicConvergent_mono {F : RubinFilter G} {S T : Set G}
   (S_basis : S ∈ AlgebraicCentralizerBasis G) (T_basis : T ∈ AlgebraicCentralizerBasis G)
@@ -2063,8 +2054,8 @@ end Basis
 
 section Homeomorph
 
-variable {G : Type _} [Group G]
-variable (α : Type _) [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
+variable {G : Type u} [Group G]
+variable (α : Type v) [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
 
 @[simp]
@@ -2147,8 +2138,8 @@ end Homeomorph
 
 section Equivariant
 
-variable {G : Type _} [Group G]
-variable {α : Type _} [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
+variable {G : Type u} [Group G]
+variable {α : Type v} [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
 
 -- TODO: move elsewhere
@@ -2344,8 +2335,13 @@ instance : MulAction G (RubinSpace G) where
 
 theorem RubinSpace.smul_def (g : G) (Q : RubinSpace G) : g • Q = Q.smul g := rfl
 
+end Equivariant
+
+variable {G : Type u} [Group G]
+variable {α : Type v} [RubinAction G α] -- this doesn't work because RubinAction is not a class. presumably we would want that.
+
 noncomputable def rubin' : EquivariantHomeomorph G (RubinSpace G) α where
-  toHomeomorph := RubinSpace.homeomorph (G := G) α
+  toHomeomorph := @RubinSpace.homeomorph (G := G) _ α
   equivariant := by
     intro g Q
     simp [RubinSpace.homeomorph]
@@ -2354,15 +2350,16 @@ noncomputable def rubin' : EquivariantHomeomorph G (RubinSpace G) α where
     rw [<-F_eq, RubinSpace.smul_mk, RubinSpace.lim_mk, RubinSpace.lim_mk]
     rw [RubinFilter.smul_lim]
 
-variable {β : Type}
-variable [TopologicalSpace β] [MulAction G β]
+variable {α : Type v} [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
+         [Nonempty α] [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+variable {β : Type w} [TopologicalSpace β] [T2Space β] [HasNoIsolatedPoints β] [LocallyCompactSpace β]
+         [Nonempty β] [MulAction G β] [ContinuousConstSMul G β] [FaithfulSMul G β] [LocallyDense G β]
+
 
 theorem rubin (hα : RubinAction G α) (hβ : RubinAction G β) : EquivariantHomeomorph G α β := by
-  let h₁ := @rubin' (G := G)
-  let h₂ := @rubin' (α := β) -- why doesn't this work?
+  let h₁ := @rubin' G _ α _ _ _ _ _ _ _ _ _
+  let h₂ := @rubin' G _ β _ _ _ _ _ _ _ _ _
   exact h₂.trans h₁.symm
-
-end Equivariant
 
 end Rubin
 

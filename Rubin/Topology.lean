@@ -10,6 +10,11 @@ import Rubin.MulActionExt
 namespace Rubin
 
 -- TODO: coe to / extend MulActionHom
+
+/--
+maps from `α` to `β` which preserve both the topology (they are homeomorphisms)
+and the group structure (they intertwine the actions of `G` on `α` and `β`)
+-/
 structure EquivariantHomeomorph (G α β : Type _) [Group G] [TopologicalSpace α]
     [TopologicalSpace β] [MulAction G α] [MulAction G β] extends Homeomorph α β where
   equivariant : is_equivariant G toFun
@@ -18,9 +23,9 @@ structure EquivariantHomeomorph (G α β : Type _) [Group G] [TopologicalSpace �
 @[inherit_doc]
 notation:25 α " ≃ₜ[" G "] " β => EquivariantHomeomorph G α β
 
-variable {G α β : Type _}
-variable [Group G]
-variable [TopologicalSpace α] [TopologicalSpace β] [MulAction G α] [MulAction G β]
+variable {G : Type u} [Group G]
+variable {α : Type v} [TopologicalSpace α] [MulAction G α]
+variable {β : Type w} [TopologicalSpace β] [MulAction G β]
 
 theorem equivariant_fun (h : EquivariantHomeomorph G α β) :
     is_equivariant G h.toFun :=
