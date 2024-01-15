@@ -12,6 +12,12 @@ variable {α β : Type _}
 def DoubleMonotoneOn [Preorder α] [Preorder β] (f: α → β) (B : Set α): Prop :=
   ∀ x, x ∈ B → ∀ y, y ∈ B → (x ≤ y ↔ f x ≤ f y)
 
+theorem orderEmbedding_to_doubleMonotoneOn [Preorder α] [Preorder β] {B : Set α}
+    {C : Set β} (f : B ↪o C) : DoubleMonotoneOn f Set.univ := by
+  intro ⟨x, x_in_B⟩ _ ⟨y, y_in_B⟩ _
+  simp
+
+
 variable {f : α → β} {B : Set α}
 
 theorem DoubleMonotoneOn.monotoneOn [Preorder α] [Preorder β] (f_double_mono : DoubleMonotoneOn f B) :
@@ -245,6 +251,32 @@ def OrderIso.orderIsoOn (F : α ≃o β) (S : Set α) : OrderIsoOn α β S where
   toFun_doubleMonotone := by
     intro a _ b _
     exact Iff.symm (RelIso.map_rel_iff F)
+
+noncomputable def OrderIso.orderIsoOn₂_toFun [βne : Nonempty β] {B : Set α} {C : Set β} (F : B ≃o C) : α → β :=
+  fun a =>
+    let _dec : Decidable (a ∈ B) := Classical.propDecidable _
+    if h : a ∈ B then
+      (F.toFun ⟨a, h⟩).val
+    else
+      βne.some
+
+
+noncomputable instance OrderIso.orderIsoOn₂ [αne : Nonempty α] [βne : Nonempty β] {B : Set α} {C : Set β} :
+  CoeOut (B ≃o C) (OrderIsoOn α β B) where
+  coe := fun F => ⟨
+    OrderIso.orderIsoOn₂_toFun F,
+    fun b =>
+      let dec : Decidable (b ∈ C) := Classical.propDecidable _
+      if h : b ∈ C then
+        (F.invFun ⟨b, h⟩).val
+      else
+        αne.some,
+
+    sorry,
+    sorry,
+    sorry
+  ⟩
+
 
 -- instance : Coe (α ≃o β) (OrderIsoOn α β S) where
 --   coe := fun f => OrderIso.orderIsoOn f S

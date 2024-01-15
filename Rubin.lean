@@ -871,6 +871,40 @@ by
 
 variable [Nonempty α] [HasNoIsolatedPoints α] [LocallyDense G α]
 
+variable (G α)
+
+noncomputable def RigidStabilizer.order_iso :
+    OrderIso (RegularSupportBasis G α) (AlgebraicCentralizerBasis G) where
+  toFun := fun ⟨S, S_in_basis⟩ => ⟨
+    G•[S],
+    AlgebraicCentralizerBasis.mem_of_regularSupportBasis S_in_basis
+  ⟩
+  invFun := fun ⟨H, H_in_basis⟩ => ⟨
+    rigidStabilizer_inv (α := α) H,
+    (rigidStabilizer_inv_in_basis H).mp H_in_basis
+  ⟩
+
+  left_inv := by
+    intro ⟨S, S_in_basis⟩
+    simp
+    exact rigidStabilizer_inv_eq' S_in_basis
+
+  right_inv := by
+    intro ⟨H, H_in_basis⟩
+    simp
+    symm
+    exact rigidStabilizer_inv_eq H_in_basis
+
+  map_rel_iff' := by
+    simp
+    intro S₁ S₁_in_basis S₂ S₂_in_basis
+    symm
+    apply rigidStabilizer_subset_iff
+    all_goals apply RegularSupportBasis.regular (G := G)
+    all_goals assumption
+
+variable {G α}
+
 noncomputable def RigidStabilizer.order_iso_on (G α : Type _) [Group G] [Nonempty α] [TopologicalSpace α] [T2Space α]
   [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]
   [HasNoIsolatedPoints α] [LocallyDense G α] : OrderIsoOn (Set α) (Set G) (RegularSupportBasis G α)
