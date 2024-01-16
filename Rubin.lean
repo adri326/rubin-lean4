@@ -45,10 +45,10 @@ section RubinActions
 -- since the instance inference engine doesn't play well with it.
 -- One alternative would be to lay out all of the properties as-is (without their class wrappers),
 -- then provide ways to reconstruct them in instances.
-structure RubinAction (G α : Type _) where
-  group : Group G
+class RubinAction (G : outParam (Type _)) (α : Type _) [Group G] where
   action : MulAction G α
   topology : TopologicalSpace α
+  continuous : ContinuousConstSMul G α
   faithful : FaithfulSMul G α
   locally_compact : LocallyCompactSpace α
   hausdorff : T2Space α
@@ -61,13 +61,13 @@ Constructs a RubinAction from ambient instances.
 If needed, missing instances can be passed as named parameters.
 --/
 def RubinAction.mk' (G α : Type _)
-  [group : Group G] [topology : TopologicalSpace α] [hausdorff : T2Space α] [action : MulAction G α]
-  [faithful : FaithfulSMul G α] [locally_compact : LocallyCompactSpace α]
+  [Group G] [topology : TopologicalSpace α] [hausdorff : T2Space α] [action : MulAction G α]
+  [continuous : ContinuousConstSMul G α] [faithful : FaithfulSMul G α] [locally_compact : LocallyCompactSpace α]
   [no_isolated_points : HasNoIsolatedPoints α] [locally_dense : LocallyDense G α] :
   RubinAction G α := ⟨
-    group,
     action,
     topology,
+    continuous,
     faithful,
     locally_compact,
     hausdorff,
@@ -75,24 +75,22 @@ def RubinAction.mk' (G α : Type _)
     locally_dense
   ⟩
 
-variable {G α : Type _}
-
-instance RubinAction.instGroup (act : RubinAction G α) : Group G := act.group
-
-instance RubinAction.instFaithful (act : RubinAction G α) : @FaithfulSMul G α (@MulAction.toSMul G α act.group.toMonoid act.action) := act.faithful
-
-instance RubinAction.topologicalSpace (act : RubinAction G α) : TopologicalSpace α := act.topology
+instance [Group G] [RubinAction G α] : MulAction G α := RubinAction.action
+instance [Group G] [RubinAction G α] : TopologicalSpace α := RubinAction.topology
+instance [Group G] [RubinAction G α] : ContinuousConstSMul G α := RubinAction.continuous
+instance [Group G] [RubinAction G α] : FaithfulSMul G α := RubinAction.faithful
+instance [Group G] [RubinAction G α] : LocallyCompactSpace α := RubinAction.locally_compact
+instance [Group G] [RubinAction G α] : T2Space α := RubinAction.hausdorff
+instance [Group G] [RubinAction G α] : HasNoIsolatedPoints α := RubinAction.no_isolated_points
+instance [Group G] [RubinAction G α] : LocallyDense G α := RubinAction.locally_dense
 
 end RubinActions
 
 section AlgebraicDisjointness
 
-variable {G α : Type _}
-variable [TopologicalSpace α]
-variable [Group G]
-variable [MulAction G α]
-variable [ContinuousConstSMul G α]
-variable [FaithfulSMul G α]
+variable {G : Type _} [Group G]
+variable {α : Type _} [TopologicalSpace α]
+variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]
 
 -- TODO: modify the proof to be less "let everything"-y, especially the first half
 lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp_disjoint : Disjoint (Support α f) (Support α g)) : AlgebraicallyDisjoint f g := by
@@ -151,13 +149,13 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
 
     show Support α ⁅f₁, ⁅f₂, h⁆⁆ ⊆ Support α f
     calc
-      Support α ⁅f₁, k⁆ = Support α ⁅k, f₁⁆ := by rw [<-commutatorElement_inv, support_inv]
+      Support α ⁅f₁, k⁆ = Support α ⁅k, f₁⁆ := by rw [←commutatorElement_inv, support_inv]
       _ ⊆ Support α f₁ ∪ (k •'' Support α f₁) := support_comm α k f₁
       _ ⊆ W ∪ (k •'' Support α f₁) := Set.union_subset_union_left _ supp_f₁_subset_W
       _ ⊆ W ∪ (k •'' W) := by
         apply Set.union_subset_union_right
         exact (smulImage_mono k supp_f₁_subset_W)
-      _ = W ∪ (f₂ •'' W) := by rw [<-smulImage_eq_of_smul_eq h₂]
+      _ = W ∪ (f₂ •'' W) := by rw [←smulImage_eq_of_smul_eq h₂]
       _ ⊆ V ∪ (f₂ •'' W) := Set.union_subset_union_left _ W_in_V
       _ ⊆ V ∪ V := by
         apply Set.union_subset_union_right
@@ -170,12 +168,12 @@ lemma proposition_1_1_1 [h_lm : LocallyMoving G α] [T2Space α] (f g : G) (supp
     have h₄: ∀ z ∈ W, ⁅f₁, k⁆ • z = f₁ • z := by
       apply disjoint_support_comm f₁ k
       exact rigidStabilizer_support.mp f₁_in_rist_W
-      rw [<-smulImage_eq_of_smul_eq h₂]
+      rw [←smulImage_eq_of_smul_eq h₂]
       exact disjoint_img_W
     let ⟨z, z_in_W, z_moved⟩ := faithful_rigid_stabilizer_moves_point f₁_in_rist_W f₁_ne_one
 
     by_contra h₅
-    rw [<-h₄ z z_in_W] at z_moved
+    rw [←h₄ z z_in_W] at z_moved
     have h₆ : ⁅f₁, ⁅f₂, h⁆⁆ • z = z := by rw [h₅, one_smul]
     exact z_moved h₆
 #align proposition_1_1_1 Rubin.proposition_1_1_1
@@ -199,9 +197,9 @@ by
     all_goals norm_num
 
   have g12_fixed : g^12 • x = x := by
-    rw [<-zpow_ofNat]
+    rw [←zpow_ofNat]
     simp
-    rw [<-Int.mul_ediv_cancel' k_div_12]
+    rw [←Int.mul_ediv_cancel' k_div_12]
     have res := smul_zpow_eq_of_smul_eq (12/k) x_fixed
     group_action at res
     exact res
@@ -246,8 +244,8 @@ by
     let ⟨z, z_in_V, z_moved⟩ := faithful_rigid_stabilizer_moves_point h_in_ristV h_ne_one
     apply z_moved
 
-    nth_rewrite 2 [<-one_smul G z]
-    rw [<-commutatorElement_eq_one_iff_commute.mpr comm_trivial.symm]
+    nth_rewrite 2 [←one_smul G z]
+    rw [←commutatorElement_eq_one_iff_commute.mpr comm_trivial.symm]
     symm
 
     apply disjoint_support_comm h f
@@ -278,7 +276,7 @@ by
   have support_h' : Support α h' ⊆ ⋃(i : Fin 2 × Fin 2), (f₁^(i.1.val) * f₂^(i.2.val)) •'' V := by
     rw [rewrite_Union]
     simp (config := {zeta := false})
-    rw [<-smulImage_mul, <-smulImage_union]
+    rw [←smulImage_mul, ←smulImage_union]
     calc
       Support α h' ⊆ Support α ⁅f₂,h⁆ ∪ (f₁ •'' Support α ⁅f₂, h⁆) := support_comm α f₁ ⁅f₂,h⁆
       _ ⊆ V ∪ (f₂ •'' V) ∪ (f₁ •'' Support α ⁅f₂, h⁆) := by
@@ -296,7 +294,7 @@ by
     intro i
     rw [mem_support]
     by_contra p_fixed
-    rw [<-mul_smul, h'_commutes.pow_right, mul_smul] at p_fixed
+    rw [←mul_smul, h'_commutes.pow_right, mul_smul] at p_fixed
     group_action at p_fixed
     exact p_moves p_fixed
 
@@ -317,7 +315,7 @@ by
     (fun (i : Fin 5) _ => Finset.mem_univ (choice i))
 
   let k := f₁^(choice i).1.val * f₂^(choice i).2.val
-  have same_k : f₁^(choice j).1.val * f₂^(choice j).2.val = k := by rw [<-same_choice]
+  have same_k : f₁^(choice j).1.val * f₂^(choice j).2.val = k := by rw [←same_choice]
   have gi : g^i.val • p ∈ k •'' V := (choice_pred i).choose_spec
   have gk : g^j.val • p ∈ k •'' V := by
     have gk' := (choice_pred j).choose_spec
@@ -344,9 +342,9 @@ by
 
   have g_k_disjoint : Disjoint ((g^i.val)⁻¹ •'' (k •'' V)) ((g^j.val)⁻¹ •'' (k •'' V)) := by
     repeat rw [smulImage_mul]
-    repeat rw [<-inv_pow]
+    repeat rw [←inv_pow]
     repeat rw [k_commutes.symm.inv_left.pow_left]
-    repeat rw [<-smulImage_mul k]
+    repeat rw [←smulImage_mul k]
     repeat rw [inv_pow]
     exact smulImage_disjoint k g_disjoint
 
@@ -420,7 +418,7 @@ by
       rw [IH]
       rw [smul_succ]
       rw [mul_smul]
-      rw [<-smul_succ]
+      rw [←smul_succ]
 
       -- We can show that `g^(Nat.succ i') • q ∉ V`,
       -- which means that with `h` in `RigidStabilizer G V`, `h` fixes that point
@@ -451,12 +449,12 @@ by
   -- This even holds for `i = n`
   have hgpown_moves : (h * g) ^ n • q ≠ q := by
     -- Rewrite (hg)^n • q = h * g^n • q
-    rw [<-Nat.succ_pred n_pos.ne.symm]
+    rw [←Nat.succ_pred n_pos.ne.symm]
     rw [pow_succ]
     have h_eq := hgpow_eq_gpow ⟨Nat.pred n, Nat.pred_lt_self n_pos⟩
     simp at h_eq
-    rw [mul_smul, h_eq, <-mul_smul, mul_assoc, <-pow_succ]
-    rw [<-Nat.succ_eq_add_one, Nat.succ_pred n_pos.ne.symm]
+    rw [mul_smul, h_eq, ←mul_smul, mul_assoc, ←pow_succ]
+    rw [←Nat.succ_eq_add_one, Nat.succ_pred n_pos.ne.symm]
 
     -- We first eliminate `g^n • q` by proving that `n = Period g q`
     have period_gq_eq_n : Period.period q g = n := by
@@ -469,7 +467,7 @@ by
           · exact q_in_V.left
           · exact g_in_ristU
         · intro i i_pos
-          rw [<-hgpow_eq_gpow]
+          rw [←hgpow_eq_gpow]
           apply hgpow_moves i i_pos
       }
       {
@@ -481,7 +479,7 @@ by
         · exact g_in_ristU
       }
 
-    rw [mul_smul, <-period_gq_eq_n]
+    rw [mul_smul, ←period_gq_eq_n]
     rw [Period.pow_period_fix]
     -- Finally, we have `h • q ≠ q`
     exact hq_ne_q
@@ -490,7 +488,7 @@ by
   have ⟨period_hg_pos, period_hg_le_n⟩ := Period.zero_lt_period_le_Sup_periods U_nonempty exp_ne_zero ⟨q, q_in_V.left⟩ ⟨h * g, hg_in_ristU⟩
   simp at period_hg_pos
   simp at period_hg_le_n
-  rw [<-n_eq_Sup] at period_hg_le_n
+  rw [←n_eq_Sup] at period_hg_le_n
   cases (lt_or_eq_of_le period_hg_le_n) with
   | inl period_hg_lt_n =>
       apply hgpow_moves ⟨Period.period q (h * g), period_hg_lt_n⟩
@@ -499,7 +497,7 @@ by
       apply Period.pow_period_fix
   | inr period_hg_eq_n =>
       apply hgpown_moves
-      rw [<-period_hg_eq_n]
+      rw [←period_hg_eq_n]
       apply Period.pow_period_fix
 
 
@@ -557,7 +555,7 @@ by
   intro n n_pos
   rw [Monoid.exponent_eq_zero_iff] at exp_eq_zero
   unfold Monoid.ExponentExists at exp_eq_zero
-  rw [<-Classical.not_forall_not, Classical.not_not] at exp_eq_zero
+  rw [←Classical.not_forall_not, Classical.not_not] at exp_eq_zero
   simp at exp_eq_zero
   exact exp_eq_zero n n_pos
 
@@ -594,7 +592,7 @@ by
       · rw [RegularSupport.def]
         exact interior_subset
       · rfl
-      · rw [<-g_eq_g']
+      · rw [←g_eq_g']
         exact Disjoint.closure_left supp_disj (support_isOpen _)
   }
 
@@ -655,7 +653,7 @@ theorem rigidStabilizer_inter_bot_iff_regularSupport_disj {G α : Type _}
   G•[RegularSupport α f] ⊓ G•[RegularSupport α g] = ⊥
   ↔ Disjoint (RegularSupport α f) (RegularSupport α g) :=
 by
-  rw [<-rigidStabilizer_inter]
+  rw [←rigidStabilizer_inter]
   constructor
   {
     intro rist_disj
@@ -678,7 +676,7 @@ by
     rw [rsupp_disj]
 
     by_contra rist_ne_bot
-    rw [<-ne_eq, Subgroup.ne_bot_iff_exists_ne_one] at rist_ne_bot
+    rw [←ne_eq, Subgroup.ne_bot_iff_exists_ne_one] at rist_ne_bot
     let ⟨⟨h, h_in_rist⟩, h_ne_one⟩ := rist_ne_bot
     simp at h_ne_one
     apply h_ne_one
@@ -687,9 +685,8 @@ by
     exact h_in_rist
   }
 
-variable {G α : Type _}
-variable [Group G]
-variable [TopologicalSpace α] [T2Space α]
+variable {G : Type _} [Group G]
+variable {α : Type _} [TopologicalSpace α] [T2Space α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
 /--
@@ -707,10 +704,10 @@ by
   intro alg_disj
   rw [disjoint_interiorClosure_iff (support_isOpen _) (support_isOpen _)]
   simp
-  repeat rw [<-RegularSupport.def]
-  rw [<-rigidStabilizer_inter_bot_iff_regularSupport_disj]
+  repeat rw [←RegularSupport.def]
+  rw [←rigidStabilizer_inter_bot_iff_regularSupport_disj]
 
-  repeat rw [<-proposition_2_1]
+  repeat rw [←proposition_2_1]
   exact alg_disj
 
 -- lemma remark_2_3' {f g : G} :
@@ -731,14 +728,14 @@ by
   unfold RegularSupport.FiniteInter
   unfold AlgebraicCentralizerInter
   rw [rigidStabilizer_iInter_regularSupport']
-  simp only [<-proposition_2_1]
+  simp only [←proposition_2_1]
 
 lemma regularSupportInter_nonEmpty_iff_neBot {S : Finset G} [Nonempty α]:
   AlgebraicCentralizerInter S ≠ ⊥ ↔
   Set.Nonempty (RegularSupport.FiniteInter α S) :=
 by
   constructor
-  · rw [<-rigidStabilizer_inter_eq_algebraicCentralizerInter (α := α), ne_eq]
+  · rw [←rigidStabilizer_inter_eq_algebraicCentralizerInter (α := α), ne_eq]
     intro rist_neBot
     by_contra eq_empty
     rw [Set.not_nonempty_iff_eq_empty] at eq_empty
@@ -746,8 +743,8 @@ by
     exact rist_neBot rfl
   · intro nonempty
     intro eq_bot
-    rw [<-rigidStabilizer_inter_eq_algebraicCentralizerInter (α := α)] at eq_bot
-    rw [<-rigidStabilizer_empty (G := G) (α := α), rigidStabilizer_eq_iff] at eq_bot
+    rw [←rigidStabilizer_inter_eq_algebraicCentralizerInter (α := α)] at eq_bot
+    rw [←rigidStabilizer_empty (G := G) (α := α), rigidStabilizer_eq_iff] at eq_bot
     · rw [eq_bot, Set.nonempty_iff_ne_empty] at nonempty
       exact nonempty rfl
     · apply RegularSupport.FiniteInter_regular
@@ -770,14 +767,14 @@ by
 
   have ⟨H_ne_one, ⟨seed, H_eq⟩⟩ := (AlgebraicCentralizerBasis.mem_iff H).mp H_in_basis?
 
-  rw [H_eq, <-Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq, <-ne_eq] at H_ne_one
+  rw [H_eq, ←Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq, ←ne_eq] at H_ne_one
 
   use RegularSupport.FiniteInter α seed
   constructor
   · intro _
     rw [RegularSupportBasis.mem_iff]
     repeat' apply And.intro
-    · rw [<-regularSupportInter_nonEmpty_iff_neBot]
+    · rw [←regularSupportInter_nonEmpty_iff_neBot]
       exact H_ne_one
     · use seed
     · rw [rigidStabilizer_inter_eq_algebraicCentralizerInter]
@@ -802,7 +799,7 @@ by
   constructor
   · rw [S_eq, rigidStabilizer_inter_eq_algebraicCentralizerInter]
     rw [regularSupportInter_nonEmpty_iff_neBot (α := α)]
-    rw [<-S_eq]
+    rw [←S_eq]
     exact S_nonempty
   · use seed
     rw [S_eq]
@@ -816,7 +813,7 @@ by
   constructor
   · simp
     intro S S_in_basis H_eq
-    rw [<-H_eq]
+    rw [←H_eq]
     apply mem_of_regularSupportBasis S_in_basis
   · intro H_in_basis
     simp
@@ -825,15 +822,6 @@ by
     let ⟨S_in_basis, H_eq⟩ := S_props H_in_basis
     symm at H_eq
     use S
-
-variable (α)
-
-theorem AlgebraicCentralizerBasis.to_regular [Nonempty α] {S : Set G}
-    (S_in_basis : S ∈ AlgebraicCentralizerBasis G) : ∃ T ∈ RegularSupportBasis G α, G•[T] = S := by
-  rw [<-eq_rist_image (α := α)] at S_in_basis
-  exact S_in_basis
-
-variable {α}
 
 noncomputable def rigidStabilizer_inv [Nonempty α] (H : Set G) : Set α :=
   (AlgebraicCentralizerBasis.exists_rigidStabilizer_inv H).choose
@@ -870,40 +858,6 @@ by
   · exact RegularSupportBasis.regular ((rigidStabilizer_inv_in_basis _).mp GS_in_basis)
 
 variable [Nonempty α] [HasNoIsolatedPoints α] [LocallyDense G α]
-
-variable (G α)
-
-noncomputable def RigidStabilizer.order_iso :
-    OrderIso (RegularSupportBasis G α) (AlgebraicCentralizerBasis G) where
-  toFun := fun ⟨S, S_in_basis⟩ => ⟨
-    G•[S],
-    AlgebraicCentralizerBasis.mem_of_regularSupportBasis S_in_basis
-  ⟩
-  invFun := fun ⟨H, H_in_basis⟩ => ⟨
-    rigidStabilizer_inv (α := α) H,
-    (rigidStabilizer_inv_in_basis H).mp H_in_basis
-  ⟩
-
-  left_inv := by
-    intro ⟨S, S_in_basis⟩
-    simp
-    exact rigidStabilizer_inv_eq' S_in_basis
-
-  right_inv := by
-    intro ⟨H, H_in_basis⟩
-    simp
-    symm
-    exact rigidStabilizer_inv_eq H_in_basis
-
-  map_rel_iff' := by
-    simp
-    intro S₁ S₁_in_basis S₂ S₂_in_basis
-    symm
-    apply rigidStabilizer_subset_iff
-    all_goals apply RegularSupportBasis.regular (G := G)
-    all_goals assumption
-
-variable {G α}
 
 noncomputable def RigidStabilizer.order_iso_on (G α : Type _) [Group G] [Nonempty α] [TopologicalSpace α] [T2Space α]
   [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α]
@@ -964,9 +918,9 @@ by
 theorem RegularSupportBasis.eq_inv_rist_image:
   (fun H => rigidStabilizer_inv (α := α) H) '' AlgebraicCentralizerBasis G = RegularSupportBasis G α :=
 by
-  rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α) (G := G)]
+  rw [←AlgebraicCentralizerBasis.eq_rist_image (α := α) (G := G)]
   rw [Set.image_image]
-  nth_rw 2 [<-OrderIsoOn.leftInv_image (RigidStabilizer.order_iso_on G α)]
+  nth_rw 2 [←OrderIsoOn.leftInv_image (RigidStabilizer.order_iso_on G α)]
   rw [Function.comp_def]
   rw [RigidStabilizer.order_iso_on]
 
@@ -998,22 +952,22 @@ by
 theorem rigidStabilizer_subset_iff_subset_inv [Nonempty α] {S : Set α} (S_in_basis : S ∈ RegularSupportBasis G α) {T : Set G} (T_in_basis : T ∈ AlgebraicCentralizerBasis G):
   (G•[S] : Set G) ⊆ T ↔ S ⊆ rigidStabilizer_inv T :=
 by
-  nth_rw 1 [<-RigidStabilizer_rightInv (α := α) T_in_basis]
+  nth_rw 1 [←RigidStabilizer_rightInv (α := α) T_in_basis]
   rw [SetLike.coe_subset_coe]
   rw [rigidStabilizer_subset_iff (G := G)]
   · exact RegularSupportBasis.regular S_in_basis
   · apply RegularSupportBasis.regular (G := G)
-    rw [<-rigidStabilizer_inv_in_basis T]
+    rw [←rigidStabilizer_inv_in_basis T]
     assumption
 
 theorem subset_rigidStabilizer_iff_inv_subset [Nonempty α] {S : Set G} (S_in_basis : S ∈ AlgebraicCentralizerBasis G) {T : Set α} (T_in_basis : T ∈ RegularSupportBasis G α):
   S ⊆ (G•[T] : Set G) ↔ rigidStabilizer_inv S ⊆ T :=
 by
-  nth_rw 1 [<-RigidStabilizer_rightInv (α := α) S_in_basis]
+  nth_rw 1 [←RigidStabilizer_rightInv (α := α) S_in_basis]
   rw [SetLike.coe_subset_coe]
   rw [rigidStabilizer_subset_iff (G := G)]
   · apply RegularSupportBasis.regular (G := G)
-    rw [<-rigidStabilizer_inv_in_basis S]
+    rw [←rigidStabilizer_inv_in_basis S]
     assumption
   · exact RegularSupportBasis.regular T_in_basis
 
@@ -1021,23 +975,23 @@ theorem rigidStabilizer_inv_smulImage [Nonempty α] {S : Set G} (S_in_basis : S 
   h •'' rigidStabilizer_inv S = rigidStabilizer_inv (α := α) ((fun g => h * g * h⁻¹) '' S) :=
 by
   rw [smulImage_inv]
-  rw [<-rigidStabilizer_eq_iff (G := G)]
+  rw [←rigidStabilizer_eq_iff (G := G)]
   swap
   {
     apply RegularSupportBasis.regular (G := G)
-    rw [<-rigidStabilizer_inv_in_basis S]
+    rw [←rigidStabilizer_inv_in_basis S]
     exact S_in_basis
   }
   swap
   {
-    rw [<-smulImage_regular]
+    rw [←smulImage_regular]
     apply RegularSupportBasis.regular (G := G)
-    rw [<-rigidStabilizer_inv_in_basis]
+    rw [←rigidStabilizer_inv_in_basis]
     apply AlgebraicCentralizerBasis.conj_mem
     assumption
   }
-  rw [<-SetLike.coe_set_eq]
-  rw [<-rigidStabilizer_conj_image_eq]
+  rw [←SetLike.coe_set_eq]
+  rw [←rigidStabilizer_conj_image_eq]
   repeat rw [RigidStabilizer_rightInv]
   · rw [Set.image_image]
     group
@@ -1052,7 +1006,8 @@ section HomeoGroup
 
 open Topology
 
-variable {G α : Type _} [Group G] [TopologicalSpace α] [T2Space α]
+variable {G : Type _} [Group G]
+variable {α : Type _} [TopologicalSpace α] [T2Space α]
 variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
 
 theorem exists_compact_closure_of_le_nhds {α : Type _} [TopologicalSpace α] [T2Space α] [LocallyCompactSpace α] (F : Filter α):
@@ -1082,7 +1037,7 @@ theorem proposition_3_4_2 {α : Type _} [TopologicalSpace α] [T2Space α] [Loca
   (∃ p : α, ClusterPt p F) ↔ ∃ S ∈ F, IsCompact (closure S) :=
 by
   constructor
-  · simp only [Ultrafilter.clusterPt_iff, <-Ultrafilter.mem_coe]
+  · simp only [Ultrafilter.clusterPt_iff, ←Ultrafilter.mem_coe]
     exact exists_compact_closure_of_le_nhds (F : Filter α)
   · exact clusterPt_of_exists_compact_closure (F : Filter α)
 
@@ -1091,15 +1046,13 @@ end HomeoGroup
 
 section Ultrafilter
 
-variable {G α : Type _}
-variable [Group G]
-variable [TopologicalSpace α] [T2Space α]
-variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyMoving G α]
+variable {G : Type _} [Group G]
+variable {α : Type _} [RubinAction G α]
 
 def RSuppSubsets (G : Type _) {α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] (V : Set α) : Set (Set α) :=
   {W ∈ RegularSupportBasis G α | W ⊆ V}
 
-def RSuppOrbit {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] (F : Filter α) (H : Subgroup G) : Set (Set α) :=
+def RSuppOrbit {G : Type _} {α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] (F : Filter α) (H : Subgroup G) : Set (Set α) :=
   { g •'' W | (g ∈ H) (W ∈ F) }
 
 lemma moving_elem_of_open_subset_closure_orbit {U V : Set α} (U_open : IsOpen U) (U_nonempty : Set.Nonempty U)
@@ -1152,8 +1105,6 @@ by
   constructor
   · exact subset_trans clV_ss_W W_ss_U
   · exact IsCompact.of_isClosed_subset W_compact isClosed_closure clV_ss_W
-
-variable [LocallyDense G α] [LocallyCompactSpace α] [HasNoIsolatedPoints α]
 
 lemma proposition_3_5_1
   {U : Set α} (U_in_basis : U ∈ RegularSupportBasis G α) (F: Filter α):
@@ -1225,7 +1176,7 @@ by
           apply closure_mono
           assumption
         _ ⊆ _ := by
-          rw [<-closure_closure (s := MulAction.orbit _ _)]
+          rw [←closure_closure (s := MulAction.orbit _ _)]
           apply closure_mono
           assumption
 
@@ -1259,7 +1210,7 @@ by
     · simp only [smulImage_inv, inv_inv]
       have dec_eq : DecidableEq G := Classical.typeDecidableEq G
       use Finset.image (fun g => h⁻¹ * g * h) W_seed
-      rw [<-RegularSupport.FiniteInter_conj, Finset.image_image]
+      rw [←RegularSupport.FiniteInter_conj, Finset.image_image]
       have fn_eq_id : (fun g => h * g * h⁻¹) ∘ (fun g => h⁻¹ * g * h) = id := by
         ext x
         simp
@@ -1294,7 +1245,7 @@ by
 
   have gV'_in_F : g⁻¹ •'' V' ∈ F := by
     rw [smulImage_inv] at gW_eq_V
-    rw [<-gW_eq_V]
+    rw [←gW_eq_V]
     assumption
   have gV'_compact : IsCompact (closure (g⁻¹ •'' V'.val)) := by
     rw [smulImage_closure]
@@ -1311,8 +1262,8 @@ by
   specialize p_lim (g⁻¹ •'' V') gV'_in_F
   rw [smulImage_closure, mem_smulImage, inv_inv] at p_lim
 
-  rw [rigidStabilizer_support, <-support_inv] at g_in_rist
-  rw [<-fixed_smulImage_in_support g⁻¹ g_in_rist]
+  rw [rigidStabilizer_support, ←support_inv] at g_in_rist
+  rw [←fixed_smulImage_in_support g⁻¹ g_in_rist]
 
   rw [mem_smulImage, inv_inv]
   apply V_ss_U
@@ -1345,7 +1296,7 @@ by
     exact ⟨V, V_in_basis, V_ss_U, subsets_ss_orbit⟩
   · intro ⟨V, V_in_basis, V_ss_U, subsets_ss_orbit⟩
     simp only [
-      <-F.clusterPt_iff_le_nhds
+      ←F.clusterPt_iff_le_nhds
         (RegularSupportBasis.isBasis G α)
         (RegularSupportBasis.closed_inter G α)
     ]
@@ -1356,8 +1307,7 @@ end Ultrafilter
 section RubinFilter
 
 variable {G : Type _} [Group G]
-variable {α : Type _} [Nonempty α] [TopologicalSpace α] [HasNoIsolatedPoints α] [T2Space α] [LocallyCompactSpace α]
-variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+variable {α : Type _} [RubinAction G α] [Nonempty α]
 
 def AlgebraicSubsets (V : Set G) : Set (Set G) :=
   {W ∈ AlgebraicCentralizerBasis G | W ⊆ V}
@@ -1390,9 +1340,7 @@ lemma AlgebraicCentralizerBasis.empty_not_mem' : ∅ ∉ (RigidStabilizer.order_
   rw [AlgebraicCentralizerBasis.eq_rist_image]
   exact AlgebraicCentralizerBasis.empty_not_mem
 
-def RubinFilter.map (F : RubinFilter G) (α : Type _)
-  [TopologicalSpace α] [T2Space α] [Nonempty α] [HasNoIsolatedPoints α]
-  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α] : UltrafilterInBasis (RegularSupportBasis G α) :=
+def RubinFilter.map (F : RubinFilter G) (α : Type _) [RubinAction G α] [Nonempty α] : UltrafilterInBasis (RegularSupportBasis G α) :=
   (
     F.filter.map_basis
       AlgebraicCentralizerBasis.empty_not_mem
@@ -1411,7 +1359,7 @@ by
   simp
   have ⟨U', U'_in_basis, U'_eq⟩ := (RegularSupportBasis.eq_inv_rist_image (G := G) (α := α)).symm ▸ U_in_basis
   simp only at U'_eq
-  rw [<-U'_eq]
+  rw [←U'_eq]
   rw [Filter.InBasis.map_mem_map_basis_of_basis_set _ RigidStabilizer_inv_doubleMonotone F.filter.in_basis U'_in_basis]
   rw [RigidStabilizer_rightInv U'_in_basis]
   rfl
@@ -1433,8 +1381,9 @@ theorem IsRubinFilterOf.mem_inv {A : UltrafilterInBasis (RegularSupportBasis G �
   (filter_of : IsRubinFilterOf A B) {U : Set G} (U_in_basis : U ∈ AlgebraicCentralizerBasis G):
   U ∈ B ↔ rigidStabilizer_inv U ∈ A :=
 by
-  let ⟨V, V_in_basis, V_eq⟩ := AlgebraicCentralizerBasis.to_regular α U_in_basis
-  rw [<-V_eq, RigidStabilizer_leftInv V_in_basis]
+  rw [←AlgebraicCentralizerBasis.eq_rist_image (α := α)] at U_in_basis
+  let ⟨V, V_in_basis, V_eq⟩ := U_in_basis
+  rw [←V_eq, RigidStabilizer_leftInv V_in_basis]
   symm
   exact filter_of V V_in_basis
 
@@ -1447,12 +1396,12 @@ by
   · intro ⟨U_in_filter, U_in_basis⟩
     constructor
     simp
-    rw [<-filter_of.mem_inv U_in_basis]
+    rw [←filter_of.mem_inv U_in_basis]
     exact U_in_filter
-    rw [<-rigidStabilizer_inv_in_basis]
+    rw [←rigidStabilizer_inv_in_basis]
     assumption
   · intro ⟨iU_in_filter, U_in_basis⟩
-    rw [<-rigidStabilizer_inv_in_basis] at U_in_basis
+    rw [←rigidStabilizer_inv_in_basis] at U_in_basis
     constructor
     · simp
       rw [filter_of.mem_inv U_in_basis]
@@ -1507,7 +1456,7 @@ by
       AlgebraicCentralizerBasis.mem_of_regularSupportBasis U_in_basis
     have U'_ss_GW : U' ⊆ G•[W] := by
       rw [SetLike.coe_subset_coe]
-      rw [<-rigidStabilizer_subset_iff]
+      rw [←rigidStabilizer_subset_iff]
       · assumption
       · exact RegularSupportBasis.regular U_in_basis
       · exact RegularSupportBasis.regular W_in_basis
@@ -1538,20 +1487,22 @@ by
   · rw [proposition_3_5' V_in_basis]
     intro ⟨W, W_in_basis, W_ss_V, subsets_ss_orbit⟩
     use G•[W]
-    rw [<-filter_of.subsets_ss_orbit W_in_basis]
+    rw [←filter_of.subsets_ss_orbit W_in_basis]
     refine ⟨?GW_in_basis, ?GW_ss_GV, subsets_ss_orbit⟩
     exact AlgebraicCentralizerBasis.mem_of_regularSupportBasis W_in_basis
     simp
-    rwa [<-rigidStabilizer_subset_iff _ (RegularSupportBasis.regular W_in_basis) (RegularSupportBasis.regular V_in_basis)]
+    rwa [←rigidStabilizer_subset_iff _ (RegularSupportBasis.regular W_in_basis) (RegularSupportBasis.regular V_in_basis)]
   · intro ⟨W, W_in_basis, W_ss_GV, subsets_ss_orbit⟩
-    let ⟨W', W'_in_basis, W'_eq⟩ := AlgebraicCentralizerBasis.to_regular α W_in_basis
+    rw [←AlgebraicCentralizerBasis.eq_rist_image (α := α)] at W_in_basis
+    let ⟨W', W'_in_basis, W'_eq⟩ := W_in_basis
+    simp only at W'_eq
     rw [proposition_3_5' V_in_basis]
     use W'
     rw [filter_of.subsets_ss_orbit W'_in_basis, W'_eq]
     refine ⟨W'_in_basis, ?W'_ss_V, subsets_ss_orbit⟩
-    rw [<-W'_eq] at W_ss_GV
+    rw [←W'_eq] at W_ss_GV
     simp at W_ss_GV
-    rwa [<-rigidStabilizer_subset_iff _ (RegularSupportBasis.regular W'_in_basis) (RegularSupportBasis.regular V_in_basis)] at W_ss_GV
+    rwa [←rigidStabilizer_subset_iff _ (RegularSupportBasis.regular W'_in_basis) (RegularSupportBasis.regular V_in_basis)] at W_ss_GV
 
 def RubinFilter.from (F : UltrafilterInBasis (RegularSupportBasis G α)) (F_converges : ∃ p : α, F ≤ nhds p) : RubinFilter G where
   filter := (F.map_basis
@@ -1572,8 +1523,8 @@ def RubinFilter.from (F : UltrafilterInBasis (RegularSupportBasis G α)) (F_conv
       ?subsets_ss_orbit
     ⟩
 
-    rw [<-Subgroup.coe_top, <-rigidStabilizer_univ (α := α) (G := G)]
-    rwa [<-(RubinFilter.from_isRubinFilterOf' F).subsets_ss_orbit W_in_basis]
+    rw [←Subgroup.coe_top, ←rigidStabilizer_univ (α := α) (G := G)]
+    rwa [←(RubinFilter.from_isRubinFilterOf' F).subsets_ss_orbit W_in_basis]
 
 
 theorem RubinFilter.from_isRubinFilterOf (F : UltrafilterInBasis (RegularSupportBasis G α)) (F_converges : ∃ p : α, F ≤ nhds p):
@@ -1593,9 +1544,7 @@ by
 
 section Convergence
 
-variable (α : Type _)
-variable [Nonempty α] [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
-variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+variable (α : Type _) [RubinAction G α] [Nonempty α]
 
 theorem RubinFilter.map_converges (F : RubinFilter G):
   ∃ p : α, (F.map α).filter ≤ nhds p :=
@@ -1625,7 +1574,7 @@ by
   intro S S_in_B S_in_F
 
   rw [(RubinFilter.from_isRubinFilterOf (F.map α) (RubinFilter.map_converges α F)).mem_inv S_in_B]
-  rw [<-(RubinFilter.map_isRubinFilterOf F (α := α)).mem_inv S_in_B]
+  rw [←(RubinFilter.map_isRubinFilterOf F (α := α)).mem_inv S_in_B]
   exact S_in_F
 
 noncomputable def RubinFilter.lim (F : RubinFilter G)
@@ -1640,14 +1589,14 @@ by
   intro F_le_p
   have F_le_lim := F.le_nhds_lim (α := α)
   by_contra p_ne_lim
-  rw [<-ne_eq, <-disjoint_nhds_nhds] at p_ne_lim
+  rw [←ne_eq, ←disjoint_nhds_nhds] at p_ne_lim
   apply (map F α).ne_bot.ne
   exact Filter.empty_mem_iff_bot.mp (p_ne_lim F_le_p F_le_lim trivial)
 
 lemma RubinFilter.lim_mem_iff (F : RubinFilter G) {T : Set α} (T_in_basis : T ∈ RegularSupportBasis G α) :
   F.lim α ∈ T ↔ ∃ V ∈ RegularSupportBasis G α, V ⊆ T ∧ RSuppSubsets G V ⊆ RSuppOrbit (F.map α) G•[T] :=
 by
-  rw [<-proposition_3_5' T_in_basis]
+  rw [←proposition_3_5' T_in_basis]
 
   constructor
   · intro lim_in_T
@@ -1670,9 +1619,7 @@ end Convergence
 
 section Setoid
 
-variable {α : Type}
-variable [Nonempty α] [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
-variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+variable {α : Type _} [RubinAction G α] [Nonempty α]
 
 /--
 Two rubin filters are equivalent if they share the same behavior in regards to which set their converging point `p` lies in.
@@ -1705,11 +1652,11 @@ lemma RubinFilter.lim_mem_iff_of_eqv {F₁ F₂ : RubinFilter G} (F_equiv : F₁
   have F₁_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₁ (α := α))
   have F₂_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₂ (α := α))
 
-  rw [F₁.lim_mem_iff α S_in_basis, <-proposition_3_5' S_in_basis]
+  rw [F₁.lim_mem_iff α S_in_basis, ←proposition_3_5' S_in_basis]
   rw [F₁_rubinFilterOf.converges_iff S_in_basis]
   rw [F_equiv _ (AlgebraicCentralizerBasis.mem_of_regularSupportBasis S_in_basis)]
-  rw [<-F₂_rubinFilterOf.converges_iff S_in_basis]
-  rw [F₂.lim_mem_iff α S_in_basis, <-proposition_3_5' S_in_basis]
+  rw [←F₂_rubinFilterOf.converges_iff S_in_basis]
+  rw [F₂.lim_mem_iff α S_in_basis, ←proposition_3_5' S_in_basis]
 
 lemma RubinFilter.mem_nhds_lim_iff_of_eqv {F₁ F₂ : RubinFilter G} (F_equiv : F₁ ≈ F₂)
   (S : Set α) : S ∈ nhds (F₁.lim α) ↔ S ∈ nhds (F₂.lim α) :=
@@ -1748,7 +1695,7 @@ by
 
   rw [mem_nhds_lim_iff_of_eqv F_equiv] at V_in_nhds
   apply (F₂.map α).ne_bot.ne
-  rw [<-inf_eq_left.mpr (F₂.le_nhds_lim α)]
+  rw [←inf_eq_left.mpr (F₂.le_nhds_lim α)]
   rw [Filter.inf_eq_bot_iff]
   exact ⟨U, U_in_F₂, V, V_in_nhds, UV_empty⟩
 
@@ -1761,16 +1708,18 @@ by
   have F₁_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₁ (α := α))
   have F₂_rubinFilterOf := (RubinFilter.map_isRubinFilterOf F₂ (α := α))
 
-  let ⟨S', S'_in_basis, S'_eq⟩ := AlgebraicCentralizerBasis.to_regular α S_in_basis
-  rw [<-S'_eq]
+  rw [←AlgebraicCentralizerBasis.eq_rist_image (α := α)] at S_in_basis
+  let ⟨S', S'_in_basis, S'_eq⟩ := S_in_basis
+  simp only at S'_eq
+  rw [←S'_eq]
 
-  rw [<-F₁_rubinFilterOf.converges_iff S'_in_basis]
-  rw [<-F₂_rubinFilterOf.converges_iff S'_in_basis]
+  rw [←F₁_rubinFilterOf.converges_iff S'_in_basis]
+  rw [←F₂_rubinFilterOf.converges_iff S'_in_basis]
 
   rw [F₁.exists_nhds_iff_lim_in_set α S']
   rw [F₂.exists_nhds_iff_lim_in_set α S']
-  rw [<-F₁.le_nhds_eq_lim _ _ F₁_le_nhds]
-  rw [<-F₂.le_nhds_eq_lim _ _ F₂_le_nhds]
+  rw [←F₁.le_nhds_eq_lim _ _ F₁_le_nhds]
+  rw [←F₂.le_nhds_eq_lim _ _ F₂_le_nhds]
 
 theorem RubinFilter.lim_eq_iff_eqv (F₁ F₂ : RubinFilter G):
   F₁ ≈ F₂ ↔ F₁.lim α = F₂.lim α :=
@@ -1823,7 +1772,7 @@ by
 lemma RubinFilter.lim_in_set (F : RubinFilter G) {S : Set α} (S_in_basis : S ∈ RegularSupportBasis G α) :
   F.lim α ∈ S ↔ AlgebraicConvergent F.filter.filter G•[S] :=
 by
-  rw [<-(RubinFilter.map_isRubinFilterOf F (α := α)).converges_iff S_in_basis]
+  rw [←(RubinFilter.map_isRubinFilterOf F (α := α)).converges_iff S_in_basis]
   constructor
   · intro lim_in_S
     exact ⟨lim α F, lim_in_S, le_nhds_lim α F⟩
@@ -1899,7 +1848,7 @@ by
     (by rfl : (MulAut.conj g⁻¹) '' U = (MulAut.conj g⁻¹).toEquiv '' U),
     (by rfl : (fun i => h * i * h⁻¹) '' W = (MulAut.conj h).toEquiv '' W),
     Equiv.eq_image_iff_symm_image_eq,
-    <-Set.preimage_equiv_eq_image_symm,
+    ←Set.preimage_equiv_eq_image_symm,
     Set.image_equiv_eq_preimage_symm,
     Set.preimage_preimage
   ] at W_eq
@@ -1956,7 +1905,7 @@ theorem RubinSpace.lim_fromPoint (p : α) :
 by
   unfold lim
   let ⟨Q, Q_eq⟩ := (RubinSpace.fromPoint (G := G) p).exists_rep
-  rw [<-Q_eq]
+  rw [←Q_eq]
   simp
   apply RubinSpace.fromPoint_converges p Q
   rwa [mem_iff]
@@ -1965,7 +1914,7 @@ theorem RubinSpace.fromPoint_lim (Q : RubinSpace G) :
   RubinSpace.fromPoint (Q.lim (α := α)) = Q :=
 by
   let ⟨Q', Q'_eq⟩ := Q.exists_rep
-  rw [<-Q'_eq, lim, fromPoint]
+  rw [←Q'_eq, lim, fromPoint]
   simp
   rw [Quotient.eq]
   apply RubinFilter.lim_fromPoint_eqv
@@ -1981,25 +1930,21 @@ end RubinFilter
 
 section Basis
 
-variable {G : Type _}
-variable [Group G]
-
-variable (α : Type) [α_nonempty : Nonempty α]
-  [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α]
-  [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+variable {G : Type _} [Group G]
+variable (α : Type _) [RubinAction G α] [α_nonempty : Nonempty α]
 
 lemma AlgebraicConvergent_mono {F : RubinFilter G} {S T : Set G}
   (S_basis : S ∈ AlgebraicCentralizerBasis G) (T_basis : T ∈ AlgebraicCentralizerBasis G)
   (S_ss_T : S ⊆ T) (F_converges : AlgebraicConvergent F.filter.filter S) : AlgebraicConvergent F.filter.filter T :=
 by
-  let ⟨S', S'_basis, S'_eq⟩ := AlgebraicCentralizerBasis.to_regular α S_basis
-  let ⟨T', T'_basis, T'_eq⟩ := AlgebraicCentralizerBasis.to_regular α T_basis
-  rw [<-S'_eq, <-RubinFilter.lim_in_set F S'_basis (α := α)] at F_converges
-  rw [<-T'_eq, <-RubinFilter.lim_in_set F T'_basis (α := α)]
+  let ⟨S', S'_basis, S'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ S_basis
+  let ⟨T', T'_basis, T'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ T_basis
+  rw [←S'_eq, ←RubinFilter.lim_in_set F S'_basis (α := α)] at F_converges
+  rw [←T'_eq, ←RubinFilter.lim_in_set F T'_basis (α := α)]
   have S'_ss_T' : S' ⊆ T' := by
-    rw [<-S'_eq, <-T'_eq] at S_ss_T
+    rw [←S'_eq, ←T'_eq] at S_ss_T
     simp at S_ss_T
-    rw [<-rigidStabilizer_subset_iff] at S_ss_T
+    rw [←rigidStabilizer_subset_iff] at S_ss_T
     any_goals apply RegularSupportBasis.regular (α := α) (G := G)
     all_goals assumption
   apply S'_ss_T'
@@ -2014,11 +1959,13 @@ theorem RubinFilterBasis.isBasis : TopologicalSpace.IsTopologicalBasis (RubinFil
     have F_conv₁ := (B₁_mem F).mp F_in_T₁
     have F_conv₂ := (B₂_mem F).mp F_in_T₂
 
-    let ⟨B₁', B₁'_in_basis, B₁'_eq⟩ := AlgebraicCentralizerBasis.to_regular α B₁_in_basis
-    let ⟨B₂', B₂'_in_basis, B₂'_eq⟩ := AlgebraicCentralizerBasis.to_regular α B₂_in_basis
+    let ⟨B₁', B₁'_in_basis, B₁'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ B₁_in_basis
+    let ⟨B₂', B₂'_in_basis, B₂'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ B₂_in_basis
+    simp only at B₁'_eq
+    simp only at B₂'_eq
 
-    rw [<-B₁'_eq, <-RubinFilter.lim_in_set F B₁'_in_basis] at F_conv₁
-    rw [<-B₂'_eq, <-RubinFilter.lim_in_set F B₂'_in_basis] at F_conv₂
+    rw [←B₁'_eq, ←RubinFilter.lim_in_set F B₁'_in_basis] at F_conv₁
+    rw [←B₂'_eq, ←RubinFilter.lim_in_set F B₂'_in_basis] at F_conv₂
 
     have F_conv₃ : F.lim α ∈ B₁' ∩ B₂' := ⟨F_conv₁, F_conv₂⟩
 
@@ -2031,23 +1978,23 @@ theorem RubinFilterBasis.isBasis : TopologicalSpace.IsTopologicalBasis (RubinFil
       rw [rigidStabilizer_inter, Subgroup.coe_inf, B₁'_eq, B₂'_eq]
 
     have B₃_in_basis : B₁ ∩ B₂ ∈ AlgebraicCentralizerBasis G := by
-      rw [<-AlgebraicCentralizerBasis.eq_rist_image (α := α)]
+      rw [←AlgebraicCentralizerBasis.eq_rist_image (α := α)]
       use B₁' ∩ B₂'
       simp
       exact ⟨B₃'_in_basis, B₃_eq.symm⟩
 
     have B₃_ne_bot : B₁ ∩ B₂ ≠ {1} := by
-      rw [B₃_eq, <-Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq]
+      rw [B₃_eq, ←Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq]
       rw [rigidStabilizer_empty_iff _ (RegularSupportBasis.regular B₃'_in_basis)]
-      rwa [<-ne_eq, <-Set.nonempty_iff_ne_empty]
+      rwa [←ne_eq, ←Set.nonempty_iff_ne_empty]
 
     use { F : RubinFilter G | AlgebraicConvergent F.filter (B₁ ∩ B₂) }
     simp [RubinFilterBasis]
     refine ⟨⟨B₁ ∩ B₂, ?B_in_basis, rfl⟩, ?F_conv₃, ?T₃_ss_T₁, ?T₃_ss_T₂⟩
     · apply AlgebraicCentralizerBasis.inter_closed
       all_goals assumption
-    · rw [<-B₁'_eq, <-B₂'_eq, <-Subgroup.coe_inf, <-rigidStabilizer_inter]
-      rw [<-RubinFilter.lim_in_set F B₃'_in_basis]
+    · rw [←B₁'_eq, ←B₂'_eq, ←Subgroup.coe_inf, ←rigidStabilizer_inter]
+      rw [←RubinFilter.lim_in_set F B₃'_in_basis]
       exact ⟨F_conv₁, F_conv₂⟩
     · intro X
       simp [B₁_mem]
@@ -2093,13 +2040,14 @@ theorem RubinSpace.basis : TopologicalSpace.IsTopologicalBasis (
   refine ⟨B, B_in_basis, ?mem⟩
   intro F
 
-  let ⟨B', B'_in_basis, B'_eq⟩ := AlgebraicCentralizerBasis.to_regular α B_in_basis
+  let ⟨B', B'_in_basis, B'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ B_in_basis
+  simp only at B'_eq
 
   simp only [B_mem]
-  rw [<-B'_eq, <-RubinFilter.lim_in_set (α := α) (G := G)]
+  rw [←B'_eq, ←RubinFilter.lim_in_set (α := α) (G := G)]
   conv => {
     lhs; congr; intro;
-    rw [<-RubinFilter.lim_in_set (α := α) (G := G) _ B'_in_basis]
+    rw [←RubinFilter.lim_in_set (α := α) (G := G) _ B'_in_basis]
   }
   swap
   exact B'_in_basis
@@ -2108,7 +2056,7 @@ theorem RubinSpace.basis : TopologicalSpace.IsTopologicalBasis (
   · intro ⟨F', F'_lim, F'_eqv⟩
     rw [(by rfl : Setoid.r F' F ↔ F' ≈ F)] at F'_eqv
     rw [RubinFilter.lim_eq_iff_eqv F' F (α := α)] at F'_eqv
-    rwa [<-F'_eqv]
+    rwa [←F'_eqv]
   · intro F_lim
     exact ⟨F, F_lim, Setoid.refl F⟩
 
@@ -2117,8 +2065,7 @@ end Basis
 section Homeomorph
 
 variable {G : Type _} [Group G]
-variable (α : Type _) [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
-variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+variable (α : Type _) [RubinAction G α] [Nonempty α]
 
 @[simp]
 lemma RubinSpace.lim_mk (F : RubinFilter G) :
@@ -2142,7 +2089,7 @@ theorem RubinSpace.lim_continuous : Continuous (RubinSpace.lim (G := G) (α := �
   use G•[S]
   refine ⟨AlgebraicCentralizerBasis.mem_of_regularSupportBasis S_in_basis, ?filters_mem⟩
   simp
-  simp [<-RubinFilter.lim_in_set _ S_in_basis]
+  simp [←RubinFilter.lim_in_set _ S_in_basis]
 
 theorem RubinSpace.fromPoint_continuous : Continuous (RubinSpace.fromPoint (G := G) (α := α)) := by
   apply (RubinSpace.basis (α := α)).continuous
@@ -2150,12 +2097,14 @@ theorem RubinSpace.fromPoint_continuous : Continuous (RubinSpace.fromPoint (G :=
   intro U U_in_basis
   rw [RubinFilterBasis.mem_iff] at U_in_basis
   let ⟨V, V_in_basis, U_mem⟩ := U_in_basis
-  let ⟨V', V'_in_basis, V'_eq⟩ := AlgebraicCentralizerBasis.to_regular α V_in_basis
+  -- TODO: automatize this
+  let ⟨V', V'_in_basis, V'_eq⟩ := (AlgebraicCentralizerBasis.eq_rist_image (G := G) (α := α)).symm ▸ V_in_basis
+  simp only at V'_eq
 
-  rw [<-V'_eq] at U_mem
+  rw [←V'_eq] at U_mem
   conv at U_mem => {
     intro F
-    rw [<-F.lim_in_set V'_in_basis]
+    rw [←F.lim_in_set V'_in_basis]
   }
 
   rw [(RegularSupportBasis.isBasis G α).isOpen_iff]
@@ -2198,15 +2147,24 @@ end Homeomorph
 section Equivariant
 
 variable {G : Type _} [Group G]
-variable {α : Type _} [TopologicalSpace α] [T2Space α] [HasNoIsolatedPoints α] [LocallyCompactSpace α] [Nonempty α]
-variable [MulAction G α] [ContinuousConstSMul G α] [FaithfulSMul G α] [LocallyDense G α]
+variable {α : Type _} [RubinAction G α] [Nonempty α]
 
-theorem _root_.EquivLike.image_univ {α β γ: Type*} [EquivLike γ α β] (f : γ) :
-  f '' Set.univ = Set.univ :=
+-- TODO: move elsewhere
+@[simp]
+theorem Group.range_conj_eq_univ {G : Type*} [Group G] (g : G) :
+  Set.range (fun i => g * i * g⁻¹) = Set.univ :=
 by
-  rw [Set.image_univ]
-  show Set.range (f : Equiv α β) = Set.univ
-  exact Equiv.range_eq_univ _
+  ext h
+  simp
+  use g⁻¹ * h * g
+  group
+
+@[simp]
+theorem Group.range_conj'_eq_univ {G : Type*} [Group G] (g : G) :
+  Set.range (fun i => g⁻¹ * i * g) = Set.univ :=
+by
+  nth_rw 2 [←inv_inv g]
+  exact Group.range_conj_eq_univ g⁻¹
 
 def RubinFilter.smul (F : RubinFilter G) (g : G) : RubinFilter G where
   filter := (F.filter.map_basis
@@ -2223,7 +2181,7 @@ def RubinFilter.smul (F : RubinFilter G) (g : G) : RubinFilter G where
     simp [MulAut.conj_order_iso]
     rw [Filter.InBasis.map_basis_toOrderIsoSet _ F.filter.in_basis]
     convert AlgebraicConvergent.conj F.converges g
-    rw [EquivLike.image_univ]
+    simp
 
 theorem RubinFilter.smul_lim (F : RubinFilter G) (g : G) :
   (F.smul g).lim α = g • F.lim α :=
@@ -2232,7 +2190,7 @@ by
   apply le_nhds_eq_lim
 
   intro U gU_in_nhds
-  rw [<-smulFilter_nhds, mem_smulFilter_iff] at gU_in_nhds
+  rw [←smulFilter_nhds, mem_smulFilter_iff] at gU_in_nhds
   rw [RubinFilter.map]
   simp [smul]
 
@@ -2240,7 +2198,7 @@ by
   let m₁ := (MulAut.conj_order_iso g).orderIsoOn (AlgebraicCentralizerBasis G)
   let m₂: OrderIsoOn (Set G) (Set α) (m₁.toFun '' (AlgebraicCentralizerBasis G)) :=
     (RigidStabilizer.inv_order_iso_on G α).mk_of_subset (by
-      nth_rw 3 [<-AlgebraicCentralizerBasis.eq_conj_self g]
+      nth_rw 3 [←AlgebraicCentralizerBasis.eq_conj_self g]
       unfold_let
       rfl
     )
@@ -2297,7 +2255,7 @@ by
   constructor
   · intro F₁_conv
     have F₁_conv' := AlgebraicConvergent.conj F₁_conv g⁻¹
-    rw [Filter.map_map, <-MulAut.coe_mul, map_inv, mul_left_inv, MulAut.coe_one, Filter.map_id] at F₁_conv'
+    rw [Filter.map_map, ←MulAut.coe_mul, map_inv, mul_left_inv, MulAut.coe_one, Filter.map_id] at F₁_conv'
     rw [F_eqv] at F₁_conv'
     convert AlgebraicConvergent.conj F₁_conv' g using 1
     simp [Set.image_image]
@@ -2305,8 +2263,8 @@ by
     simp
   · intro F₂_conv
     have F₂_conv' := AlgebraicConvergent.conj F₂_conv g⁻¹
-    rw [Filter.map_map, <-MulAut.coe_mul, map_inv, mul_left_inv, MulAut.coe_one, Filter.map_id] at F₂_conv'
-    rw [<-F_eqv] at F₂_conv'
+    rw [Filter.map_map, ←MulAut.coe_mul, map_inv, mul_left_inv, MulAut.coe_one, Filter.map_id] at F₂_conv'
+    rw [←F_eqv] at F₂_conv'
     convert AlgebraicConvergent.conj F₂_conv' g using 1
     simp [Set.image_image]
     group
@@ -2345,7 +2303,7 @@ theorem RubinFilter.mul_smul (g h : G) (F : RubinFilter G) : (F.smul g).smul h =
     · show (MulAut.conj g⁻¹).toEquiv ⁻¹' T ∈ AlgebraicCentralizerBasis G
       rw [Set.preimage_equiv_eq_image_symm]
       show (MulEquiv.symm (MulAut.conj g⁻¹)) '' T ∈ AlgebraicCentralizerBasis G
-      rw [<-MulAut.inv_def, map_inv, inv_inv]
+      rw [←MulAut.inv_def, map_inv, inv_inv]
       exact AlgebraicCentralizerBasis.conj_mem T_in_basis g
     · show (MulAut.conj g⁻¹).toEquiv ⁻¹' T ⊆ S
       rw [Set.preimage_equiv_eq_image_symm, Equiv.subset_image]
@@ -2354,7 +2312,7 @@ theorem RubinFilter.mul_smul (g h : G) (F : RubinFilter G) : (F.smul g).smul h =
       rw [map_inv, MulAut.inv_def]
       exact T_ss_gS
   }
-  rw [Filter.map_map, <-MulAut.coe_mul]
+  rw [Filter.map_map, ←MulAut.coe_mul]
   rw [Filter.InBasis.map_basis_toOrderIsoSet _ F.filter.in_basis]
 
 -- Note: awfully slow to compile (since it isn't noncomputable, it gets compiled down to IR)
@@ -2370,7 +2328,7 @@ instance : MulAction G (RubinSpace G) where
   one_smul := by
     intro Q
     let ⟨F, F_eq⟩ := Q.exists_rep
-    rw [<-F_eq]
+    rw [←F_eq]
     show RubinSpace.smul ⟦F⟧ 1 = ⟦F⟧
     rw [RubinSpace.smul_mk]
     rw [RubinFilter.smul_one]
@@ -2378,7 +2336,7 @@ instance : MulAction G (RubinSpace G) where
   mul_smul := by
     intro g h Q
     let ⟨F, F_eq⟩ := Q.exists_rep
-    rw [<-F_eq]
+    rw [←F_eq]
     show RubinSpace.smul ⟦F⟧ (g * h) = RubinSpace.smul (RubinSpace.smul ⟦F⟧ h) g
     repeat rw [RubinSpace.smul_mk]
     rw [RubinFilter.mul_smul]
@@ -2392,23 +2350,20 @@ noncomputable def RubinSpace.equivariantHomeomorph : EquivariantHomeomorph G (Ru
     simp [RubinSpace.homeomorph]
     rw [RubinSpace.smul_def]
     let ⟨F, F_eq⟩ := Q.exists_rep
-    rw [<-F_eq, RubinSpace.smul_mk, RubinSpace.lim_mk, RubinSpace.lim_mk]
+    rw [←F_eq, RubinSpace.smul_mk, RubinSpace.lim_mk, RubinSpace.lim_mk]
     rw [RubinFilter.smul_lim]
 
 end Equivariant
 
-variable (G : Type _)
-variable [Group G] [Nontrivial G]
-variable (α : Type _) [TopologicalSpace α] [T2Space α] [LocallyCompactSpace α] [HasNoIsolatedPoints α]
-variable [MulAction G α] [FaithfulSMul G α] [ContinuousConstSMul G α] [LocallyDense G α]
-variable (β : Type _) [TopologicalSpace β] [T2Space β] [LocallyCompactSpace β] [HasNoIsolatedPoints β]
-variable [MulAction G β] [FaithfulSMul G β] [ContinuousConstSMul G β] [LocallyDense G β]
+instance [Group G] [Nontrivial G] [RubinAction G α] : Nonempty α := by
+  rwa [LocallyMoving.nonempty_iff_nontrivial G]
 
-noncomputable def rubin : EquivariantHomeomorph G α β :=
-  let α_nonempty : Nonempty α := by rwa [LocallyMoving.nonempty_iff_nontrivial G]
-  let β_nonempty : Nonempty β := by rwa [LocallyMoving.nonempty_iff_nontrivial G]
-  (RubinSpace.equivariantHomeomorph (G := G) (α := α)).symm.trans
-    (RubinSpace.equivariantHomeomorph (G := G) (α := β))
+/-- the main result: there is a unique Rubin action on a non-empty α
+-/
+theorem rubin {G : Type _} [Group G] (α : Type _) [RubinAction G α] [Nonempty α]
+  (β : Type _) [RubinAction G β] [Nonempty β] : α ≃ₜ[G] β :=
+  (RubinSpace.equivariantHomeomorph (α := α)).inv.trans
+    (RubinSpace.equivariantHomeomorph (α := β))
 
 end Rubin
 

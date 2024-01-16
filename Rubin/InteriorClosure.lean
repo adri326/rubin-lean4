@@ -48,7 +48,7 @@ instance Regular.instCoe {U : Set α} : Coe (Regular U) (interior (closure U) = 
 theorem regular_open (U : Set α) : Regular U → IsOpen U :=
 by
   intro h_reg
-  rw [<-h_reg]
+  rw [←h_reg]
   simp
 
 theorem Regular.isOpen {U : Set α} (U_regular : Regular U): IsOpen U := regular_open _ U_regular
@@ -56,7 +56,7 @@ theorem Regular.isOpen {U : Set α} (U_regular : Regular U): IsOpen U := regular
 theorem regular_interior {U : Set α} : Regular U → interior U = U :=
 by
   intro h_reg
-  rw [<-h_reg]
+  rw [←h_reg]
   simp
 
 theorem interiorClosure_open (U : Set α) : IsOpen (InteriorClosure U) := by simp
@@ -77,12 +77,12 @@ by
   apply Set.eq_of_subset_of_subset <;> unfold InteriorClosure
   {
     apply interior_mono
-    nth_rw 2 [<-closure_closure (s := U)]
+    nth_rw 2 [←closure_closure (s := U)]
     apply closure_mono
     exact interior_subset
   }
   {
-    nth_rw 1 [<-interior_interior]
+    nth_rw 1 [←interior_interior]
     apply interior_mono
     exact subset_closure
   }
@@ -100,7 +100,7 @@ theorem monotone_interiorClosure : Monotone (InteriorClosure (α := α))
 theorem interiorClosure_subset_of_regular {U V : Set α} (U_ss_V : U ⊆ V) (V_regular : Regular V) :
   InteriorClosure U ⊆ V :=
 by
-  rw [<-V_regular]
+  rw [←V_regular]
   apply interiorClosure_mono
   assumption
 
@@ -118,8 +118,8 @@ theorem interiorClosure_closure {S : Set α} (S_open : IsOpen S) : closure (Inte
 by
   apply Set.eq_of_subset_of_subset
   · simp
-    rw [<-Set.compl_subset_compl]
-    rw [<-(compl_closure_regular_of_open S_open)]
+    rw [←Set.compl_subset_compl]
+    rw [←(compl_closure_regular_of_open S_open)]
     simp
     rfl
   · apply closure_mono
@@ -149,7 +149,7 @@ by
   intro disj
   apply Set.disjoint_of_subset_left
   · exact subset_closure
-  · rw [<-interiorClosure_closure U_open]
+  · rw [←interiorClosure_closure U_open]
     exact Disjoint.closure_left disj V_open
 
 theorem disjoint_interiorClosure_iff {U V : Set α} (U_open : IsOpen U) (V_open : IsOpen V) :
@@ -176,10 +176,10 @@ theorem subset_from_diff_closure_eq_empty {U V : Set α}
   V ⊆ U :=
 by
   have V_eq_interior : interior V = V := IsOpen.interior_eq V_open
-  rw [<-V_eq_interior]
-  rw [<-U_regular]
+  rw [←V_eq_interior]
+  rw [←U_regular]
   apply interior_mono
-  rw [<-Set.diff_eq_empty]
+  rw [←Set.diff_eq_empty]
   exact V_diff_cl_empty
 
 theorem regular_empty (α : Type _) [TopologicalSpace α]: Regular (∅ : Set α) :=
@@ -215,10 +215,10 @@ by
   apply Set.eq_of_subset_of_subset
   · simp
     constructor
-    · nth_rw 2 [<-U_reg]
+    · nth_rw 2 [←U_reg]
       apply interiorClosure_mono
       simp
-    · nth_rw 2 [<-V_reg]
+    · nth_rw 2 [←V_reg]
       apply interiorClosure_mono
       simp
   · apply interiorClosure_subset
@@ -239,8 +239,8 @@ theorem interiorClosure_smulImage {G : Type _} [Group G] [MulAction G α] [Conti
   InteriorClosure (g •'' U) = g •'' InteriorClosure U :=
 by
   simp
-  rw [<-smulImage_interior]
-  rw [<-smulImage_closure]
+  rw [←smulImage_interior]
+  rw [←smulImage_closure]
 
 theorem smulImage_regular {G : Type _} [Group G] [MulAction G α] [ContinuousConstSMul G α]
   (g : G) (U : Set α) :
@@ -250,7 +250,7 @@ by
     constructor
     apply this
     have U_eq : g⁻¹ •'' (g •'' U) = U := by simp
-    nth_rw 2 [<-U_eq]
+    nth_rw 2 [←U_eq]
     apply this
   intro U g U_reg
   unfold Regular

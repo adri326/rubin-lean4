@@ -12,11 +12,21 @@ namespace Rubin
 
 section Equivariant
 
+-- TODO: rename or remove?
+def IsEquivariant (G : Type _) {β : Type _} [Group G] [MulAction G α]
+    [MulAction G β] (f : α → β) :=
+  ∀ g : G, ∀ x : α, f (g • x) = g • f x
+
 -- TODO: rename to MulActionHomeomorph
-structure EquivariantHomeomorph (G α β : Type _) [Group G] [TopologicalSpace α]
+/--
+maps from `α` to `β` which preserve both the topology (they are homeomorphisms)
+and the group structure (they intertwine the actions of `G` on `α` and `β`)
+-/
+structure EquivariantHomeomorph (G : Type _) (α β : Type _) [Group G] [TopologicalSpace α]
     [TopologicalSpace β] [MulAction G α] [MulAction G β] extends Homeomorph α β where
   toFun_equivariant' : IsEquivariant G toFun
 
+@[inherit_doc]
 notation:25 α " ≃ₜ[" G "] " β => EquivariantHomeomorph G α β
 
 variable {G α β γ: Type*}
@@ -74,26 +84,19 @@ by
   simp [trans]
   rfl
 
-def EquivariantHomeomorph.symm (f : α ≃ₜ[G] β) :
+def EquivariantHomeomorph.inv (f : α ≃ₜ[G] β) :
   EquivariantHomeomorph G β α
 where
-  toHomeomorph := f.toHomeomorph.symm
+  toHomeomorph := f.symm
   toFun_equivariant' := f.invFun_equivariant
 
 @[simp]
-theorem EquivariantHomeomorph.symm_toFun (f : α ≃ₜ[G] β) :
-  f.symm.toFun = f.invFun := rfl
+theorem EquivariantHomeomorph.inv_toFun (f : α ≃ₜ[G] β) :
+  f.inv.toFun = f.invFun := rfl
 
 @[simp]
-theorem EquivariantHomeomorph.symm_invFun (f : α ≃ₜ[G] β) :
-  f.symm.invFun = f.toFun := rfl
-
-def refl : α ≃ₜ[G] α where
-  continuous_toFun := continuous_id
-  continuous_invFun := continuous_id
-  toEquiv := Equiv.refl α
-  toFun_equivariant' := IsEquivariant.refl
-
+theorem EquivariantHomeomorph.inv_invFun (f : α ≃ₜ[G] β) :
+  f.inv.invFun = f.toFun := rfl
 
 end Equivariant
 
@@ -187,7 +190,7 @@ theorem TopologicalBasisContaining.mem_iff {α : Type _} [TopologicalSpace α]
   {B : Set (Set α)} (B_basis : TopologicalSpace.IsTopologicalBasis B) (p : α) (S : Set α) :
   S ∈ TopologicalBasisContaining B_basis p ↔ S ∈ B ∧ p ∈ S :=
 by
-  rw [<-FilterBasis.mem_sets]
+  rw [←FilterBasis.mem_sets]
   rfl
 
 theorem TopologicalBasisContaining.mem_nhds {α : Type _} [TopologicalSpace α]
@@ -204,7 +207,7 @@ instance TopologicalBasisContaining.neBot {α : Type _} [TopologicalSpace α]
   Filter.NeBot (TopologicalBasisContaining B_basis p).filter where
   ne' := by
     intro empty_in
-    rw [<-Filter.empty_mem_iff_bot, FilterBasis.mem_filter_iff] at empty_in
+    rw [←Filter.empty_mem_iff_bot, FilterBasis.mem_filter_iff] at empty_in
     let ⟨S, ⟨S_in_basis, S_ss_empty⟩⟩ := empty_in
     rw [TopologicalBasisContaining.mem_iff] at S_in_basis
     exact S_ss_empty S_in_basis.right

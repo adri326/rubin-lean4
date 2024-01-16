@@ -57,7 +57,7 @@ by
   · intro S S_in_set
     simp at S_in_set
     let ⟨g, ⟨_, Heq⟩⟩ := S_in_set
-    rw [<-Heq]
+    rw [←Heq]
     exact regularSupport_regular α g
 
 @[simp]
@@ -92,7 +92,7 @@ noncomputable instance RegularSupportBasis.instSmul : SMul G (RegularSupportBasi
       by
         rw [RegularSupportBasis.mem_iff]
         nth_rw 1 [RegularSupport.FiniteInter_conj, smulImage_nonempty]
-        rw [<-S.prop.right.choose_spec]
+        rw [←S.prop.right.choose_spec]
 
         constructor
         · exact S.prop.left
@@ -108,14 +108,14 @@ theorem RegularSupportBasis.smul_eq (f : G) (S : RegularSupportBasis G α) :
 by
   rw [RegularSupportBasis.smul_eq']
   rw [RegularSupport.FiniteInter_conj]
-  rw [<-S.prop.right.choose_spec]
+  rw [←S.prop.right.choose_spec]
 
 theorem RegularSupportBasis.smulImage_in_basis {U : Set α} (U_in_basis : U ∈ RegularSupportBasis G α)
   (f : G) : f •'' U ∈ RegularSupportBasis G α :=
 by
   have eq := smul_eq f ⟨U, U_in_basis⟩
   simp only at eq
-  rw [<-eq]
+  rw [←eq]
   exact Subtype.coe_prop _
 
 def RegularSupportBasis.fromSingleton [T2Space α] [FaithfulSMul G α] (g : G) (g_ne_one : g ≠ 1) : { S : Set α // S ∈ RegularSupportBasis G α } :=
@@ -134,7 +134,7 @@ def RegularSupportBasis.fromSingleton [T2Space α] [FaithfulSMul G α] (g : G) (
       apply FaithfulSMul.eq_of_smul_eq_smul (α := α)
       intro x
       simp
-      rw [<-not_mem_support]
+      rw [←not_mem_support]
       apply Set.not_mem_subset
       · apply support_subset_regularSupport
       · simp [RegularSupport.FiniteInter] at rsupp_empty
@@ -215,7 +215,7 @@ by
   · apply rigidStabilizer_mono interior_subset
     simp
     exact g_in_rist
-  · rw [<-mem_support] at g_moves_p
+  · rw [←mem_support] at g_moves_p
     apply support_subset_regularSupport
     exact g_moves_p
   · rw [rigidStabilizer_support] at g_in_rist
@@ -268,7 +268,7 @@ by
   use s1 ∪ s2
   rw [RegularSupport.FiniteInter_sInter]
   rw [Finset.coe_union, Set.image_union, Set.sInter_union]
-  repeat rw [<-RegularSupport.FiniteInter_sInter]
+  repeat rw [←RegularSupport.FiniteInter_sInter]
   rw [b2_eq, b1_eq]
 
 theorem RegularSupportBasis.empty_not_mem :

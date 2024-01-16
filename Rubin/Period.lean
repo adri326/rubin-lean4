@@ -67,14 +67,14 @@ theorem moves_within_period' {z : ℤ} (g : G) (x : α) :
   0 < z → z < period x g → g^z • x ≠ x :=
 by
   intro n_pos n_lt_period
-  rw [<-Int.natAbs_of_nonneg (Int.le_of_lt n_pos)]
+  rw [←Int.natAbs_of_nonneg (Int.le_of_lt n_pos)]
   rw [zpow_ofNat]
   apply moves_within_period
-  · rw [<-Int.natAbs_zero]
+  · rw [←Int.natAbs_zero]
     apply Int.natAbs_lt_natAbs_of_nonneg_of_lt
     rfl
     assumption
-  · rw [<-Int.natAbs_cast (period x g)]
+  · rw [←Int.natAbs_cast (period x g)]
     apply Int.natAbs_lt_natAbs_of_nonneg_of_lt
     exact Int.le_of_lt n_pos
     assumption

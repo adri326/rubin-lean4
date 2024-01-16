@@ -25,7 +25,7 @@ theorem Commute.conj (f g h : G) : Commute (f * g * f⁻¹) h ↔ Commute g (f�
     · apply this
     · intro cg
       symm
-      nth_rw 1 [<-inv_inv f]
+      nth_rw 1 [←inv_inv f]
       apply this
       symm
       rw [inv_inv]
@@ -33,18 +33,18 @@ theorem Commute.conj (f g h : G) : Commute (f * g * f⁻¹) h ↔ Commute g (f�
 
   intro f g h fgf_h_comm
   unfold Commute SemiconjBy at *
-  rw [<-mul_assoc, <-mul_assoc]
-  rw [<-mul_assoc, <-mul_assoc] at fgf_h_comm
+  rw [←mul_assoc, ←mul_assoc]
+  rw [←mul_assoc, ←mul_assoc] at fgf_h_comm
   have gfh_eq : g * f⁻¹ * h = f⁻¹ * h * f * g * f⁻¹ := by
     repeat rw [mul_assoc f⁻¹]
-    rw [<-fgf_h_comm]
+    rw [←fgf_h_comm]
     group
   rw [gfh_eq]
   group
 
 theorem Commute.conj' (f g h : G) : Commute (f⁻¹ * g * f) h ↔ Commute g (f * h * f⁻¹) := by
-  nth_rw 2 [<-inv_inv f]
-  nth_rw 3 [<-inv_inv f]
+  nth_rw 2 [←inv_inv f]
+  nth_rw 3 [←inv_inv f]
   apply Commute.conj
 
 
@@ -90,9 +90,9 @@ theorem conj {f g h : G} (disj_elem : AlgebraicallyDisjointElem f g h) (i : G): 
   comm_elem_nontrivial := by
     intro eq_one
     apply disj_elem.comm_elem_nontrivial
-    rw [comm_elem_conj, <-mul_right_inv i] at eq_one
+    rw [comm_elem_conj, ←mul_right_inv i] at eq_one
     apply mul_right_cancel at eq_one
-    nth_rw 2 [<-mul_one i] at eq_one
+    nth_rw 2 [←mul_one i] at eq_one
     apply mul_left_cancel at eq_one
     exact eq_one
   comm_elem_commute := by
@@ -298,7 +298,7 @@ by
   {
     show 1 ≤ abs_diff
     unfold_let
-    rw [<-zero_add 1, Int.add_one_le_iff]
+    rw [←zero_add 1, Int.add_one_le_iff]
     apply abs_pos.mpr
     apply sub_ne_zero.mpr
     simp
@@ -309,9 +309,9 @@ by
     show abs_diff < (n : ℤ)
     apply abs_lt.mpr
     constructor
-    · rw [<-zero_sub]
+    · rw [←zero_sub]
       apply Int.sub_lt_sub_of_le_of_lt <;> simp
-    · rw [<-sub_zero (n : ℤ)]
+    · rw [←sub_zero (n : ℤ)]
       apply Int.sub_lt_sub_of_lt_of_le <;> simp
   }
   {
@@ -359,20 +359,20 @@ by
   intro k one_le_k k_lt_n
 
   have one_le_abs_k : 1 ≤ k.natAbs := by
-    rw [<-Nat.cast_le (α := ℤ)]
+    rw [←Nat.cast_le (α := ℤ)]
     norm_num
     calc
       1 ≤ k := one_le_k
       _ ≤ |k| := le_abs_self k
   have abs_k_lt_n : k.natAbs < n := by
-    rw [<-Nat.cast_lt (α := ℤ)]
+    rw [←Nat.cast_lt (α := ℤ)]
     norm_num
     calc
       |k| = k := abs_of_pos one_le_k
       _ < n := k_lt_n
   have res := period_ge_n' k.natAbs one_le_abs_k abs_k_lt_n
 
-  rw [<-zpow_ofNat, Int.coe_natAbs, abs_of_pos _] at res
+  rw [←zpow_ofNat, Int.coe_natAbs, abs_of_pos _] at res
   exact res
   exact one_le_k
 
@@ -388,7 +388,7 @@ theorem smul_injective_within_period {g : G} {p : α} {n : ℕ}
   (period_eq_n : Period.period p g = n) :
   Function.Injective (fun (i : Fin n) => g ^ (i : ℕ) • p) :=
 by
-  simp only [<-zpow_coe_nat]
+  simp only [←zpow_coe_nat]
   apply moves_inj
   intro k one_le_k k_lt_n
 
@@ -430,14 +430,14 @@ by
   constructor
   · intro ⟨y, y_disj, x_eq⟩
     use g * y * g⁻¹
-    rw [<-gxg12_eq]
+    rw [←gxg12_eq]
     exact ⟨y_disj.conj g, x_eq⟩
   · intro ⟨y, y_disj, x_eq⟩
     use g⁻¹ * y * g
     constructor
     · convert y_disj.conj g⁻¹ using 1
       all_goals group
-    · nth_rw 3 [<-inv_inv g]
+    · nth_rw 3 [←inv_inv g]
       simp only [conj_pow]
       rw [x_eq]
       group
@@ -454,19 +454,19 @@ by
   constructor
   · intro ⟨y, ⟨x_comm, x_eq⟩⟩
     intro h h_in_alg
-    rw [<-AlgebraicSubgroup.conj] at h_in_alg
+    rw [←AlgebraicSubgroup.conj] at h_in_alg
     simp at h_in_alg
     let ⟨i, i_in_alg, gig_eq_h⟩ := h_in_alg
     specialize x_comm i i_in_alg
-    rw [<-gig_eq_h, <-x_eq]
+    rw [←gig_eq_h, ←x_eq]
     group
-    rw [mul_assoc _ i, x_comm, <-mul_assoc]
+    rw [mul_assoc _ i, x_comm, ←mul_assoc]
   · intro x_comm
     use g⁻¹ * x * g
     group
     simp
     intro h h_in_alg
-    simp [<-AlgebraicSubgroup.conj] at x_comm
+    simp [←AlgebraicSubgroup.conj] at x_comm
     specialize x_comm h h_in_alg
     have h₁ : g⁻¹ * x * g * h = g⁻¹ * (g * h * g⁻¹ * x) * g := by
       rw [x_comm]
@@ -494,15 +494,15 @@ theorem AlgebraicCentralizerBasis.subgroup_mem_iff (S : Subgroup G) :
   (S : Set G) ∈ AlgebraicCentralizerBasis G ↔
     S ≠ ⊥ ∧ ∃ seed : Finset G, S = AlgebraicCentralizerInter seed :=
 by
-  rw [mem_iff, <-Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq]
+  rw [mem_iff, ←Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq]
   simp
 
 theorem AlgebraicCentralizerBasis.empty_not_mem : ∅ ∉ AlgebraicCentralizerBasis G := by
   simp [AlgebraicCentralizerBasis]
   intro _ _
-  rw [<-ne_eq]
+  rw [←ne_eq]
   symm
-  rw [<-Set.nonempty_iff_ne_empty]
+  rw [←Set.nonempty_iff_ne_empty]
   exact Subgroup.coe_nonempty _
 
 theorem AlgebraicCentralizerBasis.to_subgroup {S : Set G} (S_in_basis : S ∈ AlgebraicCentralizerBasis G):
@@ -518,7 +518,7 @@ by
   constructor
   · intro fS_eq_T
     ext x
-    rw [<-fS_eq_T]
+    rw [←fS_eq_T]
     simp
   · intro S_eq_fT
     ext x
@@ -549,7 +549,7 @@ by
   · rw [conj_eq]
     rw [ne_eq, Set.image_equiv_eq]
     simp
-    rw [<-Subgroup.coe_bot, SetLike.coe_set_eq]
+    rw [←Subgroup.coe_bot, SetLike.coe_set_eq]
     exact S_in_basis.left
   · let ⟨seed, S'_eq⟩ := S_in_basis.right
     have dec_eq : DecidableEq G := Classical.typeDecidableEq _
@@ -564,7 +564,7 @@ by
       rhs
       intro
       intro
-      rw [<-SetLike.mem_coe, <-AlgebraicCentralizer.conj, conj_eq, Set.mem_image_equiv]
+      rw [←SetLike.mem_coe, ←AlgebraicCentralizer.conj, conj_eq, Set.mem_image_equiv]
     }
 
 theorem AlgebraicCentralizerBasis.inter_closed
@@ -582,8 +582,8 @@ by
   rw [T_eq, subgroup_mem_iff] at T_in_basis
   let ⟨T'_ne_bot, ⟨T'_seed, T'_eq⟩⟩ := T_in_basis
 
-  rw [<-Subgroup.coe_inf, subgroup_mem_iff]
-  rw [S_eq, T_eq, <-Subgroup.coe_inf, <-Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq, <-ne_eq] at ST_ne_bot
+  rw [←Subgroup.coe_inf, subgroup_mem_iff]
+  rw [S_eq, T_eq, ←Subgroup.coe_inf, ←Subgroup.coe_bot, ne_eq, SetLike.coe_set_eq, ←ne_eq] at ST_ne_bot
 
   have dec_eq : DecidableEq G := Classical.typeDecidableEq G
 
@@ -591,7 +591,7 @@ by
 
   unfold AlgebraicCentralizerInter
 
-  simp only [<-Finset.mem_coe]
+  simp only [←Finset.mem_coe]
   rw [Finset.coe_union, iInf_union]
   rw [S'_eq, T'_eq]
   rfl
@@ -612,7 +612,7 @@ by
   simp
   constructor
   · intro ⟨T, T_in_basis, T_eq⟩
-    rw [<-T_eq]
+    rw [←T_eq]
     exact conj_mem T_in_basis g
   · intro S_in_basis
     use (fun h => g⁻¹ * h * g⁻¹⁻¹) '' S
