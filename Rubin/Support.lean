@@ -33,7 +33,7 @@ theorem support_eq_compl_fixedBy : Support α g = (MulAction.fixedBy α g)ᶜ :=
 #align support_eq_not_fixed_by Rubin.support_eq_compl_fixedBy
 
 theorem fixedBy_eq_compl_support : MulAction.fixedBy α g = (Support α g)ᶜ := by
-  rw [<-compl_compl (MulAction.fixedBy _ _)]
+  rw [←compl_compl (MulAction.fixedBy _ _)]
   exact congr_arg (·ᶜ) support_eq_compl_fixedBy
 
 theorem mem_support :
@@ -115,7 +115,7 @@ theorem support_pow (α : Type _) [MulAction G α] (g : G) (j : ℕ) :
     let j_ih := (congr_arg (g • ·) (not_not.mp j_ih)).trans (not_mem_support.mp xfixed)
     simp at j_ih
     group_action at j_ih
-    rw [<-Nat.one_add, <-zpow_ofNat, Int.ofNat_add]
+    rw [←Nat.one_add, ←zpow_ofNat, Int.ofNat_add]
     exact j_ih
     -- TODO: address this pain point
     -- Alternatively:
@@ -132,8 +132,8 @@ by
     exact support_pow α g n
   | negSucc n =>
     rw [Int.negSucc_eq, zpow_neg, support_inv, zpow_add, zpow_coe_nat, zpow_one]
-    nth_rw 2 [<-pow_one g]
-    rw [<-pow_add]
+    nth_rw 2 [←pow_one g]
+    rw [←pow_add]
     exact support_pow α g (n+1)
 
 theorem support_comm (α : Type _) [MulAction G α] (g h : G) :
@@ -198,18 +198,18 @@ by
     have h₁ : g • f • x = g • x := by
       have res := disjoint_not_mem₂ disj gx_in_img
       rw [not_mem_support] at res
-      rw [<-mul_smul] at res
+      rw [←mul_smul] at res
       rw [h_comm] at res
       rw [mul_smul] at res
       exact res
     have h₂ : f • x = x := by
-      rw [<-one_smul G (f • x)]
-      nth_rw 2 [<-one_smul G x]
-      rw [<-mul_left_inv g]
+      rw [←one_smul G (f • x)]
+      nth_rw 2 [←one_smul G x]
+      rw [←mul_left_inv g]
       rw [mul_smul]
       rw [mul_smul]
       nth_rw 1 [h₁]
-    rw [<-not_mem_support] at h₂
+    rw [←not_mem_support] at h₂
     exact h₂
 
   have h₀' : Disjoint (Support α f) U := by
@@ -227,7 +227,7 @@ by
   ext x
   simp
   by_contra h
-  rw [<-ne_eq, <-mem_support] at h
+  rw [←ne_eq, ←mem_support] at h
   apply Set.eq_empty_iff_forall_not_mem.mp support_empty
   exact h
 
@@ -240,8 +240,8 @@ theorem support_eq: Support α f = Support α g ↔ ∀ (x : α), (f • x = x �
       have gx_ne_x := by rw [h] at x_in?; exact x_in?
       exact ⟨x_in?, gx_ne_x⟩
     · left
-      have fx_eq_x : f • x = x := by rw [<-not_mem_support]; exact x_in?
-      have gx_eq_x : g • x = x := by rw [<-not_mem_support, <-h]; exact x_in?
+      have fx_eq_x : f • x = x := by rw [←not_mem_support]; exact x_in?
+      have gx_eq_x : g • x = x := by rw [←not_mem_support, ←h]; exact x_in?
       exact ⟨fx_eq_x, gx_eq_x⟩
   · intro h
     ext x
@@ -294,13 +294,13 @@ by
   suffices ∀ (g : G) (p : α), p ∈ Support α g → g • p ∈ Support α g by
     constructor
     exact this g p
-    rw [<-support_inv]
+    rw [←support_inv]
     intro H
-    rw [<-one_smul G p, <-mul_left_inv g, mul_smul]
+    rw [←one_smul G p, ←mul_left_inv g, mul_smul]
     exact this _ _ H
   intro g p p_in_supp
   by_contra gp_notin_supp
-  rw [<-support_inv, not_mem_support] at gp_notin_supp
+  rw [←support_inv, not_mem_support] at gp_notin_supp
   rw [mem_support] at p_in_supp
   apply p_in_supp
   symm at gp_notin_supp
@@ -324,7 +324,7 @@ by
   · constructor
     all_goals intro; apply support_in_U
     swap; exact p_in_supp?
-    rw [<-elem_moved_in_support' p (support_zpow α g j)]
+    rw [←elem_moved_in_support' p (support_zpow α g j)]
     assumption
   · rw [not_mem_support] at p_in_supp?
     rw [smul_zpow_eq_of_smul_eq j p_in_supp?]
@@ -338,12 +338,12 @@ by
   simp at hp_eq_q
   rw [Subgroup.mem_closure_singleton] at h_in_closure
   let ⟨n, g_pow_n_eq_h⟩ := h_in_closure
-  rw [<-hp_eq_q, <-g_pow_n_eq_h]
+  rw [←hp_eq_q, ←g_pow_n_eq_h]
   clear hp_eq_q g_pow_n_eq_h h_in_closure
 
   have union_superset : Support α g ⊆ Support α g ∪ {p} := by
     simp only [Set.union_singleton, Set.subset_insert]
-  rw [<-elem_moved_in_support_zpow _ _ union_superset]
+  rw [←elem_moved_in_support_zpow _ _ union_superset]
   simp only [Set.union_singleton, Set.mem_insert_iff, true_or]
 
 theorem orbit_subset_of_support_subset (g : G) {p : α} {U : Set α} (p_in_U : p ∈ U)

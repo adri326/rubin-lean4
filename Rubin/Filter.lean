@@ -7,16 +7,10 @@ import Mathlib.Topology.Separation
 
 section Order
 
-variable {α β : Type _}
+variable {α : Type _} {β : Type _}
 
 def DoubleMonotoneOn [Preorder α] [Preorder β] (f: α → β) (B : Set α): Prop :=
   ∀ x, x ∈ B → ∀ y, y ∈ B → (x ≤ y ↔ f x ≤ f y)
-
-theorem orderEmbedding_to_doubleMonotoneOn [Preorder α] [Preorder β] {B : Set α}
-    {C : Set β} (f : B ↪o C) : DoubleMonotoneOn f Set.univ := by
-  intro ⟨x, x_in_B⟩ _ ⟨y, y_in_B⟩ _
-  simp
-
 
 variable {f : α → β} {B : Set α}
 
@@ -56,7 +50,7 @@ by
 theorem DoubleMonotoneOn.subset_iff {B : Set (Set α)} {f : Set α → Set β} (f_double_mono : DoubleMonotoneOn f B) :
   ∀ s ∈ B, ∀ t ∈ B, s ⊆ t ↔ f s ⊆ f t :=
 by
-  simp only [<-Set.le_eq_subset]
+  simp only [←Set.le_eq_subset]
   exact f_double_mono
 
 structure OrderIsoOn (α : Type _) (β : Type _) [Preorder α] [Preorder β] (S : Set α) :=
@@ -105,7 +99,7 @@ theorem OrderIsoOn.invFun_doubleMonotone [Preorder α] [Preorder β] (F : OrderI
   DoubleMonotoneOn F.invFun (F.toFun '' S) :=
 by
   intro x ⟨x', x'_in_S, x_eq⟩ y ⟨y', y'_in_S, y_eq⟩
-  rw [<-x_eq, <-y_eq]
+  rw [←x_eq, ←y_eq]
   (repeat rw [F.leftInv_on]) <;> try assumption
   symm
   apply toFun_doubleMonotone <;> assumption
@@ -121,8 +115,8 @@ by
   intro ⟨x, x_in_S⟩ ⟨y, y_in_S⟩
   simp
   intro fX_eq_fY
-  rw [<-F.leftInv_on _ x_in_S]
-  rw [<-F.leftInv_on _ y_in_S]
+  rw [←F.leftInv_on _ x_in_S]
+  rw [←F.leftInv_on _ y_in_S]
   rw [fX_eq_fY]
 
 theorem OrderIsoOn.toFun_inj (F : OrderIsoOn α β S) :
@@ -142,7 +136,7 @@ theorem OrderIsoOn.mem_toFun_image (F : OrderIsoOn α β S) (y : β):
 by
   simp
   intro x x_in_S y_eq
-  rw [<-y_eq]
+  rw [←y_eq]
   rw [F.leftInv_on x x_in_S]
   assumption
 
@@ -151,7 +145,7 @@ theorem OrderIsoOn.toFun_eq_to_invFun (F : OrderIsoOn α β S) :
 by
   intro x x_in_S y y_eq
   have y_in_mS : y ∈ F.toFun '' S := by use x
-  rw [<-F.rightInv_on y y_in_mS] at y_eq
+  rw [←F.rightInv_on y y_in_mS] at y_eq
   apply F.toFun_inj <;> try assumption
   apply mem_toFun_image
   assumption
@@ -184,7 +178,7 @@ by
 
 @[simp]
 theorem OrderIsoOn.leftInv_image' (F : OrderIsoOn α β S) :
-  F.invFun '' (F.toFun '' S) = S := by rw [Set.image_image, <-Function.comp_def, leftInv_image]
+  F.invFun '' (F.toFun '' S) = S := by rw [Set.image_image, ←Function.comp_def, leftInv_image]
 
 def OrderIsoOn.comp {γ : Type _} [Preorder γ] (F : OrderIsoOn α β S)
   (G : OrderIsoOn β γ (F.toFun '' S)) : OrderIsoOn α γ S where
@@ -200,10 +194,10 @@ def OrderIsoOn.comp {γ : Type _} [Preorder γ] (F : OrderIsoOn α β S)
   rightInv_on := by
     intro y y_in_img
     simp
-    rw [Function.comp_def, <-Set.image_image G.toFun F.toFun] at y_in_img
+    rw [Function.comp_def, ←Set.image_image G.toFun F.toFun] at y_in_img
     let ⟨z, z_in_fS, fz_eq_y⟩ := y_in_img
     have z_eq_fy : z = G.invFun y := G.toFun_eq_to_invFun z z_in_fS y fz_eq_y
-    rw [<-z_eq_fy, <-fz_eq_y]
+    rw [←z_eq_fy, ←fz_eq_y]
     rw [F.rightInv_on]
     assumption
 
@@ -251,32 +245,6 @@ def OrderIso.orderIsoOn (F : α ≃o β) (S : Set α) : OrderIsoOn α β S where
   toFun_doubleMonotone := by
     intro a _ b _
     exact Iff.symm (RelIso.map_rel_iff F)
-
-noncomputable def OrderIso.orderIsoOn₂_toFun [βne : Nonempty β] {B : Set α} {C : Set β} (F : B ≃o C) : α → β :=
-  fun a =>
-    let _dec : Decidable (a ∈ B) := Classical.propDecidable _
-    if h : a ∈ B then
-      (F.toFun ⟨a, h⟩).val
-    else
-      βne.some
-
-
-noncomputable instance OrderIso.orderIsoOn₂ [αne : Nonempty α] [βne : Nonempty β] {B : Set α} {C : Set β} :
-  CoeOut (B ≃o C) (OrderIsoOn α β B) where
-  coe := fun F => ⟨
-    OrderIso.orderIsoOn₂_toFun F,
-    fun b =>
-      let dec : Decidable (b ∈ C) := Classical.propDecidable _
-      if h : b ∈ C then
-        (F.invFun ⟨b, h⟩).val
-      else
-        αne.some,
-
-    sorry,
-    sorry,
-    sorry
-  ⟩
-
 
 -- instance : Coe (α ≃o β) (OrderIsoOn α β S) where
 --   coe := fun f => OrderIso.orderIsoOn f S
@@ -399,7 +367,7 @@ by
       simp
       exact fT_eq_fS
     simp at T_eq_S
-    rw [<-T_eq_S]
+    rw [←T_eq_S]
     assumption
   · intro S_in_basis
     use S
@@ -451,7 +419,7 @@ by
   have basis_nonempty := Filter.InBasis.basis_nonempty' F_basis
 
   rw [Filter.mem_iInf_of_directed]
-  · simp [basis, <-and_assoc]
+  · simp [basis, ←and_assoc]
   · exact Filter.InBasis.map_directed F_basis map map_mono
 
 theorem Filter.InBasis.map_basis_inBasis (F_basis : Filter.InBasis F B)
@@ -515,7 +483,7 @@ by
   constructor
   · intro ⟨⟨y1, y1_in_F, _, y1_ss_x⟩, ⟨y2, y2_in_B, y2_eq⟩⟩
     use y2
-    rw [<-y2_eq] at y1_ss_x
+    rw [←y2_eq] at y1_ss_x
     repeat' apply And.intro
     apply Filter.mem_of_superset y1_in_F
     rw [map_double_mono.subset_iff]
@@ -544,7 +512,7 @@ by
     have mS_in_mB : map S ∈ map '' B := by
       simp
       use S
-    rw [<-basis_map_basis map map_double_mono F_basis]
+    rw [←basis_map_basis map map_double_mono F_basis]
     rw [mem_basis_iff_of_basis_set _ mS_in_mB]
 
   rw [Filter.InBasis.mem_image_basis_of_injective_on _ _ map_double_mono.injective S_in_B]
@@ -556,7 +524,7 @@ theorem Filter.InBasis.mem_map_basis'
   x ∈ (Filter.InBasis.map_basis F B map) ↔ ∃ y : Set α, y ∈ F ∧ y ∈ B ∧ map y = x :=
 by
   let ⟨y, y_in_B, y_eq⟩ := x_in_basis
-  rw [<-y_eq]
+  rw [←y_eq]
   rw [map_mem_map_basis_of_basis_set map map_double_mono F_basis y_in_B]
   constructor
   · intro y_in_F
@@ -575,7 +543,7 @@ by
   unfold map_basis
   rw [iInf_subtype]
   simp [basis_map_basis]
-  rw [<-iInf_subtype (f := fun i => Filter.principal (m₂.toFun i.val))]
+  rw [←iInf_subtype (f := fun i => Filter.principal (m₂.toFun i.val))]
 
   have F'_basis := (Filter.InBasis.map_basis_inBasis F_basis m₁.toFun m₁.toFun_doubleMonotone.monotoneOn)
   have basis_nonempty : Nonempty { i // i ∈ basis (⨅ S : basis F B, Filter.principal (m₁.toFun ↑S)) (m₁.toFun '' B) } :=
@@ -630,17 +598,17 @@ theorem Filter.InBasis.map_basis_inv (map : OrderIsoOn (Set α) (Set β) B)
   {F : Filter α} (F_basis : F.InBasis B):
   Filter.InBasis.map_basis (Filter.InBasis.map_basis F B map) (map.toFun '' B) map.invFun = F :=
 by
-  rw [<-map.inv_toFun, map_basis_comp _ _ F_basis, map_basis_id F_basis]
+  rw [←map.inv_toFun, map_basis_comp _ _ F_basis, map_basis_id F_basis]
   exact OrderIsoOn.comp_inv map
 
 theorem Filter.InBasis.map_basis_inv' (map : OrderIsoOn (Set α) (Set β) B)
   {F : Filter β} (F_basis : F.InBasis (map.toFun '' B)):
   Filter.InBasis.map_basis (Filter.InBasis.map_basis F (map.toFun '' B) map.invFun) B map.toFun = F :=
 by
-  nth_rw 4 [<-OrderIsoOn.leftInv_image' map]
-  rw [<-map.inv_toFun]
-  nth_rw 5 [<-map.inv_invFun]
-  rw [<-map.inv.inv_toFun]
+  nth_rw 4 [←OrderIsoOn.leftInv_image' map]
+  rw [←map.inv_toFun]
+  nth_rw 5 [←map.inv_invFun]
+  rw [←map.inv.inv_toFun]
 
   rw [map_basis_comp map.inv map.inv.inv F_basis, map_basis_id F_basis]
 
@@ -669,9 +637,9 @@ theorem Filter.InBasis.map_basis_le_iff (map : OrderIsoOn (Set α) (Set β) B)
 by
   constructor
   · exact map_basis_mono map F_basis G_basis
-  · nth_rw 1 [<-map_basis_inv map F_basis]
-    nth_rw 1 [<-map_basis_inv map G_basis]
-    rw [<-OrderIsoOn.inv_toFun]
+  · nth_rw 1 [←map_basis_inv map F_basis]
+    nth_rw 1 [←map_basis_inv map G_basis]
+    rw [←OrderIsoOn.inv_toFun]
     apply map_basis_mono
     all_goals apply map_basis_inBasis
     any_goals assumption
@@ -689,8 +657,8 @@ theorem Filter.InBasis.map_basis_inBasis₂ (map : OrderIsoOn (Set α) (Set β) 
   {F : Filter β} (F_basis : F.InBasis (map.toFun '' B)) :
   (Filter.InBasis.map_basis F (map.toFun '' B) map.invFun).InBasis B :=
 by
-  nth_rw 4 [<-OrderIsoOn.leftInv_image map]
-  rw [Function.comp_def, <-Set.image_image map.invFun]
+  nth_rw 4 [←OrderIsoOn.leftInv_image map]
+  rw [Function.comp_def, ←Set.image_image map.invFun]
   apply map_basis_inBasis
   assumption
   exact map.invFun_doubleMonotone.monotoneOn
@@ -708,7 +676,7 @@ by
       all_goals assumption
     · intro mF_le_G
 
-      nth_rw 1 [<-map_basis_inv map F_basis]
+      nth_rw 1 [←map_basis_inv map F_basis]
       apply map_basis_mono map
       rw [map_basis_inv _ F_basis]
       any_goals assumption
@@ -722,7 +690,7 @@ by
       apply map_basis_inBasis₂
       assumption
 
-      rw [<-OrderIsoOn.inv_toFun, map_basis_le_iff]
+      rw [←OrderIsoOn.inv_toFun, map_basis_le_iff]
 
       · simp
         rw [map_basis_inv']
@@ -744,7 +712,7 @@ by
     any_goals assumption
     exact map.invFun_doubleMonotone
   have U_in_F : U ∈ F := by
-    rw [<-T_eq] at mT_in_F
+    rw [←T_eq] at mT_in_F
     rw [map.leftInv_on U U_in_B] at mT_in_F
     exact mT_in_F
 
@@ -760,10 +728,10 @@ theorem Filter.InBasis.map_basis_le_inv' (map : OrderIsoOn (Set α) (Set β) B)
   {F : Filter α} (F_basis : F.InBasis B) {G : Filter β} (G_basis : G.InBasis (map.toFun '' B)) :
   G ≤ Filter.InBasis.map_basis F B map.toFun ↔ Filter.InBasis.map_basis G (map.toFun '' B) map.invFun ≤ F :=
 by
-  nth_rw 1 [<-map.leftInv_image']
-  rw [<-map.inv_invFun, <-map.inv_toFun]
+  nth_rw 1 [←map.leftInv_image']
+  rw [←map.inv_invFun, ←map.inv_toFun]
 
-  rw [<-map.leftInv_image', <-map.inv_toFun] at F_basis
+  rw [←map.leftInv_image', ←map.inv_toFun] at F_basis
   nth_rw 1 [map.inv_invFun]
   rw [Filter.InBasis.map_basis_le_inv _ G_basis F_basis]
   simp
@@ -791,7 +759,7 @@ by
   }
   conv => {
     rhs; congr; intro y
-    rw [<-Equiv.subset_image, and_assoc]
+    rw [←Equiv.subset_image, and_assoc]
   }
 
 instance Filter.InBasis.order_bot : OrderBot { F : Filter α // F.InBasis B ∨ F = ⊥ } where
@@ -867,11 +835,11 @@ theorem Filter.InBasis.sInf_finset_closed
     simp only [Finset.mem_insert_coe]
     rw [iInf_insert (s := I') (b := F)]
     apply Filter.InBasis.inf basis_closed _ I'_basis
-    · simp only [<-Finset.mem_coe]
+    · simp only [←Finset.mem_coe]
       show NeBot (id F ⊓ ⨅ f ∈ (I' : Set (Filter α)), id f)
-      rw [<-iInf_insert]
+      rw [←iInf_insert]
       apply Filter.neBot_of_le (f := ⨅ f ∈ I, f)
-      simp only [id_eq, <-Finset.mem_coe]
+      simp only [id_eq, ←Finset.mem_coe]
       apply iInf_le_iInf_of_subset
       exact Set.insert_subset F_in_I I'_ss_I
     · exact in_basis _ F_in_I
@@ -890,7 +858,7 @@ by
   simp only at iInf_I_eq
 
   intro T T_in_sinf
-  rw [<-iInf_I_eq] at T_in_sinf
+  rw [←iInf_I_eq] at T_in_sinf
   rw [Filter.mem_iInf_finite] at T_in_sinf
   let ⟨S, T_in_inf⟩ := T_in_sinf
   clear T_in_sinf
@@ -915,7 +883,7 @@ by
     let ⟨U, U_in_F, U_in_B, _⟩ := in_basis F F_in_I Set.univ Filter.univ_mem
     use U
     constructor
-    · rw [<-iInf_I_eq]
+    · rw [←iInf_I_eq]
       apply Filter.mem_iInf_of_mem ⟨F, F_in_I⟩
       exact U_in_F
     · assumption
@@ -930,9 +898,9 @@ by
       simp only [Finset.mem_image]
       intro F ⟨F', _, F'_eq⟩
       apply in_basis
-      rw [<-F'_eq]
+      rw [←F'_eq]
       exact Subtype.mem F'
-    · simp only [<-Finset.mem_coe]
+    · simp only [←Finset.mem_coe]
       apply Filter.neBot_of_le (f := ⨅ f ∈ I, f)
       apply iInf_le_iInf_of_subset
       simp
@@ -972,12 +940,12 @@ by
     intro f f_in_ch' g g_in_ch' f_ne_g
     let ⟨f', f'_in_ch, f'_eq⟩ := f_in_ch'
     let ⟨g', g'_in_ch, g'_eq⟩ := g_in_ch'
-    rw [<-f'_eq, <-g'_eq]
+    rw [←f'_eq, ←g'_eq]
     simp
     have f'_ne_g' : f' ≠ g' := by
       intro eq
       rw [eq] at f'_eq
-      rw [<-f'_eq, <-g'_eq] at f_ne_g
+      rw [←f'_eq, ←g'_eq] at f_ne_g
       exact f_ne_g rfl
     symm at f'_ne_g'
     apply ch_chain <;> assumption
@@ -1009,7 +977,7 @@ by
       exfalso
       simp [F_eq_bot] at F_in_ch
       exact bot_notin_ch F_in_ch
-    · rw [<-sInf_eq_iInf]
+    · rw [←sInf_eq_iInf]
       exact sch_neBot
 
   let sch' : { F // InBasis F B ∨ F = ⊥ } := ⟨sch, Or.intro_left _ sch_basis⟩
@@ -1035,7 +1003,7 @@ This is a formulation for prefilters in a basis that are ultra.
 It is a weaker statement than regular ultrafilters,
 but it allows for some nice properties, like the equivalence of cluster points and neighborhoods.
 --/
-structure UltrafilterInBasis {α : Type} (B : Set (Set α)) :=
+structure UltrafilterInBasis {α : Type _} (B : Set (Set α)) :=
   filter : Filter α
 
   in_basis : Filter.InBasis filter B
@@ -1129,7 +1097,7 @@ by
     · apply Filter.InBasis.map_basis_neBot_of_neBot F_in_basis
       exact map.invFun_doubleMonotone.monotoneOn
       intro S ⟨T, T_in_B, T_eq⟩ _
-      rw [<-T_eq, map.leftInv_on T T_in_B]
+      rw [←T_eq, map.leftInv_on T T_in_B]
       rw [Set.nonempty_iff_ne_empty]
       intro T_empty
       exact empty_notin_B (T_empty ▸ T_in_B)
@@ -1249,7 +1217,7 @@ theorem UltrafilterInBasis.mem_of_compl_not_mem (U : UltrafilterInBasis B)
   Sᶜ ∉ U → S ∈ U :=
 by
   intro sc_notin_U
-  rw [<-mem_coe, <-Filter.le_principal_iff]
+  rw [←mem_coe, ←Filter.le_principal_iff]
   apply le_of_inf_neBot U B_closed
   · exact Filter.InBasis.principal S_in_B
   · constructor
@@ -1306,7 +1274,7 @@ def UltrafilterInBasis.cast (U : UltrafilterInBasis B) {C : Set (Set α)} (B_eq_
   ne_bot := U.ne_bot
   in_basis := U.in_basis.mono (subset_of_eq B_eq_C)
   ultra := by
-    nth_rw 1 [<-B_eq_C]
+    nth_rw 1 [←B_eq_C]
     exact U.ultra
 
 @[simp]

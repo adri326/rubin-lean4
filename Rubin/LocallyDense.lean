@@ -51,7 +51,7 @@ theorem LocallyDense.rigidStabilizer_in_nhds (G α : Type _) [Group G] [Topologi
   closure (MulAction.orbit G•[U] p) ∈ 𝓝 p :=
 by
   rw [mem_nhds_iff]
-  rw [<-mem_interior]
+  rw [←mem_interior]
   apply LocallyDense.isLocallyDense <;> assumption
 
 lemma LocallyDense.elem_from_nonEmpty {G α : Type _} [Group G] [TopologicalSpace α] [MulAction G α] [LocallyDense G α]:
@@ -76,7 +76,7 @@ theorem get_moving_elem_in_rigidStabilizer (G : Type _) {α : Type _}
   ∃ g : G, g ∈ G•[U] ∧ g • p ≠ p :=
 by
   by_contra g_not_exist
-  rw [<-Classical.not_forall_not] at g_not_exist
+  rw [←Classical.not_forall_not] at g_not_exist
   simp at g_not_exist
 
   have orbit_singleton : MulAction.orbit (RigidStabilizer G U) p = {p} := by
@@ -188,8 +188,8 @@ by
     · apply Set.inter_subset_right
     · intro y hy; show y ∈ V
 
-      rw [<-smul_inv_smul g y]
-      rw [<-mem_inv_smulImage]
+      rw [←smul_inv_smul g y]
+      rw [←mem_inv_smulImage]
 
       rw [mem_smulImage] at hy
       simp at hy
@@ -301,7 +301,7 @@ theorem rigidStabilizer_empty_iff (G : Type _) [Group G] {α : Type _} [Topologi
   {U : Set α} (U_reg : Regular U) :
   G•[U] = ⊥ ↔ U = ∅ :=
 by
-  rw [<-rigidStabilizer_empty (α := α) (G := G)]
+  rw [←rigidStabilizer_empty (α := α) (G := G)]
   exact rigidStabilizer_eq_iff G U_reg (regular_empty α)
 
 end Rubin

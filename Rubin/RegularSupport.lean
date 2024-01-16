@@ -61,7 +61,7 @@ theorem regularSupport_subset {g : G} {U : Set α} :
   Regular U → Support α g ⊆ U → RegularSupport α g ⊆ U :=
 by
   intro U_reg h
-  rw [<-U_reg]
+  rw [←U_reg]
   apply interiorClosure_mono
   exact h
 
@@ -109,7 +109,7 @@ by
     simp
   have h₂ : ⨅ (g ∈ F), G•[RegularSupport α g] = ⨅ (s ∈ S), G•[s] := by
     ext x
-    rw [<-sInf_image]
+    rw [←sInf_image]
     simp
     rw [Subgroup.mem_iInf]
     simp only [Subgroup.mem_iInf, and_imp, forall_apply_eq_imp_iff₂]

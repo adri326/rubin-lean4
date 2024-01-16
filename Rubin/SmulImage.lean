@@ -73,7 +73,7 @@ theorem mem_inv_smulImage {x : α} {g : G} {U : Set α} : x ∈ g⁻¹ •'' U �
 theorem mem_smulImage' {x : α} (g : G) {U : Set α} : g • x ∈ g •'' U ↔ x ∈ U :=
 by
   rw [mem_smulImage]
-  rw [<-mul_smul, mul_left_inv, one_smul]
+  rw [←mul_smul, mul_left_inv, one_smul]
 
 @[simp]
 theorem smulImage_mul (g h : G) (U : Set α) : g •'' (h •'' U) = (g * h) •'' U :=
@@ -108,15 +108,15 @@ theorem SmulImage.congr (g : G) {U V : Set α} : U = V → g •'' U = g •'' V
 theorem SmulImage.inv_congr (g: G) {U V : Set α} : g •'' U = g •'' V → U = V :=
 by
   intro h
-  rw [<-one_smulImage (G := G) U]
-  rw [<-one_smulImage (G := G) V]
-  rw [<-mul_left_inv g]
-  repeat rw [<-smulImage_mul]
+  rw [←one_smulImage (G := G) U]
+  rw [←one_smulImage (G := G) V]
+  rw [←mul_left_inv g]
+  repeat rw [←smulImage_mul]
   exact SmulImage.congr g⁻¹ h
 
 theorem smulImage_inv (g: G) (U V : Set α) : g •'' U = V ↔ U = g⁻¹ •'' V := by
-  nth_rw 2 [<-one_smulImage (G := G) U]
-  rw [<-mul_left_inv g, <-smulImage_mul]
+  nth_rw 2 [←one_smulImage (G := G) U]
+  rw [←mul_left_inv g, ←smulImage_mul]
   constructor
   · intro h
     rw [SmulImage.congr]
@@ -166,7 +166,7 @@ by
     let ⟨T, ⟨T_in_S, x_in_gT⟩⟩ := h
     use T
     constructor; trivial
-    rw [<-mem_smulImage]
+    rw [←mem_smulImage]
     exact x_in_gT
 
 @[simp]
@@ -184,7 +184,7 @@ theorem smulImage_sInter (g : G) {S : Set (Set α)} : g •'' (⋂₀ S) = ⋂�
     rw [Set.mem_sInter] at h
     rw [mem_smulImage, Set.mem_sInter]
     intro T T_in_S
-    rw [<-mem_smulImage]
+    rw [←mem_smulImage]
     simp at h
     exact h T T_in_S
 
@@ -206,7 +206,7 @@ by
     rw [mem_smulImage]
     simp
     intro i i_in_S
-    rw [<-mem_smulImage]
+    rw [←mem_smulImage]
     exact h i i_in_S
 
 @[simp]
@@ -237,7 +237,7 @@ by
   constructor
   · intro ⟨x, x_in_gU⟩
     use g⁻¹•x
-    rw [<-mem_smulImage]
+    rw [←mem_smulImage]
     assumption
   · intro ⟨x, x_in_U⟩
     use g•x
@@ -286,7 +286,7 @@ theorem smulImage_subset_inv' {G α : Type _} [Group G] [MulAction G α]
   (f : G) (U V : Set α) :
   f⁻¹ •'' U ⊆ V ↔ U ⊆ f •'' V :=
 by
-  nth_rewrite 2 [<-inv_inv f]
+  nth_rewrite 2 [←inv_inv f]
   exact smulImage_subset_inv f⁻¹ U V
 
 theorem smulImage_disjoint_mul {G α : Type _} [Group G] [MulAction G α]
@@ -302,7 +302,7 @@ theorem smulImage_disjoint_mul {G α : Type _} [Group G] [MulAction G α]
   · intro h
     apply smulImage_disjoint f at h
     rw [smulImage_mul] at h
-    rw [<-mul_assoc] at h
+    rw [←mul_assoc] at h
     rw [mul_right_inv, one_mul] at h
     exact h
 
@@ -311,9 +311,9 @@ theorem smulImage_disjoint_inv_pow {G α : Type _} [Group G] [MulAction G α]
   Disjoint (g^i •'' U) (g^j •'' V) ↔ Disjoint (g^(-j) •'' U) (g^(-i) •'' V) :=
 by
   rw [smulImage_disjoint_mul]
-  rw [<-zpow_neg, <-zpow_add, add_comm, zpow_add, zpow_neg]
-  rw [<-inv_inv (g^j)]
-  rw [<-smulImage_disjoint_mul]
+  rw [←zpow_neg, ←zpow_add, add_comm, zpow_add, zpow_neg]
+  rw [←inv_inv (g^j)]
+  rw [←smulImage_disjoint_mul]
   simp
 
 theorem smulImage_disjoint_subset {G α : Type _} [Group G] [MulAction G α]
@@ -352,8 +352,8 @@ theorem smulImage_isClosed {G α : Type _}
   [Group G] [TopologicalSpace α] [MulAction G α] [ContinuousConstSMul G α] (g : G)
   {S : Set α} (S_open : IsClosed S) : IsClosed (g •'' S) :=
 by
-  rw [<-isOpen_compl_iff]
-  rw [<-isOpen_compl_iff] at S_open
+  rw [←isOpen_compl_iff]
+  rw [←isOpen_compl_iff] at S_open
   rw [smulImage_compl]
   apply smulImage_isOpen
   assumption
@@ -396,7 +396,7 @@ by
   simp
   constructor
   · intro IH T' T T_closed U_ss_T T'_eq
-    rw [<-T'_eq]
+    rw [←T'_eq]
     clear T' T'_eq
     apply IH
     · exact smulImage_isClosed g T_closed
@@ -405,7 +405,7 @@ by
   · intro IH T T_closed gU_ss_T
     apply IH
     · exact smulImage_isClosed g⁻¹ T_closed
-    · rw [<-smulImage_subset_inv]
+    · rw [←smulImage_subset_inv]
       exact gU_ss_T
     · simp
 
@@ -433,7 +433,7 @@ theorem smulFilter_def {G α : Type _} [SMul G α] (g : G) (F : Filter α) :
 theorem smulFilter_neBot {G α : Type _} [SMul G α] (g : G) {F : Filter α} (F_neBot : Filter.NeBot F) :
   Filter.NeBot (g •ᶠ F) :=
 by
-  rw [<-smulFilter_def]
+  rw [←smulFilter_def]
   exact Filter.map_neBot
 
 instance smulFilter_neBot' {G α : Type _} [SMul G α] {g : G} {F : Filter α} [F_neBot : Filter.NeBot F] :
@@ -442,14 +442,14 @@ instance smulFilter_neBot' {G α : Type _} [SMul G α] {g : G} {F : Filter α} [
 theorem smulFilter_principal (g : G) (S : Set α) :
   g •ᶠ Filter.principal S = Filter.principal (g •'' S) :=
 by
-  rw [<-smulFilter_def]
+  rw [←smulFilter_def]
   rw [Filter.map_principal]
   rfl
 
 theorem mul_smulFilter (g h: G) (F : Filter α) :
   (g * h) •ᶠ F = g •ᶠ (h •ᶠ F) :=
 by
-  repeat rw [<-smulFilter_def]
+  repeat rw [←smulFilter_def]
   simp only [mul_smul]
   rw [Filter.map_map]
   rfl
@@ -457,14 +457,14 @@ by
 theorem one_smulFilter (G : Type _) [Group G] [MulAction G α] (F : Filter α) :
   (1 : G) •ᶠ F = F :=
 by
-  rw [<-smulFilter_def]
+  rw [←smulFilter_def]
   simp only [one_smul]
   exact Filter.map_id
 
 theorem mem_smulFilter_iff (g : G) (F : Filter α) (U : Set α) :
   U ∈ g •ᶠ F ↔ g⁻¹ •'' U ∈ F :=
 by
-  rw [<-smulFilter_def, Filter.mem_map, smulImage_eq_inv_preimage, inv_inv]
+  rw [←smulFilter_def, Filter.mem_map, smulImage_eq_inv_preimage, inv_inv]
 
 theorem smulFilter_mono (g : G) (F F' : Filter α) :
   F ≤ F' ↔ g •ᶠ F ≤ g •ᶠ F' :=
@@ -474,7 +474,7 @@ by
     apply this
     intro H
     specialize this g⁻¹ _ _ H
-    repeat rw [<-mul_smulFilter] at this
+    repeat rw [←mul_smulFilter] at this
     rw [mul_left_inv] at this
     repeat rw [one_smulFilter] at this
     exact this
@@ -488,8 +488,8 @@ by
 theorem smulFilter_le_iff_le_inv (g : G) (F F' : Filter α) :
   F ≤ g •ᶠ F' ↔ g⁻¹ •ᶠ F ≤ F' :=
 by
-  nth_rw 2 [<-one_smulFilter G F']
-  rw [<-mul_left_inv g, mul_smulFilter]
+  nth_rw 2 [←one_smulFilter G F']
+  rw [←mul_left_inv g, mul_smulFilter]
   exact smulFilter_mono g⁻¹ _ _
 
 variable [TopologicalSpace α]
@@ -498,7 +498,7 @@ theorem smulFilter_nhds (g : G) (p : α) [ContinuousConstSMul G α]:
   g •ᶠ 𝓝 p = 𝓝 (g • p) :=
 by
   ext S
-  rw [<-smulFilter_def, Filter.mem_map, mem_nhds_iff, mem_nhds_iff]
+  rw [←smulFilter_def, Filter.mem_map, mem_nhds_iff, mem_nhds_iff]
   simp
   constructor
   · intro ⟨T, T_ss_smulImage, T_open, p_in_T⟩
@@ -526,10 +526,10 @@ by
     apply this
     intro gx_clusterPt_F
 
-    rw [<-one_smul G x, <-mul_right_inv g, mul_smul]
-    nth_rw 1 [<-inv_inv g]
+    rw [←one_smul G x, ←mul_right_inv g, mul_smul]
+    nth_rw 1 [←inv_inv g]
     apply this
-    rw [<-mul_smulFilter, mul_left_inv, one_smulFilter]
+    rw [←mul_smulFilter, mul_left_inv, one_smulFilter]
     assumption
   intro g F x x_cp_gF
   rw [clusterPt_iff_forall_mem_closure]
@@ -537,8 +537,8 @@ by
   simp only [mem_smulFilter_iff] at x_cp_gF
   intro S S_in_F
 
-  rw [<-mem_inv_smulImage]
-  rw [<-smulImage_closure]
+  rw [←mem_inv_smulImage]
+  rw [←smulImage_closure]
 
   apply x_cp_gF
   rw [inv_inv, smulImage_mul, mul_left_inv, one_smulImage]
@@ -548,7 +548,7 @@ theorem smulImage_compact [ContinuousConstSMul G α] (g : G) {U : Set α} (U_com
   IsCompact (g •'' U) :=
 by
   intro F F_neBot F_le_principal
-  rw [<-smulFilter_principal, smulFilter_le_iff_le_inv] at F_le_principal
+  rw [←smulFilter_principal, smulFilter_le_iff_le_inv] at F_le_principal
   let ⟨x, x_in_U, x_clusterPt⟩ := U_compact F_le_principal
   use g • x
   constructor

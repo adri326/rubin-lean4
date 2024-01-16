@@ -39,7 +39,7 @@ theorem rigidStabilizer_eq_fixingSubgroup_compl (U : Set α) :
   G•[U] = fixingSubgroup G Uᶜ :=
 by
   ext g
-  rw [mem_fixingSubgroup_iff, <-Subgroup.mem_carrier]
+  rw [mem_fixingSubgroup_iff, ←Subgroup.mem_carrier]
   unfold RigidStabilizer
   simp
 
@@ -50,7 +50,7 @@ theorem rigidStabilizer_support {g : G} {U : Set α} :
     by_contradiction (x_in_support ∘ h x),
   by
     intro support_sub
-    rw [<-Subgroup.mem_carrier]
+    rw [←Subgroup.mem_carrier]
     unfold RigidStabilizer; simp
     intro x x_notin_U
     by_contra h
@@ -108,12 +108,12 @@ by
       have gx_notin_support : g • x ∉ Support α g := by
         intro h
         exact gx_in_U? (g_in_rist h)
-      rw [<-support_inv] at gx_notin_support
+      rw [←support_inv] at gx_notin_support
       rw [not_mem_support] at gx_notin_support
       simp at gx_notin_support
       symm at gx_notin_support
       rw [fixes_inv] at gx_notin_support
-      rw [<-gx_notin_support]
+      rw [←gx_notin_support]
       symm
       group_action
       rw [not_mem_support.mp x_notin_support]
@@ -127,7 +127,7 @@ by
     by_cases hx_in_U?: h • x ∈ U
     {
       have hx_notin_support := disjoint_not_mem U_disj hx_in_U?
-      rw [<-support_inv] at hx_notin_support
+      rw [←support_inv] at hx_notin_support
       rw [not_mem_support] at hx_notin_support
       symm at hx_notin_support
       group_action at hx_notin_support
@@ -153,7 +153,7 @@ theorem rigidStabilizer_empty (G α: Type _) [Group G] [MulAction G α] [Faithfu
 by
   rw [Subgroup.eq_bot_iff_forall]
   intro f f_in_rist
-  rw [<-Subgroup.mem_carrier] at f_in_rist
+  rw [←Subgroup.mem_carrier] at f_in_rist
   apply eq_of_smul_eq_smul (α := α)
 
   intro x
@@ -185,7 +185,7 @@ by
   · intro x_in_rist
     rw [Set.subset_sInter_iff]
     intro T T_in_S
-    rw [<-rigidStabilizer_support]
+    rw [←rigidStabilizer_support]
     rw [Subgroup.mem_iInf] at x_in_rist
     specialize x_in_rist T
     rw [Subgroup.mem_iInf] at x_in_rist
@@ -195,7 +195,7 @@ theorem rigidStabilizer_smulImage (f g : G) (S : Set α) :
   g ∈ G•[f •'' S] ↔ f⁻¹ * g * f ∈ G•[S] :=
 by
   repeat rw [rigidStabilizer_support]
-  nth_rw 3 [<-inv_inv f]
+  nth_rw 3 [←inv_inv f]
   rw [support_conjugate]
   rw [smulImage_subset_inv]
   simp
@@ -218,9 +218,9 @@ by
   intro q q_in_orbit
   have ⟨⟨h, h_in_rist⟩, hp_eq_q⟩ := MulAction.mem_orbit_iff.mp q_in_orbit
   simp at hp_eq_q
-  rw [<-hp_eq_q]
+  rw [←hp_eq_q]
   rw [rigidStabilizer_support] at h_in_rist
-  rw [<-elem_moved_in_support' p h_in_rist]
+  rw [←elem_moved_in_support' p h_in_rist]
   assumption
 
 -- TODO: remov ethe need for FaithfulSMul?

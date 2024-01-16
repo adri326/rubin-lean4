@@ -26,7 +26,7 @@ theorem smul_eq_smul_inv {G α : Type _} [Group G] [MulAction G α] {g h : G}
     rw [← mul_smul] at res
     exact res
   · intro hyp
-    rw [<-hyp, mul_smul]
+    rw [←hyp, mul_smul]
     simp
 #align smul_eq_smul Rubin.Tactic.smul_eq_smul_inv
 
@@ -52,20 +52,20 @@ macro_rules
     neg_add_self,
     neg_neg,
     tsub_self,
-    <-mul_assoc,
+    ←mul_assoc,
 
     -- one_pow,
     -- one_zpow,
-    -- <-mul_zpow_neg_one,
+    -- ←mul_zpow_neg_one,
     -- zpow_zero,
     -- mul_zpow,
     -- zpow_sub,
-    -- <-zpow_ofNat,
-    -- <-zpow_neg_one,
-    -- <-zpow_mul,
-    -- <-zpow_add_one,
-    -- <-zpow_one_add,
-    -- <-zpow_add,
+    -- ←zpow_ofNat,
+    -- ←zpow_neg_one,
+    -- ←zpow_mul,
+    -- ←zpow_add_one,
+    -- ←zpow_one_add,
+    -- ←zpow_add,
 
     Int.ofNat_add,
     Int.ofNat_mul,
@@ -131,7 +131,7 @@ example: x = g • f⁻¹ • g⁻¹ • x ↔ g⁻¹ • x = f • g⁻¹ • x
     group_action
   · intro h
     group_action at h
-    nth_rewrite 1 [<-h]
+    nth_rewrite 1 [←h]
     group_action
 
 example: x = g • f⁻¹ • g⁻¹ • x ↔ g⁻¹ • x = f⁻¹ • g⁻¹ • x := by
@@ -141,7 +141,7 @@ example: x = g • f⁻¹ • g⁻¹ • x ↔ g⁻¹ • x = f⁻¹ • g⁻¹ 
     group_action
   · intro h
     group_action at h
-    nth_rewrite 2 [<-h]
+    nth_rewrite 2 [←h]
     group_action
 
 example (h: (g * f ^ (-2 : ℤ) * g ^ (-1 : ℤ)) • x = x):
