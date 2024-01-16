@@ -103,8 +103,8 @@ example {G α: Type _} [Group G] [MulAction G α] (g h: G) (x: α): g • h • 
   group_action
 
 example {G α : Type} [Group G] [MulAction G α] (a b : G) (x y : α) (h : a • b • x = a • y) : b⁻¹ • y = x := by
-  group_action at h  -- normalizes `h` which becomes `h : c = d`
-  rw [←h]            -- the goal is now `a*d*d⁻¹ = a`
+  group_action at h  -- normalizes `h` which becomes `h : b • x = y`
+  rw [←h]            -- the goal is now `b⁻¹ • b • x = x`
   group_action       -- which then normalized and closed
 
 example (G α : Type _) [Group G] (a b c : G) [MulAction G α] (x : α) :
